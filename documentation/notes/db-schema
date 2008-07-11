@@ -1,0 +1,101 @@
+
+
+input
+  specify data / structure
+    parses and translates to db-speak
+
+db
+  create entities, relations, props + data
+    create table, view? insert
+
+  read structure as graph.
+  create db-speak for queries
+
+
+H                R
+1 nommo          1 A100
+2 fommo          2 B100
+3 sommo          3 C100
+
+rH [H_R]         rR [R_H]
+h | r            r | h
+1 | 1            1 | 1
+2 | 1            1 | 2
+3 | 2            3 | 2
+
+HOST - ROOM
+
+R         P
+1 A100    1 X
+2 B100    2 Y
+3 C100    3 Z
+
+[R_P]   [P_R]
+r | p   p | r
+1 | 1   1 | 1
+1 | 2   2 | 1
+2 | 1   1 | 2
+3 | 2   2 | 3
+3 | 3   3 | 3
+
+CREATE TABLE MetaRelation (
+  relation TEXT NOT NULL,
+  entity1  INT NOT NULL,
+  entity2  INT NOT NULL,
+  constraint TEXT NULL,
+  in       DATETIME NOT NULL,
+  out      DATETIME NULL,
+
+  PRIMARY KEY( relation ),
+  FOREIGN KEY( entity1 ) REFERENCES Entity( id ),
+  FORIEGN KEY( entity2 ) REFERENCES ENtity( id ),
+  CHECK( in < out )
+);
+
+CREATE TABLE MetaEntity_Inheritance (
+
+);
+
+# 
+CREATE TABLE MetaEntity (
+  entity    TEXT NOT NULL,
+  in        DATETIME NOT NULL,
+  out       DATETIME NULL,
+
+  PRIMARY KEY( entity ),
+  CHECK( in < out )
+);
+
+CREATE TABLE Entity (
+  id        INT NOT NULL AUTO_INCREMENT,
+  visual-id TEXT NOT NULL,
+
+  PRIMARY KEY( id ),
+  UNIQUE( visual-id )
+);
+
+CREATE TABLE Entity_Property (
+  id     INT NOT NULL,
+  value  X   NULL,
+  in     DATETIME NOT NULL,
+  out    DATETIME NULL,
+
+  PRIMARY KEY( id ),
+  FOREIGN KEY( id ) REFERENCES Entity( id ),
+  CHECK( in < out )
+);
+
+CREATE TABLE Entity1_Relation_Entity2 (
+  id    INT NOT NULL AUTO_INCREMENT,
+  lval  INT NOT NULL,
+  rval  INT NOT NULL,
+  in    DATETIME NOT NULL,
+  out   DATETIME NULL,
+
+  PRIMARY KEY( id ),
+  KEY( lval, rval ),
+  FOREIGN KEY( lval ) REFERENCES Entity1( id ),
+  FOREIGN KEY( rval ) REFERENCES Entity2( id ),
+  CHECK( in < out )
+);
+
