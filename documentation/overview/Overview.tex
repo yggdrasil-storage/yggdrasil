@@ -33,7 +33,9 @@ existing in several temporal versions within the system.
 \subsection{Objects}
 
 An object is an instance of an entity within the system.  This
-instance is the primary data unit within Yggdrasil.
+instance is the primary working set that Yggdrasil operates on.
+Objects contain properties which are their key / value pairs.  Objects
+are identified by a unique name within each entity.
 
 %\begin{wrapfigure}{l}{5cm}
 %  \begin{center}
@@ -52,9 +54,20 @@ anything that can be mapped into a text field, and their only
 relations to other objects are the ones defined by the setup of
 Yggdrasil.
 
+\subsubsection{Properties}
+
+Depending on the way Yggdrasil is set up you may or may note have
+defined types for your properties, and you may or may not have
+constraints to the data stored for each property.  
+
+Yggdrasil can either be flexible and treat all property values as a
+default type, or you can select between a set of types Yggdrasil
+guarantees no matter the back end it's running on.
+
 \subsection{Relations}
 
-All relations within Yggdrasil exist between entities.  
+All relations within Yggdrasil exist between entities.  Entities can
+be constrained with   
 
 \subsection{Temporal dimension}
 
