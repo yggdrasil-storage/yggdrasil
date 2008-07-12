@@ -58,7 +58,7 @@ CREATE TABLE MetaEntity_Inheritance (
 
 # 
 CREATE TABLE MetaEntity (
-  entity    TEXT NOT NULL,
+  entity    VARCHAR(255) NOT NULL,
   in        DATETIME NOT NULL,
   out       DATETIME NULL,
 
