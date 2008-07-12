@@ -1,0 +1,1 @@
+drop table Host_ip; drop table Host; drop table MetaProperty; drop table MetaRelation; drop table MetaEntity; drop table Room; drop table Room_use; drop table ; show tables;
