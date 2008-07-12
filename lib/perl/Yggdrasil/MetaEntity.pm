@@ -5,6 +5,17 @@ use warnings;
 
 use Yggdrasil::DB;
 
+our $SCHEMA = <<SQL;
+CREATE TABLE MetaEntity (
+  entity   VARCHAR(255) NOT NULL,
+  start    DATETIME NOT NULL,
+  stop     DATETIME NULL DEFAULT NULL,
+
+  PRIMARY KEY( entity ),
+  CHECK( start < stop )
+);
+SQL
+
 sub new {
   my $class = shift;
   my $self  = {};
@@ -18,7 +29,7 @@ sub bootstrap {
   my $self = shift;
 
   my $dbh = Yggdrasil::DB->new();
-  $dbh->dosql_update(<DATA>);
+  $dbh->dosql_update($SCHEMA);
 }
 
 sub add {
@@ -31,12 +42,3 @@ sub add {
 
 1;
 
-__DATA__
-CREATE TABLE MetaEntity (
-  entity   VARCHAR(255) NOT NULL,
-  start    DATETIME NOT NULL,
-  stop     DATETIME NULL DEFAULT NULL,
-
-  PRIMARY KEY( entity ),
-  CHECK( start < stop )
-);

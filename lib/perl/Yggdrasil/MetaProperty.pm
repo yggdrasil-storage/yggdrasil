@@ -3,6 +3,19 @@ package Yggdrasil::MetaProperty;
 use strict;
 use warnings;
 
+our $SCHEMA = <<SQL;
+CREATE TABLE MetaProperty (
+  id            INT NOT NULL AUTO_INCREMENT,
+  entity        VARCHAR(255) NOT NULL,
+  property      VARCHAR(255) NOT NULL,
+  start         DATETIME NOT NULL,
+  stop          DATETIME NULL DEFAULT NULL,
+
+  PRIMARY KEY( id ),
+  CHECK( start < stop )
+);
+SQL
+
 sub new {
   my $class = shift;
   my $self  = {};
@@ -16,7 +29,7 @@ sub bootstrap {
   my $self = shift;
 
   my $dbh = Yggdrasil::DB->new();
-  $dbh->dosql_update(<DATA>);
+  $dbh->dosql_update($SCHEMA);
 }
 
 sub add {
@@ -29,14 +42,3 @@ sub add {
 
 1;
 
-__DATA__
-CREATE TABLE MetaProperty (
-  id            INT NOT NULL AUTO_INCREMENT,
-  entity        VARCHAR(255) NOT NULL,
-  property      VARCHAR(255) NOT NULL,
-  start         DATETIME NOT NULL,
-  stop          DATETIME NULL DEFAULT NULL,
-
-  PRIMARY KEY( id ),
-  CHECK( start < stop )
-);

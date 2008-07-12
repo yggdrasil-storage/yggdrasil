@@ -9,7 +9,7 @@ use Yggdrasil::MetaEntity;
 use Yggdrasil::Property;
 use Yggdrasil::Entity::Instance;
 
-our $SCHEMA <<;
+our $SCHEMA = <<SQL;
 CREATE TABLE [name] (
   id        INT NOT NULL AUTO_INCREMENT,
   visual_id TEXT NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE [name] (
   PRIMARY KEY( id ),
   UNIQUE( visual_id(100) )
 );
-
+SQL
 
 sub new {
   my $class = shift;
@@ -38,7 +38,7 @@ sub _init {
   
   my $dbh = Yggdrasil::DB->new();
   # --- Create Entity table
-  $dbh->dosql_update(<DATA>, %data);
+  $dbh->dosql_update($SCHEMA, %data);
 
   # --- Create MetaEntity entry
   my $me = Yggdrasil::MetaEntity->new();

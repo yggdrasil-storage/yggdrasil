@@ -8,9 +8,9 @@ use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
 
+use Yggdrasil::Relation;
 use Yggdrasil::Entity;
 
-$/ = undef;
 
 sub new {
   my $class = shift;
@@ -54,6 +54,12 @@ sub get_entity {
   my $self = shift;
 
   return Yggdrasil::Entity->get( @_ );
+}
+
+sub add_relation {
+  my $self = shift;
+
+  return Yggdrasil::Relation->new(@_);  
 }
 
 1;
