@@ -1,0 +1,18 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use FindBin qw($RealBin);
+use lib qq(../lib/perl);
+
+use Yggdrasil;
+
+my $ygg = new Yggdrasil( user     => $ENV{YGG_USER}, 
+			 password => $ENV{YGG_PASSWORD},
+			 host     => $ENV{YGG_HOST},
+			 port     => $ENV{YGG_PORT},
+			 db       => $ENV{YGG_DB},
+			 engine   => $ENV{YGG_ENGINE} );
+
+$ygg->bootstrap();

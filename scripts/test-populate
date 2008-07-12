@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use FindBin qw($RealBin);
+use lib qq(../lib/perl);
+
+use Yggdrasil;
+
+my $ygg = new Yggdrasil( user     => $ENV{YGG_USER}, 
+			 password => $ENV{YGG_PASSWORD},
+			 host     => $ENV{YGG_HOST},
+			 port     => $ENV{YGG_PORT},
+			 db       => $ENV{YGG_DB},
+			 engine   => $ENV{YGG_ENGINE} );
+
+my $entity = $ygg->add_entity( name => "Host" );
+#my $entity = $ygg->get_entity( name => "Host" );
+$entity->add_property( name => "ip", type => "IP" );
+my $object = $entity->add( "nommo" );
+$object->property( key => "ip", value => "129.240.222.179" );
+
+my $room = $ygg->add_entity( name => "Room" );
+$room->add_property( name => "use", type => "TEXT" );
+my $object2 = $room->add( "B810" );
+$object2->property( key => "use", value => "Terminal room" );
+__DATA__
+
+my $relation = $ygg->add_relation( $host, $room );
+$relation->add( $object, $object2 );
