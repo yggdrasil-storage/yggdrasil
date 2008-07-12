@@ -17,3 +17,8 @@
 * Rename "Entity" to "Class"?  The term just doesn't sit well.
 
 * Set up a test database under Postgresql.
+
+* Type support
+
+* Transactions.  They must be "requested" by Yggdrasil and handled by
+   the storage layer as best possible.
