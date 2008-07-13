@@ -1,0 +1,25 @@
+
+* Bootstrap
+
+* add_entity
+    Entityname
+* add_property
+    Entityname, Entityid, Propertyid 
+* add_relation
+    Entityname1, Entityname2
+[ * add_inheritance 
+    Superentityname, Childentityname ]
+
+* get_entity
+    Entityname, Entityid, Start, Stop
+* get_property
+    Entityname, Entityid, Propertyid, Start, Stop
+
+* set_property
+    Entityname, Entityid, Propertyid, Value
+* set_relation
+    Entityname1, Entityid1, Entityname2, Entityid2, Requirement
+
+
+my $nommo = $ygg->get_host( 'nommo' );
+$nommo->attribute( 'ip', '129.240.222.179' );
