@@ -28,4 +28,11 @@ sub property {
   $storage->dosql_update( qq<INSERT INTO [name] (id, value, start) VALUES(?, ?, NOW())>, name => $table, [$id, $data{value}] );
 }
 
+sub attribute {
+    my $self = shift;
+    my ($key, $value) = @_;
+
+    return $self->property( key => $key, value => $value );    
+}
+
 1;
