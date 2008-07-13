@@ -10,6 +10,8 @@
 [ * add_inheritance 
     Superentityname, Childentityname ]
 
+(we also need to add stuff into the meta tables)
+
 * get_entity
     Entityname, Entityid, Start, Stop
 * get_property
