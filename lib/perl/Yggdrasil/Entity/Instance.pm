@@ -3,7 +3,7 @@ package Yggdrasil::Entity::Instance;
 use strict;
 use warnings;
 
-use Yggdrasil::DB;
+use Yggdrasil::Storage;
 
 sub new {
   my $class = shift;
@@ -24,8 +24,8 @@ sub property {
 
   my $id = $self->{id};
 
-  my $dbh = Yggdrasil::DB->new();
-  $dbh->dosql_update( qq<INSERT INTO [name] (id, value, start) VALUES(?, ?, NOW())>, name => $table, [$id, $data{value}] );
+  my $storage = Yggdrasil::Storage->new();
+  $storage->dosql_update( qq<INSERT INTO [name] (id, value, start) VALUES(?, ?, NOW())>, name => $table, [$id, $data{value}] );
 }
 
 1;

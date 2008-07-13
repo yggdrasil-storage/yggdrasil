@@ -1,4 +1,4 @@
-package Yggdrasil::DB::mysql;
+package Yggdrasil::Storage::mysql;
 
 use strict;
 use warnings;

@@ -1,16 +1,16 @@
-package Yggdrasil::DB;
+package Yggdrasil::Storage;
 
 use strict;
 use warnings;
 
-our $dbh;
+our $storage;
 
 sub new {
   my $class = shift;
   my $self  = {};
   my %data = @_;
 
-  return $dbh if $dbh;
+  return $storage if $storage;
 
   my $engine = join(".", $data{engine}, "pm" );
 
@@ -28,8 +28,8 @@ sub new {
     eval qq( require $engine_class );
     die $@ if $@;
     #  $class->import();
-    $dbh = $engine_class->new(@_);
-    return $dbh;
+    $storage = $engine_class->new(@_);
+    return $storage;
   }
 }
 

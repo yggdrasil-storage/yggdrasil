@@ -3,7 +3,7 @@ package Yggdrasil::Relation;
 use strict;
 use warnings;
 
-use Yggdrasil::DB;
+use Yggdrasil::Storage;
 
 our $SCHEMA = <<SQL;
 CREATE TABLE [entity1]_R_[entity2] (
@@ -38,9 +38,9 @@ sub _init {
   my $entity2 = shift;
   
 
-  my $dbh = Yggdrasil::DB->new();
+  my $storage = Yggdrasil::Storage->new();
   # --- Create Relation table
-  $dbh->dosql_update($SCHEMA, entity1 => $entity1->{name}, entity2 => $entity2->{name} );
+  $storage->dosql_update($SCHEMA, entity1 => $entity1->{name}, entity2 => $entity2->{name} );
 
   # --- Create MetaRelation entry
   my $me = Yggdrasil::MetaRelation->new();
@@ -60,9 +60,9 @@ sub add {
 
   my $table = join("_R_", $n1, $n2 );
 
-  my $dbh = Yggdrasil::DB->new();
+  my $storage = Yggdrasil::Storage->new();
 
-  my $id = $dbh->dosql_update( qq<INSERT INTO [name](lval,rval,start) VALUES(?,?,NOW())>, name => $table, [$id1, $id2] );
+  my $id = $storage->dosql_update( qq<INSERT INTO [name](lval,rval,start) VALUES(?,?,NOW())>, name => $table, [$id1, $id2] );
 }
 
 

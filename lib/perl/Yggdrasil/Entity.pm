@@ -3,7 +3,7 @@ package Yggdrasil::Entity;
 use strict;
 use warnings;
 
-use Yggdrasil::DB;
+use Yggdrasil::Storage;
 
 use Yggdrasil::MetaEntity;
 use Yggdrasil::Property;
@@ -36,9 +36,9 @@ sub _init {
 
   $self->{name} = $data{name};
   
-  my $dbh = Yggdrasil::DB->new();
+  my $storage = Yggdrasil::Storage->new();
   # --- Create Entity table
-  $dbh->dosql_update($SCHEMA, %data);
+  $storage->dosql_update($SCHEMA, %data);
 
   # --- Create MetaEntity entry
   my $me = Yggdrasil::MetaEntity->new();
@@ -49,7 +49,7 @@ sub add_property {
   my $self = shift;
   my %data = @_;
 
-  my $dbh = Yggdrasil::DB->new();
+  my $storage = Yggdrasil::Storage->new();
 
   # --- Create a property table
   my $propertytable = Yggdrasil::Property->new( entity => $self->{name}, %data );
@@ -74,9 +74,9 @@ sub add {
   my $self = shift;
   my $visual_id   = shift;
 
-  my $dbh = Yggdrasil::DB->new();
+  my $storage = Yggdrasil::Storage->new();
 
-  my $id = $dbh->dosql_update( qq<INSERT INTO [name](visual_id) VALUES(?)>, name => $self->{name}, [$visual_id] );
+  my $id = $storage->dosql_update( qq<INSERT INTO [name](visual_id) VALUES(?)>, name => $self->{name}, [$visual_id] );
   my $instance = Yggdrasil::Entity::Instance->new( entity => $self, id => $id );
 
   return $instance;

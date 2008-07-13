@@ -3,7 +3,7 @@ package Yggdrasil::Property;
 use strict;
 use warnings;
 
-use Yggdrasil::DB;
+use Yggdrasil::Storage;
 
 our $SCHEMA = <<SQL;
 CREATE TABLE [entity]_[name] (
@@ -36,10 +36,10 @@ sub _init {
   $self->{name} = $data{name};
   $self->{type} = $data{type};
   
-  my $dbh = Yggdrasil::DB->new();
+  my $storage = Yggdrasil::Storage->new();
 
   # --- Create Property table
-  $dbh->dosql_update($SCHEMA, %data);
+  $storage->dosql_update($SCHEMA, %data);
 
 }
 

@@ -28,16 +28,16 @@ sub new {
 sub bootstrap {
   my $self = shift;
 
-  my $dbh = Yggdrasil::DB->new();
-  $dbh->dosql_update($SCHEMA);
+  my $storage = Yggdrasil::Storage->new();
+  $storage->dosql_update($SCHEMA);
 }
 
 sub add {
   my $self = shift;
   my %data = @_;
 
-  my $dbh = Yggdrasil::DB->new();
-  $dbh->dosql_update( qq<INSERT INTO MetaProperty(entity,property,start) VALUES(?, ?, NOW())>, [$data{entity}, $data{property}] );
+  my $storage = Yggdrasil::Storage->new();
+  $storage->dosql_update( qq<INSERT INTO MetaProperty(entity,property,start) VALUES(?, ?, NOW())>, [$data{entity}, $data{property}] );
 }
 
 1;

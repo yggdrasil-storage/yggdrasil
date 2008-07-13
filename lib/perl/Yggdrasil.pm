@@ -3,7 +3,7 @@ package Yggdrasil;
 use strict;
 use warnings;
 
-use Yggdrasil::DB;
+use Yggdrasil::Storage;
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
@@ -40,8 +40,8 @@ sub bootstrap {
 sub _init {
   my $self = shift;
 
-  # --- Fetch dbh
-  $self->{dbh} = Yggdrasil::DB->new(@_);
+  # --- Fetch storage handler
+  $self->{storage} = Yggdrasil::Storage->new(@_);
 }
 
 sub add_entity {
