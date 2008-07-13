@@ -1,0 +1,59 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use DBI;
+use Getopt::Long;
+
+my ($zap, $dump) = (0, 0);
+
+GetOptions(
+	   "zap"  => \$zap,
+	   "dump" => \$dump,
+	  );
+
+my ($engine, $db, $host, $user, $password, $port) = (lc $ENV{YGG_ENGINE},
+						     $ENV{YGG_DB},
+						     $ENV{YGG_HOST},
+						     $ENV{YGG_USER},
+						     $ENV{YGG_PASSWORD},
+						     $ENV{YGG_PORT},
+						    );
+my ($dbh, $sql);
+
+if (lc $engine eq 'mysql') {
+    $sql = "SHOW TABLES";        
+} elsif (lc $engine eq 'pg') {    
+    $sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+}
+
+$dbh = DBI->connect("DBI:$engine:database=$db;host=$host;port=$port", $user, $password );
+
+my $sth = $dbh->prepare( $sql );
+die 'prepare died' unless $sth;
+$sth->execute() || die 'execute died ';
+
+while (my @row_array = $sth->fetchrow_array) {
+    print " * ", $row_array[0], "\n";
+    if ($dump) {
+	my $table = $dbh->prepare( "select * from $row_array[0]" );
+	die 'prepare died' unless $table;
+	$table->execute() || die 'execute died ';
+
+	while (my @row = $table->fetchrow_array) {
+	    my @data;
+	    for my $c (@row) {
+		push @data, $c || 'NULL';
+	    }
+	    print join " | ", @data;
+	    print "\n";
+	}
+	print "\n";
+    } 
+    
+    if ($zap) {
+	$dbh->do( "DROP TABLE $row_array[0]" );
+    }
+}
+
