@@ -93,6 +93,29 @@ fly while the system is running live.
 \section{API}
 
 An important note is to remember to bootstrap your Yggdrasil
-installation before it's used.  This is done only once per installation.
+installation before it's used.  If you're using the Yggdrasil library
+directly, call bootstrap() once in the lifespan of the installation.
+
+\subsection{Defining structure}
+
+Creating structure within Yggdrasil is done via commands prefixed
+``define''.  This accounts for defining entities, properties and
+relations.  
+
+\begin{table}[h]
+\centering
+\caption{Define statements in Yggdrasil}
+
+\begin{tabular}{l l}
+\hline\hline %inserts double horizontal lines
+Statement & Parameters \\
+\hline
+define\_entity  & Name-of-entity \\
+define\_property & Name-of-entity, Name-of-property \\
+define\_relation & Name-of-entity1, Name-of-entity2 \\
+\end{tabular}
+
+\end{table}
+
 
 \end{document}
