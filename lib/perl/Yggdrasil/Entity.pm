@@ -45,7 +45,7 @@ sub _init {
   $me->add( %data );
 }
 
-sub add_property {
+sub define_property {
   my $self = shift;
   my %data = @_;
 

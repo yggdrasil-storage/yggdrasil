@@ -44,7 +44,7 @@ sub _init {
   $self->{storage} = Yggdrasil::Storage->new(@_);
 }
 
-sub add_entity {
+sub define_entity {
   my $self = shift;
 
   return Yggdrasil::Entity->new(@_);
@@ -56,7 +56,7 @@ sub get_entity {
   return Yggdrasil::Entity->get( @_ );
 }
 
-sub add_relation {
+sub define_relation {
   my $self = shift;
 
   return Yggdrasil::Relation->new(@_);  
