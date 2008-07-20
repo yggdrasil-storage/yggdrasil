@@ -51,3 +51,11 @@ $usage->add( $b810 => "Terminal room" );
 # $b810     isa Yggdrasil::Entity::Instance
 my $relation = define Yggdrasil::Relation $host => $room;
 $relation->add( $nommo, $b810 );
+
+
+# --- Define entity "Person"
+# $person  isa Yggdrasil::Entity
+# $student isa Yggdrasil::Entity
+my $person = define Yggdrasil::Entity "Person";
+my $student = define Yggdrasil::Entity "Student";
+derive $student from => $person;

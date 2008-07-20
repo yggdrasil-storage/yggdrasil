@@ -6,6 +6,7 @@ use warnings;
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
+use Yggdrasil::MetaInheritance;
 
 use Yggdrasil::Storage;
 
@@ -35,6 +36,7 @@ sub bootstrap {
     define Yggdrasil::MetaEntity;
     define Yggdrasil::MetaRelation;
     define Yggdrasil::MetaProperty;
+    define Yggdrasil::MetaInheritance;
 }
 
 1;

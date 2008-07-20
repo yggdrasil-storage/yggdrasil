@@ -21,7 +21,7 @@ SQL
 sub _define {
     my $self = shift;
     my $name = shift;
-
+    
     $self->{name} = $name;
 
     # --- Tell Storage to create SCHEMA
@@ -29,7 +29,6 @@ sub _define {
 
     # --- Add to MetaEntity;
     $self->_meta_add($name);
-
 }
 
 sub _get {
@@ -50,6 +49,14 @@ sub add {
 
   # --- Return Instance object representing the added info.
   return Yggdrasil::Entity::Instance->new( entity => $self, id => $id );
+}
+
+sub derive {
+    my $self   = shift;
+    my %derive = @_;
+    
+    my $inherit = Yggdrasil::MetaInheritance->new();
+    $inherit->_meta_add( $self, $derive{from} );
 }
 
 1;
