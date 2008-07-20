@@ -3,10 +3,8 @@ package Yggdrasil::Entity;
 use strict;
 use warnings;
 
-use Yggdrasil::Storage;
+use base qw(Yggdrasil::MetaEntity);
 
-use Yggdrasil::MetaEntity;
-use Yggdrasil::Property;
 use Yggdrasil::Entity::Instance;
 
 our $SCHEMA = <<SQL;
@@ -19,69 +17,39 @@ CREATE TABLE [name] (
 );
 SQL
 
-sub new {
-  my $class = shift;
-  my $self  = {};
 
-  bless $self, $class;
+sub _define {
+    my $self = shift;
+    my $name = shift;
 
-  $self->_init(@_);
+    $self->{name} = $name;
 
-  return $self; 
-}
+    # --- Tell Storage to create SCHEMA
+    $self->{storage}->dosql_update( $SCHEMA, $self );
 
-sub _init {
-  my $self = shift;
-  my %data = @_;
-
-  $self->{name} = $data{name};
-  
-  my $storage = Yggdrasil::Storage->new();
-  # --- Create Entity table
-  $storage->dosql_update($SCHEMA, %data);
-
-  # --- Create MetaEntity entry
-  my $me = Yggdrasil::MetaEntity->new();
-  $me->add( %data );
-}
-
-sub define_property {
-  my $self = shift;
-  my %data = @_;
-
-  my $storage = Yggdrasil::Storage->new();
-
-  # --- Create a property table
-  my $propertytable = Yggdrasil::Property->new( entity => $self->{name}, %data );
-
-  # --- Update MetaProperty table
-  Yggdrasil::MetaProperty->add( entity => $self->{name}, property => $data{name} );
+    # --- Add to MetaEntity;
+    $self->_meta_add($name);
 
 }
 
-# Dette må vi tenke hardt på
-# kun en "new"
-sub get {
-  my $class = shift;
-  my $self = {};
-  my %data = @_;
+sub _get {
+    my $self = shift;
+    my $name = shift;
 
-  $self->{name} = $data{name};
-  return bless $self, $class;
+    # FIX: Check that Entity actually exists?
+    $self->{name} = $name;
 }
 
 sub add {
-  my $self = shift;
-  my $visual_id   = shift;
+  my $self      = shift;
+  my $visual_id = shift;
 
-  my $storage = Yggdrasil::Storage->new();
+  # --- Insert visual-id info into entity
+  my $id = $self->{storage}->dosql_update( 
+      qq<INSERT INTO [name](visual_id) VALUES(?)>, $self, [$visual_id] );
 
-  my $id = $storage->dosql_update( qq<INSERT INTO [name](visual_id) VALUES(?)>, name => $self->{name}, [$visual_id] );
-  my $instance = Yggdrasil::Entity::Instance->new( entity => $self, id => $id );
-
-  return $instance;
+  # --- Return Instance object representing the added info.
+  return Yggdrasil::Entity::Instance->new( entity => $self, id => $id );
 }
 
 1;
-
-

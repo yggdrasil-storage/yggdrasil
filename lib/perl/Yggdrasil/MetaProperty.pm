@@ -3,6 +3,8 @@ package Yggdrasil::MetaProperty;
 use strict;
 use warnings;
 
+use base qw(Yggdrasil::Meta);
+
 our $SCHEMA = <<SQL;
 CREATE TABLE MetaProperty (
   id            INT NOT NULL AUTO_INCREMENT,
@@ -16,29 +18,18 @@ CREATE TABLE MetaProperty (
 );
 SQL
 
-sub new {
-  my $class = shift;
-  my $self  = {};
+sub _define {
+    my $self = shift;
 
-  bless $self, $class;
-
-  return $self;  
+    $self->{storage}->dosql_update($SCHEMA);
 }
 
-sub bootstrap {
-  my $self = shift;
+sub _meta_add {
+  my $self   = shift;
+  my $entity = shift;
+  my $key    = shift;
 
-  my $storage = Yggdrasil::Storage->new();
-  $storage->dosql_update($SCHEMA);
-}
-
-sub add {
-  my $self = shift;
-  my %data = @_;
-
-  my $storage = Yggdrasil::Storage->new();
-  $storage->dosql_update( qq<INSERT INTO MetaProperty(entity,property,start) VALUES(?, ?, NOW())>, [$data{entity}, $data{property}] );
+  $self->{storage}->dosql_update( qq<INSERT INTO MetaProperty(entity,property,start) VALUES(?, ?, NOW())>, [$entity->{name}, $key] );
 }
 
 1;
-

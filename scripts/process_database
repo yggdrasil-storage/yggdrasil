@@ -9,9 +9,10 @@ use Getopt::Long;
 my ($zap, $dump) = (0, 0);
 
 GetOptions(
-	   "zap"  => \$zap,
-	   "dump" => \$dump,
-	  );
+    "zap"  => \$zap,
+    "dump" => \$dump,
+    "help" => \&help,
+    );
 
 my ($engine, $db, $host, $user, $password, $port) = (lc $ENV{YGG_ENGINE},
 						     $ENV{YGG_DB},
@@ -57,3 +58,18 @@ while (my @row_array = $sth->fetchrow_array) {
     }
 }
 
+sub help {
+    print <DATA>;
+    exit;
+}
+
+__DATA__
+Usage: $0 [options]
+
+By default display defined table names.
+
+Options:
+--------
+--help        Help text
+--zap         Zap the entire database
+--dump        Dump all tables

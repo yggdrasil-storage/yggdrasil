@@ -7,6 +7,9 @@ use FindBin qw($RealBin);
 use lib qq(../lib/perl);
 
 use Yggdrasil;
+use Yggdrasil::Entity;
+use Yggdrasil::Property;
+use Yggdrasil::Relation;
 
 my $ygg = new Yggdrasil( user     => $ENV{YGG_USER}, 
 			 password => $ENV{YGG_PASSWORD},
@@ -15,17 +18,36 @@ my $ygg = new Yggdrasil( user     => $ENV{YGG_USER},
 			 db       => $ENV{YGG_DB},
 			 engine   => $ENV{YGG_ENGINE} );
 
-my $entity = $ygg->define_entity( name => "Host" );
-#my $entity = $ygg->get_entity( name => "Host" );
-$entity->define_property( name => "ip", type => "IP" );
-my $object = $entity->add( "nommo" );
-$object->property( key => "ip", value => "129.240.222.179" );
 
-my $room = $ygg->define_entity( name => "Room" );
-$room->define_property( name => "use", type => "TEXT" );
-my $object2 = $room->add( "B810" );
-$object2->property( key => "use", value => "Terminal room" );
+# --- Define entity "Host" and property "ip" of "Host"
+# $host isa Yggdrasil::Entity
+# $ip   isa Yggdrasil::Property
+my $host = define Yggdrasil::Entity "Host";
+my $ip = define Yggdrasil::Property $host => "ip";
 
-my $relation = $ygg->define_relation( $entity, $room );
-$relation->add( $object, $object2 );
-__DATA__
+
+# --- Add entity "nommo" to "Host" and add property value
+# --- "129.240.222.179" to "ip" as belonging to "nommo"
+# $nommo isa Yggdrasil::Entity::Instance
+my $nommo = $host->add( "nommo" );
+$ip->add( $nommo => "129.240.222.179" );
+
+# --- Define "Room" with property "usage"
+# $room  isa Yggdrasil::Entity
+# $usage isa Yggdrasil::Property
+my $room = define Yggdrasil::Entity "Room";
+my $usage = define Yggdrasil::Property $room => "usage";
+
+# --- Add rooms and properties for "Room"
+# $b810 isa Yggdrasil::Entity::Instance
+my $b810 = $room->add( "B810" );
+$usage->add( $b810 => "Terminal room" );
+
+# --- Define relation "Host" <=> "Room"
+# $relation isa Yggdrasil::Relation
+# $host     isa Yggdrasil::Entity
+# $room     isa Yggdrasil::Entity
+# $nommo    isa Yggdrasil::Entity::Instance
+# $b810     isa Yggdrasil::Entity::Instance
+my $relation = define Yggdrasil::Relation $host => $room;
+$relation->add( $nommo, $b810 );

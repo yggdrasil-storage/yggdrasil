@@ -3,7 +3,7 @@ package Yggdrasil::MetaRelation;
 use strict;
 use warnings;
 
-use Yggdrasil::Storage;
+use base qw(Yggdrasil::Meta);
 
 our $SCHEMA = <<SQL;
 CREATE TABLE MetaRelation (
@@ -19,32 +19,19 @@ CREATE TABLE MetaRelation (
 );
 SQL
 
-sub new {
-  my $class = shift;
-  my $self  = {};
-
-  bless $self, $class;
-
-
-  return $self;
-}
-
-sub bootstrap {
+sub _define {
   my $self = shift;
   
-  my $storage = Yggdrasil::Storage->new();
-  $storage->dosql_update($SCHEMA);
+  $self->{storage}->dosql_update($SCHEMA);
 }
 
-sub add {
-  my $self = shift;
-  my ($e1, $e2) = @_;
+sub _meta_add {
+  my $self    = shift;
+  my $entity1 = shift;
+  my $entity2 = shift;
 
-  my $name = join("_R_", $e1->{name}, $e2->{name} );
-
-  my $storage = Yggdrasil::Storage->new();
-  $storage->dosql_update( qq<INSERT INTO MetaRelation(relation,entity1,entity2,start) VALUES(?, ?, ?, NOW())>, [$name, $e1->{name}, $e2->{name} ] );
+  $self->{storage}->dosql_update( qq<INSERT INTO MetaRelation(relation,entity1,entity2,start) VALUES(?, ?, ?, NOW())>, 
+				  [$self->{name}, $entity1->{name}, $entity2->{name} ] );
 }
 
 1;
-

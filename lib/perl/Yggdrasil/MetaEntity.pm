@@ -3,7 +3,7 @@ package Yggdrasil::MetaEntity;
 use strict;
 use warnings;
 
-use Yggdrasil::Storage;
+use base qw(Yggdrasil::Meta);
 
 our $SCHEMA = <<SQL;
 CREATE TABLE MetaEntity (
@@ -16,29 +16,17 @@ CREATE TABLE MetaEntity (
 );
 SQL
 
-sub new {
-  my $class = shift;
-  my $self  = {};
+sub _define {
+    my $self = shift;
 
-  bless $self, $class;
-
-  return $self;
+    $self->{storage}->dosql_update($SCHEMA);
 }
 
-sub bootstrap {
-  my $self = shift;
+sub _meta_add {
+    my $self = shift;
+    my $name = shift;
 
-  my $storage = Yggdrasil::Storage->new();
-  $storage->dosql_update($SCHEMA);
-}
-
-sub add {
-  my $self = shift;
-  my %data = @_;
-
-  my $storage = Yggdrasil::Storage->new();
-  $storage->dosql_update( qq<INSERT INTO MetaEntity(entity,start) VALUES(?, NOW())>, [$data{name}] );
+  $self->{storage}->dosql_update( qq<INSERT INTO MetaEntity(entity,start) VALUES(?, NOW())>, [$name] );
 }
 
 1;
-

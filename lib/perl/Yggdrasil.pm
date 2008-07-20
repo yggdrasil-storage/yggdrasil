@@ -3,63 +3,38 @@ package Yggdrasil;
 use strict;
 use warnings;
 
-use Yggdrasil::Storage;
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
 
-use Yggdrasil::Relation;
-use Yggdrasil::Entity;
+use Yggdrasil::Storage;
 
+our $STORAGE;
 
 sub new {
-  my $class = shift;
-  my $self  = {};
+    my $class = shift;
+    my $self  = bless {}, $class;
 
-  bless $self, $class;
+    $self->_init(@_);
 
-  $self->_init(@_);
-
-  return $self;
-}
-
-sub bootstrap {
-  my $self = shift;
-
-  # create db stuff
-  my $meta_entity = Yggdrasil::MetaEntity->new();
-  $meta_entity->bootstrap();
- 
-  my $meta_relation = Yggdrasil::MetaRelation->new();
-  $meta_relation->bootstrap();
-
-  my $meta_property = Yggdrasil::MetaProperty->new();
-  $meta_property->bootstrap();
+    return $self;
 }
 
 sub _init {
-  my $self = shift;
+    my $self = shift;
 
-  # --- Fetch storage handler
-  $self->{storage} = Yggdrasil::Storage->new(@_);
+    if( ref $self eq __PACKAGE__ ) {
+	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
+    } else {
+	$self->{storage} = $STORAGE;
+    }
 }
 
-sub define_entity {
-  my $self = shift;
 
-  return Yggdrasil::Entity->new(@_);
-}
-
-sub get_entity {
-  my $self = shift;
-
-  return Yggdrasil::Entity->get( @_ );
-}
-
-sub define_relation {
-  my $self = shift;
-
-  return Yggdrasil::Relation->new(@_);  
+sub bootstrap {
+    define Yggdrasil::MetaEntity;
+    define Yggdrasil::MetaRelation;
+    define Yggdrasil::MetaProperty;
 }
 
 1;
