@@ -67,4 +67,17 @@ sub dosql_update {
 }
 
 
+sub update {
+    my $self = shift;
+    my $schema = shift;
+    my %data = @_;
+
+    # --- 1. Check for previous value
+    $self->dosql_select( "SELECT * FROM $schema WHERE" )
+    
+    # --- 1a. if exists set "end" to NOW()
+    # --- 2. Insert
+    
+}
+
 1;
