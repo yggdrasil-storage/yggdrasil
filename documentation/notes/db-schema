@@ -42,7 +42,7 @@ CREATE TABLE MetaRelation (
   relation TEXT NOT NULL,
   entity1  INT NOT NULL,
   entity2  INT NOT NULL,
-  constraint TEXT NULL,
+  constraint TEXT NULL, # 1:1, 1:N, N:1, 1:4 etc
   in       DATETIME NOT NULL,
   out      DATETIME NULL,
 
@@ -54,6 +54,28 @@ CREATE TABLE MetaRelation (
 
 CREATE TABLE MetaEntity_Inheritance (
 
+);
+
+CREATE TABLE MetaRenames (
+  id            INT NOT NULL AUTO_INCREMENT,
+  entity        VARCHAR(255) NOT NULL,
+  from          VARCHAR(255) NOT NULL,
+  to            VARCHAR(255) NOT NULL,
+  in       DATETIME NOT NULL,
+  out      DATETIME NULL,
+
+  PRIMARY KEY( id ),
+);
+
+CREATE TABLE MetaProperty (
+  id            INT NOT NULL AUTO_INCREMENT,
+  entity        VARCHAR(255) NOT NULL,
+  property      VARCHAR(255) NOT NULL,
+  start         DATETIME NOT NULL,
+  stop          DATETIME NULL DEFAULT NULL,
+
+  PRIMARY KEY( id ),
+  CHECK( start < stop )
 );
 
 # 

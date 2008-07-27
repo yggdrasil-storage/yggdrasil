@@ -11,6 +11,7 @@ use Yggdrasil::MetaInheritance;
 use Yggdrasil::Storage;
 
 our $STORAGE;
+our $NAMESPACE;
 
 sub new {
     my $class = shift;
@@ -23,11 +24,14 @@ sub new {
 
 sub _init {
     my $self = shift;
-
+    
     if( ref $self eq __PACKAGE__ ) {
+	my %params = @_;
+	$NAMESPACE = $params->{namespace} || '';
 	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
     } else {
 	$self->{storage} = $STORAGE;
+	$self->{namespace} = $NAMESPACE;
     }
 }
 

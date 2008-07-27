@@ -7,55 +7,42 @@ use FindBin qw($Bin);
 use lib qq($Bin/../lib/perl);
 
 use Yggdrasil;
-use Yggdrasil::Entity;
-use Yggdrasil::Property;
-use Yggdrasil::Relation;
 
-my $ygg = new Yggdrasil( user     => $ENV{YGG_USER}, 
-			 password => $ENV{YGG_PASSWORD},
-			 host     => $ENV{YGG_HOST},
-			 port     => $ENV{YGG_PORT},
-			 db       => $ENV{YGG_DB},
-			 engine   => $ENV{YGG_ENGINE} );
-
-
-# --- Define entity "Host" and property "ip" of "Host"
-# $host isa Yggdrasil::Entity
-# $ip   isa Yggdrasil::Property
-my $host = define Yggdrasil::Entity "Host";
-my $ip = define Yggdrasil::Property $host => "ip";
+new Yggdrasil(
+	      user      => $ENV{YGG_USER},
+	      password  => $ENV{YGG_PASSWORD},
+	      host      => $ENV{YGG_HOST},
+	      port      => $ENV{YGG_PORT},
+	      db        => $ENV{YGG_DB},
+	      engine    => $ENV{YGG_ENGINE},
+	      namespace => 'Ygg',
+	     );
 
 
-# --- Add entity "nommo" to "Host" and add property value
-# --- "129.240.222.179" to "ip" as belonging to "nommo"
-# $nommo isa Yggdrasil::Entity::Instance
-my $nommo = $host->add( "nommo" );
-$ip->add( $nommo => "129.240.222.179" );
+my $host = define Yggdrasil::Entity 'Host';
+# Boom, Ygg::Host && Ygg::Host::Property exists, oh, and the DB has
+# been properly populated (MetaEntity).
 
-# --- Define "Room" with property "usage"
-# $room  isa Yggdrasil::Entity
-# $usage isa Yggdrasil::Property
-my $room = define Yggdrasil::Entity "Room";
-my $usage = define Yggdrasil::Property $room => "usage";
+my $ippack = define $package 'IP', 'Type' => 'IP';
+define Ygg::Host 'Serial';
 
-# --- Add rooms and properties for "Room"
-# $b810 isa Yggdrasil::Entity::Instance
-my $b810 = $room->add( "B810" );
-$usage->add( $b810 => "Terminal room" );
-
-# --- Define relation "Host" <=> "Room"
-# $relation isa Yggdrasil::Relation
-# $host     isa Yggdrasil::Entity
-# $room     isa Yggdrasil::Entity
-# $nommo    isa Yggdrasil::Entity::Instance
-# $b810     isa Yggdrasil::Entity::Instance
-my $relation = define Yggdrasil::Relation $host => $room;
-$relation->add( $nommo, $b810 );
+my $nommo = Ygg::Host->new( 'nommo' );
+$nommo->property( 'ip' , '129.240.222.179' );
 
 
-# --- Define entity "Person"
-# $person  isa Yggdrasil::Entity
-# $student isa Yggdrasil::Entity
-my $person = define Yggdrasil::Entity "Person";
-my $student = define Yggdrasil::Entity "Student";
-derive $student from => $person;
+$nommo = Ygg::Host->get( 'nommo' );
+
+my $roompack = define Yggdrasil::Entity 'Room';
+define Ygg::Room 'use', type => 'Text';
+
+my $b810 = Ygg::Room->new( 'B810' );
+$b810->property( "use", "Terminal room" );
+
+define Yggdrasil::Relation $host, 'Room';
+$b810->relate( $nommo );
+
+
+define Yggdrasil::Entity 'Person';
+define Yggdrasil::Entity 'Student', 'Person';
+define Yggdrasil::Entity 'Student', 'Person';
+

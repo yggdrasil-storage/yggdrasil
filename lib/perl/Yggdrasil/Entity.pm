@@ -21,14 +21,16 @@ SQL
 sub _define {
     my $self = shift;
     my $name = shift;
-    
-    $self->{name} = $name;
 
     # --- Tell Storage to create SCHEMA
     $self->{storage}->dosql_update( $SCHEMA, $self );
 
     # --- Add to MetaEntity;
     $self->_meta_add($name);
+
+    my $package = join '::', $self->{namespace}, $name;
+    eval "package $package; use base qw(Yggdrasil::Entity::Instance);";
+    
 }
 
 sub _get {
