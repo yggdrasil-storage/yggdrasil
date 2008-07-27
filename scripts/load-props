@@ -1,0 +1,60 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib/perl);
+
+use Yggdrasil;
+use Yggdrasil::Entity;
+use Yggdrasil::Property;
+
+
+new Yggdrasil(  user     => $ENV{YGG_USER}, 
+		password => $ENV{YGG_PASSWORD},
+		host     => $ENV{YGG_HOST},
+		port     => $ENV{YGG_PORT},
+		db       => $ENV{YGG_DB},
+		engine   => $ENV{YGG_ENGINE} );
+
+populate();
+
+sub extract {
+    my $host = get Yggdrasil::Entity "Host";
+    my $nommo = $host->fetch( "nommo" );
+
+    
+}
+
+sub populate {
+    # --- The "props" file stores the key on one line, the value on the next
+    open( my $fh, "props" );
+    my @data = map { chomp(); $_ } <$fh>;
+    close $fh;
+    
+    my %props;
+    my $key;
+    for( my $i=0; $i<@data; $i++ ) {
+	if( $i % 2 ) {
+	    $props{$key} = $data[$i];
+	} else {
+	    $key = $data[$i];
+	}
+    }
+
+    # --- Define "Host" and add all props to host called "nommo"
+    my $host = define Yggdrasil::Entity "Host";
+    my $nommo = $host->add( "nommo" );
+    
+    while( my( $key, $val ) = each %props ) {
+	$key =~ s/ +/_/g;
+	$key =~ s/[.,:;]//g;
+	
+	my $p = define Yggdrasil::Property $host => $key;
+	$p->add( $nommo => $val );
+    }
+
+    # --- Define an additional prop with no value for host "nommo"
+    define Yggdrasil::Property $host => "nommo_has_no_value_for_this_property";
+}

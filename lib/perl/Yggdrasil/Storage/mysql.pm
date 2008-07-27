@@ -43,7 +43,7 @@ sub dosql_select {
   $sth->execute(@$args) 
     || confess( "execute??" );
 
-  # foo
+  return $sth->fetchall_arrayref( {} );
 }
 
 sub dosql_update {

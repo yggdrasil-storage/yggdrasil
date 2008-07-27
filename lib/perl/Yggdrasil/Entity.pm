@@ -51,6 +51,17 @@ sub add {
   return Yggdrasil::Entity::Instance->new( entity => $self, id => $id );
 }
 
+sub fetch {
+    my $self      = shift;
+    my $visual_id = shift;
+
+    my $props = $self->{storage}->dosql_select(
+	qq<SELECT * FROM MetaProperty WHERE entity = ?>, [$self->{name}]);
+
+    my @props = map { $_->{property} } @$props;
+    
+}
+
 sub derive {
     my $self   = shift;
     my %derive = @_;

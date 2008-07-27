@@ -3,8 +3,8 @@
 use strict;
 use warnings;
 
-use FindBin qw($RealBin);
-use lib qq(../lib/perl);
+use FindBin qw($Bin);
+use lib qq($Bin/../lib/perl);
 
 use Yggdrasil;
 use Yggdrasil::Entity;
