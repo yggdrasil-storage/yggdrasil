@@ -16,8 +16,7 @@ CREATE TABLE [name] (
   UNIQUE( visual_id(100) )
 );
 SQL
-
-
+  
 sub _define {
     my $self = shift;
     my $name = shift;
@@ -26,27 +25,29 @@ sub _define {
       die "You bastard! No hacking more from you!\n";
     }
 
-    # --- Tell Storage to create SCHEMA
-    $self->{storage}->dosql_update( $SCHEMA, { name => $name } );
-
-    # --- Add to MetaEntity;
-    $self->_meta_add($name);
-
-    # --- Create namespace
     my $package = join '::', $self->{namespace}, $name;
-    eval "package $package; use base qw(Yggdrasil::Entity::Instance);";
+    unless ($self->get( $name )) {
+	# --- Tell Storage to create SCHEMA    
+	$self->{storage}->dosql_update( $SCHEMA, { name => $name } );
 
-    # --- Create property to store visual_id changes
-    define $package "_$name";
+	# --- Add to MetaEntity;
+	$self->_meta_add($name);
 
+	# --- Create namespace
+	$self->register_namespace( $package );
+	
+	# --- Create property to store visual_id changes
+	define $package "_$name";
+    }
+    
     return $package;
 }
 
-sub _get {
+sub get {
     my $self = shift;
     my $name = shift;
 
-    
+    return $self->{storage}->get_entity( $name );
 }
 
 sub add {

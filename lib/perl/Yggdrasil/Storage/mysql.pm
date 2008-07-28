@@ -19,6 +19,47 @@ sub new {
   return $self;
 }
 
+sub entities {
+    my $self = shift;
+    my @entities;
+    
+    my $e = $self->dosql_select( "SELECT * FROM MetaEntity WHERE stop is null" );
+
+    for my $row ( @$e ) {
+	push @entities, $row->{entity};
+    }
+    return @entities;
+}
+
+sub get_entity {
+    my $self = shift;
+    my $name = shift;
+
+    my $e = $self->dosql_select( "SELECT * FROM MetaEntity WHERE stop is null and entity = ?", [ $name ] );
+
+    return $e->[0]->{entity};
+}
+
+sub get_relation {
+    my $self = shift;
+    my $name = shift;
+
+    my $e = $self->dosql_select( "SELECT * FROM MetaRelation WHERE stop is null and relation = ?", [ $name ] );
+
+    return $e->[0]->{relation};
+
+}
+
+sub get_property {
+    my $self     = shift;
+    my $entity   = shift;
+    my $property = shift;
+
+    my $e = $self->dosql_select( "SELECT * FROM MetaProperty WHERE stop is null and entity = ? and property = ?", [ $entity, $property ] );
+    
+    return $e->[0]->{property};
+}
+
 sub _prepare_sql {
   my $self = shift;
   my $sql  = shift;
@@ -26,7 +67,7 @@ sub _prepare_sql {
 
   $sql =~ s/\[(.+?)\]/$data->{$1}/ge; #'"/
 
-print $sql, "\n";
+  print $sql, "\n";
 
   return $sql;
 }

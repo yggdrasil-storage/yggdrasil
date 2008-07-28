@@ -31,11 +31,14 @@ sub _define {
 
   my $name = join("_R_", $entity1, $entity2);
 
-  # --- Create Relation table
-  $self->{storage}->dosql_update($SCHEMA, { name => $name, entity1 => $entity1, entity2 => $entity2 } );
-
-  # --- Add to MetaRelation
-  $self->_meta_add($name, $entity1, $entity2);
+  unless ($self->get( $name )) {
+      # --- Create Relation table
+      $self->{storage}->dosql_update($SCHEMA, { name => $name, entity1 => $entity1, entity2 => $entity2 } );
+      
+      # --- Add to MetaRelation
+      $self->_meta_add($name, $entity1, $entity2);
+  }
+  
 }
 
 sub add {
@@ -48,5 +51,14 @@ sub add {
 
   $self->{storage}->dosql_update( qq<INSERT INTO [name](lval,rval,start) VALUES(?,?,NOW())>, $self, [$id1, $id2] );
 }
+
+
+sub get {
+    my $self = shift;
+    my $name = shift;
+
+    return $self->{storage}->get_relation( $name );
+}
+
 
 1;

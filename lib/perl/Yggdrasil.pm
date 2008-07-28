@@ -25,7 +25,7 @@ sub new {
     my $self  = bless {}, $class;
 
     $self->_init(@_);
-
+    
     return $self;
 }
 
@@ -34,12 +34,42 @@ sub _init {
     
     if( ref $self eq __PACKAGE__ ) {
 	my %params = @_;
-	$NAMESPACE = $params{namespace} || '';
+	$self->{namespace} = $NAMESPACE = $params{namespace} || '';
 	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
+	$self->_db_init();
     } else {
 	$self->{storage} = $STORAGE;
 	$self->{namespace} = $NAMESPACE;
     }
+}
+
+# Defines structures based on the database if there is anything
+# present in it.
+sub _db_init {
+    my $self = shift;
+
+    # Check for bootstrap data, bootstrap if needed.  Check for
+    # consistency, see if either all or none of the meta tables exist
+    # The Storage layer can't check for existence, it doesn't know what
+    # structures are needed.  Hardcoding sounds iffy.
+    
+    # Populate $namespace from entities from MetaEntity.
+    my @entities = $self->{storage}->entities();
+
+    for my $entity (@entities) {
+	my $package = join '::', $self->{namespace}, $entity;
+	$self->register_namespace( $package );
+    }
+}
+
+sub register_namespace {
+    my $self = shift;
+    my $package = shift;
+
+    print "Registering namespace '$package'...\n";
+    
+    eval "package $package; use base qw(Yggdrasil::Entity::Instance);";
+    return $package;
 }
 
 

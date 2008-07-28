@@ -60,11 +60,13 @@ sub _define {
   my $entity = $self->_extract_entity();
   my $name = join("_", $entity, $property);
 
-  # --- Create Property table
-  $self->{storage}->dosql_update( $SCHEMA, { name => $name, entity => $entity } );
-
-  # --- Add to MetaProperty
-  $self->_meta_add($entity, $property);
+  unless ($self->get_property( $entity, $property )) { 
+      # --- Create Property table
+      $self->{storage}->dosql_update( $SCHEMA, { name => $name, entity => $entity } );
+      
+      # --- Add to MetaProperty
+      $self->_meta_add($entity, $property);
+  }  
 }
 
 sub property {
