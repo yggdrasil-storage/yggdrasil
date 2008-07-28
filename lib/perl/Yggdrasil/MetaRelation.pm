@@ -26,12 +26,13 @@ sub _define {
 }
 
 sub _meta_add {
-  my $self    = shift;
-  my $entity1 = shift;
-  my $entity2 = shift;
+  my $self     = shift;
+  my $relation = shift;
+  my $entity1  = shift;
+  my $entity2  = shift;
 
-  $self->{storage}->dosql_update( qq<INSERT INTO MetaRelation(relation,entity1,entity2,start) VALUES(?, ?, ?, NOW())>, 
-				  [$self->{name}, $entity1->{name}, $entity2->{name} ] );
+  $self->{storage}->update( "MetaRelation", relation => $relation, 
+			    entity1 => $entity1, entity2 => $entity2 );
 }
 
 1;

@@ -26,15 +26,16 @@ sub _define {
   my $entity1 = shift;
   my $entity2 = shift;
 
-  $self->{name} = join("_R_", $entity1->{name}, $entity2->{name});
-  $self->{entity1} = $entity1->{name};
-  $self->{entity2} = $entity2->{name};
+  $entity1 =~ s/.*:://;
+  $entity2 =~ s/.*:://;
+
+  my $name = join("_R_", $entity1, $entity2);
 
   # --- Create Relation table
-  $self->{storage}->dosql_update($SCHEMA, $self );
+  $self->{storage}->dosql_update($SCHEMA, { name => $name, entity1 => $entity1, entity2 => $entity2 } );
 
   # --- Add to MetaRelation
-  $self->_meta_add($entity1, $entity2);
+  $self->_meta_add($name, $entity1, $entity2);
 }
 
 sub add {

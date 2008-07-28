@@ -29,7 +29,7 @@ sub _meta_add {
   my $entity = shift;
   my $key    = shift;
 
-  $self->{storage}->dosql_update( qq<INSERT INTO MetaProperty(entity,property,start) VALUES(?, ?, NOW())>, [$entity->{name}, $key] );
+  $self->{storage}->update( "MetaProperty", entity => $entity, property => $key );
 }
 
 1;

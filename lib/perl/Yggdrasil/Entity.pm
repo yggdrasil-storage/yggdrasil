@@ -22,23 +22,31 @@ sub _define {
     my $self = shift;
     my $name = shift;
 
+    unless( $name =~ /^[a-z]\w*$/i ) {
+      die "You bastard! No hacking more from you!\n";
+    }
+
     # --- Tell Storage to create SCHEMA
-    $self->{storage}->dosql_update( $SCHEMA, $self );
+    $self->{storage}->dosql_update( $SCHEMA, { name => $name } );
 
     # --- Add to MetaEntity;
     $self->_meta_add($name);
 
+    # --- Create namespace
     my $package = join '::', $self->{namespace}, $name;
     eval "package $package; use base qw(Yggdrasil::Entity::Instance);";
-    
+
+    # --- Create property to store visual_id changes
+    define $package "_$name";
+
+    return $package;
 }
 
 sub _get {
     my $self = shift;
     my $name = shift;
 
-    # FIX: Check that Entity actually exists?
-    $self->{name} = $name;
+    
 }
 
 sub add {

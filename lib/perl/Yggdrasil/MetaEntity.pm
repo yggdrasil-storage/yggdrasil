@@ -26,7 +26,7 @@ sub _meta_add {
     my $self = shift;
     my $name = shift;
 
-  $self->{storage}->dosql_update( qq<INSERT INTO MetaEntity(entity,start) VALUES(?, NOW())>, [$name] );
+    $self->{storage}->update( "MetaEntity", entity => $name );
 }
 
 1;

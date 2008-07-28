@@ -6,18 +6,14 @@ sub define {
     my $class = shift;
     my $self  = $class->new(@_);
     
-    $self->_define(@_);
-
-    return $self;
+    return $self->_define(@_);
 }
 
 sub get {
     my $class = shift;
     my $self  = $class->new(@_);
 
-    $self->_get(@_);
-
-    return $self;
+    return $self->_get(@_);
 }
 
 sub _define { die "_define not declared for class " . shift() . "\n" }

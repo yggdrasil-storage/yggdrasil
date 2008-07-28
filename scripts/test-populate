@@ -23,14 +23,33 @@ my $host = define Yggdrasil::Entity 'Host';
 # Boom, Ygg::Host && Ygg::Host::Property exists, oh, and the DB has
 # been properly populated (MetaEntity).
 
-my $ippack = define $package 'IP', 'Type' => 'IP';
+my $ippack = define $host 'ip', 'Type' => 'IP';
+
+
+
 define Ygg::Host 'Serial';
 
-my $nommo = Ygg::Host->new( 'nommo' );
-$nommo->property( 'ip' , '129.240.222.179' );
+my $nommo  = Ygg::Host->new( 'nommo' );
+my $baal   = Ygg::Host->new( 'baal' );
+my $escher = Ygg::Host->new( 'escher' );
+$nommo->property( 'ip' , 'n1' );
+$nommo->property( 'ip' , 'n2' );
+$nommo->property( 'ip' , 'n3' );
+sleep 2;
+$nommo->property( 'ip' , 'n1' );
+$nommo->property( 'Serial', 'nserial');
+
+$baal->property( 'ip' , 'b1' );
+$baal->property( 'ip' , 'b2' );
+$baal->property( 'Serial', 'bserial');
+
+$escher->property( 'Serial', 'eserial');
+$escher->property( 'ip', 'e1');
+
 
 
 $nommo = Ygg::Host->get( 'nommo' );
+print "------>>>> $nommo->{_id}\n";
 
 my $roompack = define Yggdrasil::Entity 'Room';
 define Ygg::Room 'use', type => 'Text';
@@ -38,8 +57,14 @@ define Ygg::Room 'use', type => 'Text';
 my $b810 = Ygg::Room->new( 'B810' );
 $b810->property( "use", "Terminal room" );
 
+
+
 define Yggdrasil::Relation $host, 'Room';
+
 $b810->relate( $nommo );
+
+__DATA__
+
 
 
 define Yggdrasil::Entity 'Person';
