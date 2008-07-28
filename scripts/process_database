@@ -36,7 +36,7 @@ die 'prepare died' unless $sth;
 $sth->execute() || die 'execute died ';
 
 while (my @row_array = $sth->fetchrow_array) {
-    print " * ", $row_array[0], "\n";
+    print "* ", $row_array[0], "\n";
     if ($dump) {
 	my $table = $dbh->prepare( "select * from $row_array[0]" );
 	die 'prepare died' unless $table;
@@ -47,6 +47,7 @@ while (my @row_array = $sth->fetchrow_array) {
 	    for my $c (@row) {
 		push @data, $c || 'NULL';
 	    }
+	    print "   ";
 	    print join " | ", @data;
 	    print "\n";
 	}
