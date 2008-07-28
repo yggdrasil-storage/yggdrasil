@@ -6,12 +6,13 @@ use warnings;
 use DBI;
 use Getopt::Long;
 
-my ($zap, $dump) = (0, 0);
+my ($zap, $dump, $bootstrap) = (0, 0);
 
 GetOptions(
     "zap"  => \$zap,
     "dump" => \$dump,
     "help" => \&help,
+    "bootstrap" => \$bootstrap,
     );
 
 my ($engine, $db, $host, $user, $password, $port) = (lc $ENV{YGG_ENGINE},
@@ -56,6 +57,12 @@ while (my @row_array = $sth->fetchrow_array) {
     
     if ($zap) {
 	$dbh->do( "DROP TABLE $row_array[0]" );
+    } elsif ($bootstrap) {
+	if ($row_array[0] =~ /Meta/) {
+	    $dbh->do( "TRUNCATE TABLE $row_array[0]");
+	} else {
+	    $dbh->do( "DROP TABLE $row_array[0]" );
+	}
     }
 }
 
@@ -74,3 +81,4 @@ Options:
 --help        Help text
 --zap         Zap the entire database
 --dump        Dump all tables
+--bootstrap   Remove all non-meta tables, truncate meta tables.
