@@ -36,7 +36,6 @@ sub _init {
 	my %params = @_;
 	$self->{namespace} = $NAMESPACE = $params{namespace} || '';
 	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
-	$self->_db_init();
     } else {
 	$self->{storage} = $STORAGE;
 	$self->{namespace} = $NAMESPACE;
@@ -45,13 +44,15 @@ sub _init {
 
 # Defines structures based on the database if there is anything
 # present in it.
-sub _db_init {
+sub load {
     my $self = shift;
 
     # Check for bootstrap data, bootstrap if needed.  Check for
     # consistency, see if either all or none of the meta tables exist
     # The Storage layer can't check for existence, it doesn't know what
     # structures are needed.  Hardcoding sounds iffy.
+    
+    # For i in MetaEntity .. MetaInheritance
     
     # Populate $namespace from entities from MetaEntity.
     my @entities = $self->{storage}->entities();

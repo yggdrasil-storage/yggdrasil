@@ -154,17 +154,25 @@ sub update {
     elsif( $schema =~ /_R_/ ) {
       $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and (lval = ? and rval = ?) or (rval = ? and lval = ?)", $data{lval}, $data{rval}, $data{rval}, $data{lval} );
     }
+    # Do we have an active property value that's different from the one we're trying to insert.
     elsif( $schema =~ /_/ ) {
       $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and id = ? and value != ?", [$data{id}, $data{value}] );
+      
+      # Are we trying to insert the exact same value for the same property again?
+      # If so, do nothing and return the ID of the previous entry.
+      if (! @$e) {
+	  my $old = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and id = ? and value = ?", [$data{id}, $data{value}] );
+	  return $old->[0]->{id} if $old->[0]->{id};
+      }
     }
-    else {
+   else {
       $e = $self->dosql_select( "SELECT * FROM $schema WHERE visual_id = ?", [$data{visual_id}] );
     }
 
 
     # --- 1a. if exists set "end" to NOW()
     use Data::Dumper;
-    print Dumper( $e ), "\n";
+    print "*", Dumper( $e ), "\n";
     if( @$e ) {
       if(  $schema =~ /_R_/ || $schema =~ /_/ || grep { $schema eq $_ } 'MetaProperty', 'MetaEntity', 'MetaRelation', 'MetaInheritance' ) {
 	my $row = shift @$e;
