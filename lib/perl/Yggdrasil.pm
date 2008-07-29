@@ -3,6 +3,8 @@ package Yggdrasil;
 use strict;
 use warnings;
 
+use Carp;
+
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
@@ -36,6 +38,7 @@ sub _init {
 	my %params = @_;
 	$self->{namespace} = $NAMESPACE = $params{namespace} || '';
 	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
+	$self->_db_init();
     } else {
 	$self->{storage} = $STORAGE;
 	$self->{namespace} = $NAMESPACE;
@@ -44,15 +47,13 @@ sub _init {
 
 # Defines structures based on the database if there is anything
 # present in it.
-sub load {
+sub _db_init {    
     my $self = shift;
 
     # Check for bootstrap data, bootstrap if needed.  Check for
-    # consistency, see if either all or none of the meta tables exist
-    # The Storage layer can't check for existence, it doesn't know what
-    # structures are needed.  Hardcoding sounds iffy.
-    
-    # For i in MetaEntity .. MetaInheritance
+    # consistency, create any meta tables that are missing
+    my @missing = $self->{storage}->bootstrap_missing();
+    $self->bootstrap( @missing ) if @missing;
     
     # Populate $namespace from entities from MetaEntity.
     my @entities = $self->{storage}->entities();
@@ -75,10 +76,19 @@ sub register_namespace {
 
 
 sub bootstrap {
-    define Yggdrasil::MetaEntity;
-    define Yggdrasil::MetaRelation;
-    define Yggdrasil::MetaProperty;
-    define Yggdrasil::MetaInheritance;
+    my $self = shift;
+    my @structures = @_;
+
+    if ($self && @structures) {
+	for my $structure (@structures) {
+	    eval "define Yggdrasil::$structure";
+	}
+    } else {
+	define Yggdrasil::MetaEntity;
+	define Yggdrasil::MetaRelation;
+	define Yggdrasil::MetaProperty;
+	define Yggdrasil::MetaInheritance;
+    }
 }
 
 sub _extract_entity {
