@@ -34,7 +34,7 @@ sub _define {
 	$self->_meta_add($name);
 
 	# --- Create namespace
-	$self->register_namespace( $package );
+	$self->_register_namespace( $package );
 	
 	# --- Create property to store visual_id changes
 	define $package "_$name";

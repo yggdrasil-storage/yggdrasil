@@ -60,11 +60,11 @@ sub _db_init {
 
     for my $entity (@entities) {
 	my $package = join '::', $self->{namespace}, $entity;
-	$self->register_namespace( $package );
+	$self->_register_namespace( $package );
     }
 }
 
-sub register_namespace {
+sub _register_namespace {
     my $self = shift;
     my $package = shift;
 
