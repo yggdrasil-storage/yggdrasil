@@ -52,8 +52,7 @@ sub _db_init {
 
     # Check for bootstrap data, bootstrap if needed.  Check for
     # consistency, create any meta tables that are missing
-    my @missing = $self->{storage}->bootstrap_missing();
-    $self->bootstrap( @missing ) if @missing;
+    $self->bootstrap();
     
     # Populate $namespace from entities from MetaEntity.
     my @entities = $self->{storage}->entities();
@@ -74,21 +73,11 @@ sub _register_namespace {
     return $package;
 }
 
-
 sub bootstrap {
-    my $self = shift;
-    my @structures = @_;
-
-    if ($self && @structures) {
-	for my $structure (@structures) {
-	    eval "define Yggdrasil::$structure";
-	}
-    } else {
-	define Yggdrasil::MetaEntity;
-	define Yggdrasil::MetaRelation;
-	define Yggdrasil::MetaProperty;
-	define Yggdrasil::MetaInheritance;
-    }
+    define Yggdrasil::MetaEntity;
+    define Yggdrasil::MetaRelation;
+    define Yggdrasil::MetaProperty;
+    define Yggdrasil::MetaInheritance;
 }
 
 sub _extract_entity {

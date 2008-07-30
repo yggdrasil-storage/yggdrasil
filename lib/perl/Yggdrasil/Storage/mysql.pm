@@ -21,26 +21,19 @@ sub new {
   return $self;
 }
 
-sub bootstrap_missing {
+sub get_meta {
     my $self = shift;
-    my %require = (MetaEntity => 1, MetaInheritance => 1, MetaProperty => 1, MetaRelation => 1);
+    my $meta = shift;
     
-    my $e = $self->dosql_select( "SHOW TABLES LIKE 'Meta%%'" );
-
-    use Data::Dumper;
-    print "*", Dumper( $e ), "\n";
+    my $e = $self->dosql_select( "SHOW TABLES LIKE '$meta'" );
 
     for my $row ( @$e ) {
 	for my $table ( values %$row ) {
-	    delete $require{$table};
+	    return $meta if $table eq $meta;
 	}    
     } 
+    return 0;
 
-    my @missing;
-    for my $missing (keys %require) {
-	push @missing, $missing;
-    }
-
-    return @missing;
 }
+
 1;

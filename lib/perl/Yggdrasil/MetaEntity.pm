@@ -19,7 +19,9 @@ SQL
 sub _define {
     my $self = shift;
 
-    $self->{storage}->dosql_update($SCHEMA);
+    unless ($self->{storage}->get_meta('MetaEntity')) {
+	$self->{storage}->dosql_update($SCHEMA);
+    }    
 }
 
 sub _meta_add {
