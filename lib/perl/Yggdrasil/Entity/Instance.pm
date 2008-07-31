@@ -195,6 +195,8 @@ sub fetch_related {
       my $obj = $name->new( $r->{visual_id} );
 
       $result{$r->{visual_id}} = $obj;
+
+      print "ZOOM ---> [ID] = [$obj->{_id}]\n";
     }
   }
 
@@ -208,13 +210,13 @@ sub _relation_side {
 
   my( $e1, $e2 ) = split /_R_/, $table;
 
-  print "ZOOM --> is $entity first in $table?\n";
+#  print "ZOOM --> is $entity first in $table?\n";
 
   if ($e1 eq $entity) {
-    print "ZOOM --> Yes\n";
+#    print "ZOOM --> Yes\n";
     return 'lval';
   } else {
-    print "ZOOM --> No\n";
+#    print "ZOOM --> No\n";
 
     return 'rval';
   }

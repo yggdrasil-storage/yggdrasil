@@ -111,6 +111,17 @@ for my $e (qw /Telephone Contractor Room/ ) {
   if (@res) {
     for my $p ( @res ) {
       print "ZOOM * ", $terje->id(), " has $e ", $p->id(), "\n";
+
+      my @res2 = $p->fetch_related( $person );
+
+      if( @res2 ) {
+	for my $p2 ( @res2 ) {
+	  print "ZOOM * ", $p->id(), " has Person ", $p2->id(), "\n";
+	  
+	}
+      } else {
+	print "ZOOM * ", $p->id(), " is not related to Person.\n";
+      }
     }
   } else {
     print "ZOOM * ", $terje->id(), " is not related to $e.\n";
