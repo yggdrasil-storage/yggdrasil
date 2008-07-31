@@ -6,14 +6,15 @@ use warnings;
 use DBI;
 use Getopt::Long;
 
-my ($zap, $dump, $bootstrap, $dereference) = (0, 0);
+my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 0);
 
 GetOptions(
-    "zap"  => \$zap,
-    "dump" => \$dump,
-    "help" => \&help,
-    "bootstrap" => \$bootstrap,
+    "zap"         => \$zap,
+    "dump"        => \$dump,
+    "help"        => \&help,
+    "bootstrap"   => \$bootstrap,
     "dereference" => \$dereference,
+    "tables=s"    => \$onlytables,
     );
 
 my ($engine, $db, $host, $user, $password, $port) = ($ENV{YGG_ENGINE},
@@ -25,6 +26,17 @@ my ($engine, $db, $host, $user, $password, $port) = ($ENV{YGG_ENGINE},
 						    );
 my ($dbh, $sql);
 
+my %display_tables;
+if ($onlytables) {
+    if ($onlytables =~ /,/) {
+	for my $t (split /,/, $onlytables) {
+	    $display_tables{$t}++;
+	} 
+    } else {
+	$display_tables{$onlytables}++;
+    }
+}
+
 if (lc $engine eq 'mysql') {
     $sql = "SHOW TABLES";        
 } elsif (lc $engine eq 'pg') {    
@@ -33,41 +45,48 @@ if (lc $engine eq 'mysql') {
 
 $dbh = DBI->connect("DBI:$engine:database=$db;host=$host;port=$port", $user, $password );
 
-my $sth = $dbh->prepare( $sql );
-die 'prepare died' unless $sth;
-$sth->execute() || die 'execute died ';
 
 my %idents;
 
-while (my @row_array = $sth->fetchrow_array) {
-    print "* ", $row_array[0], "\n";
-    if ($dump) {
-	my $table = $dbh->prepare( "select * from $row_array[0]" );
-	die 'prepare died' unless $table;
-	$table->execute() || die 'execute died ';
+my $tablesref = $dbh->selectall_arrayref( $sql );
 
-	while (my @row = $table->fetchrow_array) {
+for my $row_arrayref (sort stupidsort @$tablesref) {
+    my @row_array = @$row_arrayref;
+    print "* ", $row_array[0], "\n" if &display($row_array[0]);
+    if ($dump) {
+	my $tableref = $dbh->selectall_arrayref( "select * from $row_array[0]" );
+	for my $rowref (@$tableref) {
+	    my @row = @$rowref;
 	    if ($row_array[0] =~ /^[^_]+$/ && $row_array[0] !~ /^Meta/) {
 		$idents{$row_array[0]}->{$row[0]} = $row[1];
-	    }
+	    } 
 
  	    my @data;
+	    my $i = 0;
+	    my ($lval, $rval) = ();
 	    for my $c (@row) {
-		if ($c && $c =~ /^\d+$/ && $row_array[0] =~ /^([a-z]+)_\w+$/i) {
+		if ($dereference && $c && $c =~ /^\d+$/ && $row_array[0] =~ /^([a-z]+)_\w+$/i) {
 		    my $key = $1;
-#		    print "* $key :: $c\n";
-		    if ($dereference && $idents{$key} && $idents{$key}->{$c}) {
-			$c = "$c (" . $idents{$key}->{$c} . ")";
+		    if ($row_array[0] =~ /^([^_]+)_R_([^_]+)/) {
+			# id | $1 | $2
+			($lval, $rval) = ($1, $2);
+			if ($i == 1 && $idents{$lval} && $idents{$lval}->{$c}) {
+			    $c = "$c (" . $idents{$lval}->{$c} . ")";
+			} elsif ($i == 2 && $idents{$rval} && $idents{$rval}->{$c}) {
+			    $c = "$c (" . $idents{$rval}->{$c} . ")";
+			}
+		    } else {
+			if ($idents{$key} && $idents{$key}->{$c}) {
+			    $c = "$c (" . $idents{$key}->{$c} . ")";
+			}
 		    }
-		    
 		}
+		$i++;
 		push @data, $c || 'NULL';
 	    }
-	    print "   ";
-	    print join " | ", @data;
-	    print "\n";
+	    printf "   %s\n", join(" | ", @data) if &display($row_array[0]);
 	}
-	print "\n";
+	print "\n" if &display($row_array[0]);
     } 
     
     if ($zap) {
@@ -79,6 +98,21 @@ while (my @row_array = $sth->fetchrow_array) {
 	    $dbh->do( "DROP TABLE $row_array[0]" );
 	}
     }
+}
+
+sub display {
+    my $table = shift;
+
+    return 1 if ! keys %display_tables || $display_tables{$table};
+    return 0;
+}
+
+sub stupidsort {
+    if ( $a->[0] =~ /_/ ) {
+	return 1
+    } else {
+	return -1
+    } 
 }
 
 sub help {
@@ -97,3 +131,5 @@ Options:
 --zap         Zap the entire database
 --dump        Dump all tables
 --bootstrap   Remove all non-meta tables, truncate meta tables.
+--dereference Dereference keys
+--tables      Display the comma separated list of tables given only
