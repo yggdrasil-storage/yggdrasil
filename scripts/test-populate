@@ -74,6 +74,10 @@ my $phone = define Yggdrasil::Entity "Telephone";
 my $ophone = $phone->new( "22 85 54 02" );
 
 
+# --- Define contractor
+my $con = define Yggdrasil::Entity "Contractor";
+my $bravida = $con->new( "Bravida" );
+
 
 # --- Define Relations
 # room<->phone
@@ -83,7 +87,9 @@ my $ophone = $phone->new( "22 85 54 02" );
 define Yggdrasil::Relation $host, 'Room';
 define Yggdrasil::Relation $room, $phone;
 define Yggdrasil::Relation $person, $host;
+define Yggdrasil::Relation $phone, $con;
 
+define Yggdrasil::Relation $person, $phone;
 
 $b810->link( $nommo );
 $nommo->unlink( $b810 );
@@ -96,16 +102,20 @@ $b701->link( $baal );
 
 $b701->link( $ophone );
 
+$bravida->link( $ophone );
+$terje->link( $ophone );
 
-my @chain = $terje->link_to( $phone );
-my $last = shift @chain;
-foreach my $part ( @chain ) {
-  print $last->id(), " relates to ", $part->id(), "\n";
-} continue {
-  $last = $part;
+for my $e (qw /Telephone Contractor Room/ ) {
+  my @res = $terje->fetch_related( $e );
+
+  if (@res) {
+    for my $p ( @res ) {
+      print "ZOOM * ", $terje->id(), " has $e ", $p->id(), "\n";
+    }
+  } else {
+    print "ZOOM * ", $terje->id(), " is not related to $e.\n";
+  }
 }
-
-
 
 
 __DATA__

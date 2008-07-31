@@ -17,6 +17,34 @@ sub entities {
     return @entities;
 }
 
+sub relations {
+  my $self = shift;
+  my @relations;
+
+  my $e = $self->dosql_select( "SELECT * FROM MetaRelation WHERE stop is null" );
+
+  for my $row ( @$e ) {
+    push( @relations, [ $row->{entity1}, $row->{entity2}, $row->{relation} ] );
+  }
+
+  return @relations;
+}
+
+sub get_relations {
+  my $self = shift;
+  my $relation = shift;
+
+  my $e = $self->dosql_select( "SELECT * FROM MetaRelation WHERE stop is null and (entity1 = ? or entity2 = ?)",
+			       [$relation, $relation] );
+
+  my @children;
+  for my $row ( @$e ) {
+    push( @children, $row->{entity1} eq $relation ? $row->{entity2} : $row->{entity1} );
+  }
+
+  return @children;
+}
+
 sub get_entity {
     my $self = shift;
     my $name = shift;
@@ -74,7 +102,6 @@ sub _prepare_sql {
 sub dosql_select {
   my $self = shift;
   my $sql  = shift;
-  
   my $args;
   $args = pop if ref $_[-1] eq "ARRAY";
   
@@ -140,6 +167,15 @@ sub fetch {
   }
 }
 
+sub expire {
+  my $self = shift;
+  my $schema = shift;
+  my %data = @_;
+
+  $self->dosql_update( "UPDATE $schema SET stop = NOW() WHERE stop is null and ( (lval = ? and rval = ?) or (lval = ? and rval = ?) )", [$data{lval}, $data{rval}, $data{rval}, $data{lval}] );
+}
+
+
 sub update {
     my $self = shift;
     my $schema = shift;
@@ -157,7 +193,7 @@ sub update {
       $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and entity = ?", [$data{entity}] );
     }
     elsif( $schema =~ /_R_/ ) {
-      $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and (lval = ? and rval = ?) or (rval = ? and lval = ?)", [ $data{lval}, $data{rval}, $data{rval}, $data{lval} ] );
+      $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and ( (lval = ? and rval = ?) or (rval = ? and lval = ?) )", [ $data{lval}, $data{rval}, $data{rval}, $data{lval} ] );
     }
     # Do we have an active property value that's different from the one we're trying to insert.
     elsif( $schema =~ /_/ ) {
