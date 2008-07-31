@@ -6,7 +6,7 @@ use warnings;
 use DBI;
 use Getopt::Long;
 
-my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 0);
+my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 1, 0, 1);
 
 GetOptions(
     "zap"         => \$zap,
