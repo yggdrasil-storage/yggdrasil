@@ -85,6 +85,14 @@ sub property {
     return $storage->fetch( $name, id => $self->{_id} );
 }
 
+sub properties {
+    my $self = shift;
+    my $class = ref $self;
+    $class =~ s/.*:://;
+    
+    return $self->{storage}->properties( $class );
+}
+
 sub relate {
   my $self     = shift;
   my $instance = shift;

@@ -36,6 +36,19 @@ sub get_relation {
 
 }
 
+sub properties {
+    my $self = shift;
+    my $entity = shift;
+    my @props;
+
+    my $e = $self->dosql_select( "SELECT * FROM MetaProperty WHERE stop is null and entity = ? ", [ $entity ] );
+    for my $row (@$e) {
+	my $prop = $row->{property};
+	push @props, $prop unless $prop =~ /^_/;
+    }
+    return @props;
+}
+
 sub get_property {
     my $self     = shift;
     my $entity   = shift;
