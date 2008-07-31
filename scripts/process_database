@@ -15,7 +15,7 @@ GetOptions(
     "bootstrap" => \$bootstrap,
     );
 
-my ($engine, $db, $host, $user, $password, $port) = (lc $ENV{YGG_ENGINE},
+my ($engine, $db, $host, $user, $password, $port) = ($ENV{YGG_ENGINE},
 						     $ENV{YGG_DB},
 						     $ENV{YGG_HOST},
 						     $ENV{YGG_USER},
