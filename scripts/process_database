@@ -10,7 +10,7 @@ my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 1, 0, 1);
 
 GetOptions(
     "zap"         => \$zap,
-    "dump"        => \$dump,
+    "dump!"        => \$dump,
     "help"        => \&help,
     "bootstrap"   => \$bootstrap,
     "dereference" => \$dereference,
@@ -77,7 +77,7 @@ for my $row_arrayref (sort stupidsort @$tablesref) {
 			    $c = "$c (" . $idents{$rval}->{$c} . ")";
 			}
 		    } else {
-			if ($idents{$key} && $idents{$key}->{$c}) {
+			if ($i == 0 && $idents{$key} && $idents{$key}->{$c}) {
 			    $c = "$c (" . $idents{$key}->{$c} . ")";
 			}
 		    }
