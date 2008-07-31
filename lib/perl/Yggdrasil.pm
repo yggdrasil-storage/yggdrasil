@@ -38,6 +38,9 @@ sub _init {
 	my %params = @_;
 	$self->{namespace} = $NAMESPACE = $params{namespace} || '';
 	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
+
+	die "No storage layer initalized, aborting.\n" unless $STORAGE;
+
 	$self->_db_init();
     } else {
 	$self->{storage} = $STORAGE;
