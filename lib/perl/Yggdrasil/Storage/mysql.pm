@@ -36,4 +36,10 @@ sub get_meta {
 
 }
 
+sub _get_last_id {
+    my $self = shift;
+
+    return $self->{dbh}->{mysql_insertid};
+}
+
 1;

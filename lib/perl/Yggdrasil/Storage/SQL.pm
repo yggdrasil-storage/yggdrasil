@@ -98,6 +98,12 @@ sub dosql_update {
 
   my $args;
   $args = pop if ref $_[-1] eq "ARRAY";
+
+  if ($sql =~ /^CREATE TABLE/) {
+      $sql = $self->_table_filter( $sql );
+  } elsif ($sql =~ /^UPDATE/) {
+      $sql = $self->_update_filter( $sql );
+  }
   
   $sql = $self->_prepare_sql( $sql, @_ );
 
@@ -110,7 +116,7 @@ sub dosql_update {
   $sth->execute(@$args) 
     || confess( "failed to execute '$sql' with arguments [$args_str]" );
 
-  return $self->{dbh}->{mysql_insertid};
+  return $self->_get_last_id( $sql );
 }
 
 sub fetch {
@@ -151,7 +157,7 @@ sub update {
       $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and entity = ?", [$data{entity}] );
     }
     elsif( $schema =~ /_R_/ ) {
-      $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and (lval = ? and rval = ?) or (rval = ? and lval = ?)", $data{lval}, $data{rval}, $data{rval}, $data{lval} );
+      $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and (lval = ? and rval = ?) or (rval = ? and lval = ?)", [ $data{lval}, $data{rval}, $data{rval}, $data{lval} ] );
     }
     # Do we have an active property value that's different from the one we're trying to insert.
     elsif( $schema =~ /_/ ) {
@@ -170,18 +176,20 @@ sub update {
 
 
     # --- 1a. if exists set "end" to NOW()
-    use Data::Dumper;
-    print "*", Dumper( $e ), "\n";
+#    use Data::Dumper;
+#    print "*", Dumper( $e ), "\n";
     if( @$e ) {
       if(  $schema =~ /_R_/ || $schema =~ /_/ || grep { $schema eq $_ } 'MetaProperty', 'MetaEntity', 'MetaRelation', 'MetaInheritance' ) {
 	my $row = shift @$e;
 	my @fields;
 	my @values;
 	foreach my $key ( keys %$row ) {
-	  my $magic = defined $row->{$key} ? " = " : " is ";
-
-	  push( @fields, join($magic, $key, "?") );
-	  push( @values, $row->{$key} );
+	    if (! defined $row->{$key}) {
+		push( @fields, "$key is NULL" );
+	    } else {
+		push( @fields, join('=', $key, "?") );
+		push( @values, $row->{$key} );
+	    }
 	}
 	my $where = join(" and ", @fields);
 	
@@ -200,9 +208,19 @@ sub update {
 
 	return $self->dosql_update( "INSERT INTO $schema($columns, start) VALUES($question, NOW())", [values %data] );
       } else {
-
 	return $self->dosql_update( "INSERT INTO $schema($columns) VALUES($question)", [values %data] );
-
       }
 }
+
+sub _table_filter {
+    my $self = shift;
+    return $_[0];
+}
+
+sub _update_filter {
+    my $self = shift;
+    return $_[0];
+}
+
 1;
+
