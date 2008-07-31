@@ -6,13 +6,14 @@ use warnings;
 use DBI;
 use Getopt::Long;
 
-my ($zap, $dump, $bootstrap) = (0, 0);
+my ($zap, $dump, $bootstrap, $dereference) = (0, 0);
 
 GetOptions(
     "zap"  => \$zap,
     "dump" => \$dump,
     "help" => \&help,
     "bootstrap" => \$bootstrap,
+    "dereference" => \$dereference,
     );
 
 my ($engine, $db, $host, $user, $password, $port) = ($ENV{YGG_ENGINE},
@@ -36,6 +37,8 @@ my $sth = $dbh->prepare( $sql );
 die 'prepare died' unless $sth;
 $sth->execute() || die 'execute died ';
 
+my %idents;
+
 while (my @row_array = $sth->fetchrow_array) {
     print "* ", $row_array[0], "\n";
     if ($dump) {
@@ -44,8 +47,20 @@ while (my @row_array = $sth->fetchrow_array) {
 	$table->execute() || die 'execute died ';
 
 	while (my @row = $table->fetchrow_array) {
-	    my @data;
+	    if ($row_array[0] =~ /^[^_]+$/ && $row_array[0] !~ /^Meta/) {
+		$idents{$row_array[0]}->{$row[0]} = $row[1];
+	    }
+
+ 	    my @data;
 	    for my $c (@row) {
+		if ($c && $c =~ /^\d+$/ && $row_array[0] =~ /^([a-z]+)_\w+$/i) {
+		    my $key = $1;
+#		    print "* $key :: $c\n";
+		    if ($dereference && $idents{$key} && $idents{$key}->{$c}) {
+			$c = "$c (" . $idents{$key}->{$c} . ")";
+		    }
+		    
+		}
 		push @data, $c || 'NULL';
 	    }
 	    print "   ";
