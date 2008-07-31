@@ -53,6 +53,7 @@ my $tablesref = $dbh->selectall_arrayref( $sql );
 for my $row_arrayref (sort stupidsort @$tablesref) {
     my @row_array = @$row_arrayref;
     print "* ", $row_array[0], "\n" if &display($row_array[0]);
+    my @tabledata;
     if ($dump) {
 	my $tableref = $dbh->selectall_arrayref( "select * from $row_array[0]" );
 	for my $rowref (@$tableref) {
@@ -84,8 +85,30 @@ for my $row_arrayref (sort stupidsort @$tablesref) {
 		$i++;
 		push @data, $c || 'NULL';
 	    }
-	    printf "   %s\n", join(" | ", @data) if &display($row_array[0]);
+	    push @tabledata, \@data;
 	}
+
+	my @widths;
+	if (&display($row_array[0])) {
+	    for my $rowref (@tabledata) {
+		my $index = 0;
+		for my $entry (@$rowref) {
+		    my $l = length $entry;
+		    $widths[$index] = $l if !$widths[$index] || $l > $widths[$index];
+		    $index++;
+		}
+	    }
+	    for my $rowref (@tabledata) {
+		my $index = 0;
+		my @data;
+		for my $entry (@$rowref) {
+		    push @data, sprintf "%-@{[$widths[$index]]}s", $entry;
+		    $index++;
+		}
+		printf join(" | ", @data) . "\n";
+	    }
+	}
+	
 	print "\n" if &display($row_array[0]);
     } 
     
