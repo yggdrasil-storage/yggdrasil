@@ -19,13 +19,10 @@ new Yggdrasil(
 	     );
 
 
+# --- Define Hosts
 my $host = define Yggdrasil::Entity 'Host';
-# Boom, Ygg::Host && Ygg::Host::Property exists, oh, and the DB has
-# been properly populated (MetaEntity).
-
-my $ippack = define $host 'ip', 'Type' => 'IP';
-
-define Ygg::Host 'Serial';
+my $ip = define $host 'ip', 'Type' => 'IP';
+my $serial = define $host 'Serial';
 
 my $nommo  = Ygg::Host->new( 'nommo' );
 my $baal   = Ygg::Host->new( 'baal' );
@@ -33,8 +30,9 @@ my $escher = Ygg::Host->new( 'escher' );
 $nommo->property( 'ip' , 'n1' );
 $nommo->property( 'ip' , 'n2' );
 $nommo->property( 'ip' , 'n3' );
-sleep 2;
-$nommo->property( 'ip' , 'n1' );
+
+#sleep 2;
+#$nommo->property( 'ip' , 'n1' );
 $nommo->property( 'Serial', 'nserial');
 
 $baal->property( 'ip' , 'b1' );
@@ -44,22 +42,71 @@ $baal->property( 'Serial', 'bserial');
 $escher->property( 'Serial', 'eserial');
 $escher->property( 'ip', 'e1');
 
-
-
 $nommo = Ygg::Host->get( 'nommo' );
 print "------>>>> $nommo->{_id}\n";
 
-my $roompack = define Yggdrasil::Entity 'Room';
+# --- Define Rooms
+my $room = define Yggdrasil::Entity 'Room';
 define Ygg::Room 'use', type => 'Text';
 
 my $b810 = Ygg::Room->new( 'B810' );
 $b810->property( "use", "Terminal room" );
 
+my $b701 = $room->new( "B701" );
+$b701->property( "use", "Hang-out" );
 
+
+# --- Define Persons
+my $person = define Yggdrasil::Entity "Person";
+define $person "name";
+define $person "position";
+define $person "department";
+
+my $terje = $person->new( "terjekv" );
+$terje->property( name => "Terje Kvernes" );
+my $bard  = $person->new( "bard" );
+$bard->property( name => "Bård" );
+
+
+
+# --- Define Phones
+my $phone = define Yggdrasil::Entity "Telephone";
+my $ophone = $phone->new( "22 85 54 02" );
+
+
+
+# --- Define Relations
+# room<->phone
+# host<->room
+# person<->host
 
 define Yggdrasil::Relation $host, 'Room';
+define Yggdrasil::Relation $room, $phone;
+define Yggdrasil::Relation $person, $host;
 
-$b810->relate( $nommo );
+
+$b810->link( $nommo );
+$nommo->unlink( $b810 );
+
+$terje->link( $nommo );
+$bard->link( $baal );
+
+$nommo->link( $b701 );
+$b701->link( $baal );
+
+$b701->link( $ophone );
+
+
+my @chain = $terje->link_to( $phone );
+my $last = shift @chain;
+foreach my $part ( @chain ) {
+  print $last->id(), " relates to ", $part->id(), "\n";
+} continue {
+  $last = $part;
+}
+
+
+
 
 __DATA__
 
