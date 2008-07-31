@@ -14,7 +14,6 @@ CREATE TABLE [name] (
   stop  DATETIME NULL,
 
   PRIMARY KEY( id ),
-  KEY( lval, rval ),
   FOREIGN KEY( lval ) REFERENCES [entity1]( id ),
   FOREIGN KEY( rval ) REFERENCES [entity2]( id ),
   CHECK( start < stop )
