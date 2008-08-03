@@ -1,20 +1,8 @@
-* Move all SQL out beyond the Storage layer into the engines or a
-   shared SQL library for engines that talk SQL.
-
-* Clean up new() and get() routines, standardize on a semantic meaning
-   of "new()".
-
-* Fix inserts so that the previous "current value" (found where the
-   key equals ours and the stop is zero) is updated to get stopped.
-   Stop should be set to NOW().
-
 * MetaInheritance, build proper support for inheritance.
 
 * Provide a larger test suite.
 
 * Rename "Entity" to "Class"?  The term just doesn't sit well.
-
-* Set up a test database under Postgresql.
 
 * Type support
 
