@@ -115,7 +115,7 @@ sub property_exists {
 
 =head1 NAME
 
-Yggdrasil - The great new Yggdrasil!
+Yggdrasil - Dynamic relational temporal object database
 
 =head1 VERSION
 
@@ -124,24 +124,77 @@ Version 0.01
 =cut
 
 =head1 SYNOPSIS
-
-Quick summary of what the module does.
-
-Perhaps a little code snippet.
-
     use Yggdrasil;
 
-    my $foo = Yggdrasil->new();
-    ...
+    Yggdrasil->new( namespace => 'Ygg', 
+                    engine    => "...",
+                    user      => "...",
+                    ... );
 
-=head1 EXPORT
+    # Define an Entity 'Host' with two properties, 'ip' and 'os'
+    my $host = define Yggdrasil::Entity 'Host';
+    my $ip = define $host 'ip';
+    my $os = define $host 'os';
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+    # Create an Instance of 'Host'
+    my $laptop = Ygg::Host->new( 'My Laptop' );
+    $laptop->property( $ip => '127.0.0.1' );
+    $laptop->porperty( $os => 'Multics' );
+
+    # Define an Entity 'Room'
+    my $room = define Yggdrasil::Entity 'Room';
+
+    # Create Instances of 'Room'
+    my $basement = Ygg::Room->new( 'Basement' );
+    my $kitchen  = Ygg::Room->new( 'Kitchen' );
+
+    # Define a Relation between 'Host' and 'Room'
+    define Yggdrasil::Relation $host, $room;
+
+    # Relate "My Laptop" to "Basement"
+    $laptop->link( $basement );
+
+    # Relate "My Laptop" to "Kitchen"
+    $laptop->unlink( $basement );
+    $laptop->link( $kitchen );
+
+    # Query which Hosts are in the kitchen
+    $kitchen->fetch_related( $host );
+
+    # Query the location of "My Laptop"
+    $laptop->fetch_related( $room );
+
+
+=head1 ABSTRACT
+
+Yggdrasil aims to a "dynamic relational temporal object database". In
+essence, Yggdrasil aims to add two abstractions to the traditional
+view of a relational database: implicit temporal storage and a simple
+object model to represent the data stored. In addition to this
+Yggdrasil allows the relations of the entities stored within to be
+altered, and new entities and their relations to be added while the
+system is running. The relations are described by the administrator of
+the system and as soon as any relation is described to Yggdrasil, it
+is added to the overall structure of the installation.
+
 
 =head1 FUNCTIONS
 
-=head2 function1
+=head2 new()
+
+Initialize Yggdrasil. The new method takes at least two parameters,
+namespace and engine. The namespace parameter tells Yggdrasil under
+which namespace your entities should reside. The engine parameter
+tells Yggdrasil which storage engine to use.
+
+Depending on what engine you want to use, the arguments differ. See
+L<Yggdrasil::Storage> for more information.
+
+    Yggdrasil::new( namespace => 'MyNamespace',
+                    engine    => 'mysql', 
+                    user      => 'yggdrasil',
+                    password  => 'secret',
+                    db        => 'Yggdrasil' );
 
 =cut
 
@@ -184,6 +237,14 @@ L<http://cpanratings.perl.org/d/Yggdrasil>
 =item * Search CPAN
 
 L<http://search.cpan.org/dist/Yggdrasil>
+
+=item * SVN repository
+
+svn co http://svn.math.uio.no/yggdrasil/trunk/ yggdrasil
+
+=item * SVN Web interface
+
+L<http://svn.math.uio.no/trunk/>
 
 =back
 

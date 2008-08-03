@@ -44,12 +44,11 @@ TODO: {
     "'version information here'"  => qr/to provide version information/,
   );
 
-  not_in_file_ok(Changes =>
-    "placeholder date/time"       => qr(Date/time)
-  );
-
-  module_boilerplate_ok('lib/Yggdrasil.pm');
-
 
 }
 
+not_in_file_ok(Changes =>
+	       "placeholder date/time"       => qr(Date/time)
+    );
+
+module_boilerplate_ok('lib/Yggdrasil.pm');
