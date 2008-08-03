@@ -42,12 +42,17 @@ sub new {
 }
 
 sub get {
-  my $self = shift;
+  my $class = shift;
   my $visual_id = shift;
 
   print "--------> HERE <----------\n";
 
-  return $self->new( $visual_id );
+  if ($class->exists( $visual_id)) {
+      return $class->new( $visual_id );
+  } else {
+      return undef;
+  }
+
 }
 
 sub _define {

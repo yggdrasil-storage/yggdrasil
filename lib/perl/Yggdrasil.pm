@@ -76,6 +76,12 @@ sub _register_namespace {
     return $package;
 }
 
+sub _extract_entity {
+  my $self = shift;
+
+  return (split '::', ref $self)[-1];
+}
+
 sub bootstrap {
     define Yggdrasil::MetaEntity;
     define Yggdrasil::MetaRelation;
@@ -83,10 +89,17 @@ sub bootstrap {
     define Yggdrasil::MetaInheritance;
 }
 
-sub _extract_entity {
-  my $self = shift;
-
-  return (split '::', ref $self)[-1];
+sub exists {
+    my $caller = shift;
+    my $visual_id = shift;
+    
+    if (ref $caller) {
+	my $entity = $caller->_extract_entity();
+	return $caller->{storage}->exists( $entity, $visual_id );
+    } else {
+	$caller =~ s/^${NAMESPACE}:://;
+	return $STORAGE->exists( $caller, $visual_id );
+    }
 }
 
 1;

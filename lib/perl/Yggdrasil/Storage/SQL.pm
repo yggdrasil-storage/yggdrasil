@@ -54,16 +54,6 @@ sub get_entity {
     return $e->[0]->{entity};
 }
 
-sub get_relation {
-    my $self = shift;
-    my $name = shift;
-
-    my $e = $self->dosql_select( "SELECT * FROM MetaRelation WHERE stop is null and relation = ?", [ $name ] );
-
-    return $e->[0]->{relation};
-
-}
-
 sub properties {
     my $self = shift;
     my $entity = shift;
@@ -144,6 +134,23 @@ sub dosql_update {
     || confess( "failed to execute '$sql' with arguments [$args_str]" );
 
   return $self->_get_last_id( $sql );
+}
+
+sub exists {
+    my $self      = shift;
+    my $structure = shift;
+    my $id        = shift;
+
+    if ($structure =~ s/^Yggdrasil:://) {
+	my $table = "Meta$structure";
+	my $field = lc $structure;
+	my $e = $self->dosql_select( "SELECT * FROM $table WHERE stop is null and $field = ?", [ $id ] );
+	return $e->[0]->{$field};
+    } else {
+	my $e = $self->dosql_select( "SELECT * FROM $structure WHERE visual_id = ? ", [ $id ] );
+	return $e->[0]->{id} || undef;
+    }
+    return undef;
 }
 
 sub fetch {

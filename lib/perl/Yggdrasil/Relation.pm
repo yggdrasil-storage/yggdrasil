@@ -30,7 +30,7 @@ sub _define {
 
   my $name = join("_R_", $entity1, $entity2);
 
-  unless ($self->get( $name )) {
+  unless (__PACKAGE__->exists( $name )) {
       # --- Create Relation table
       $self->{storage}->dosql_update($SCHEMA, { name => $name, entity1 => $entity1, entity2 => $entity2 } );
       
@@ -49,14 +49,6 @@ sub add {
   my $id2 = $instance1->{id};
 
   $self->{storage}->dosql_update( qq<INSERT INTO [name](lval,rval,start) VALUES(?,?,NOW())>, $self, [$id1, $id2] );
-}
-
-
-sub get {
-    my $self = shift;
-    my $name = shift;
-
-    return $self->{storage}->get_relation( $name );
 }
 
 
