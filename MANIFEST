@@ -36,7 +36,6 @@ META.yml
 README
 scripts/bootstrap
 scripts/load-props
-scripts/overview
 scripts/process_database
 scripts/props
 scripts/test-populate
