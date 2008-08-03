@@ -28,11 +28,13 @@ sub _define {
   $self->{entity_name} = $entity->{name};
   $self->{name}   = join("_", $entity->{name}, $key);
 
-  # --- Create Property table
-  $self->{storage}->dosql_update( $SCHEMA, $self );
-
-  # --- Add to MetaProperty
-  $self->_meta_add($entity, $key);
+  unless (__PACKAGE->exists()) {
+      # --- Create Property table
+      $self->{storage}->dosql_update( $SCHEMA, $self );
+      
+      # --- Add to MetaProperty
+      $self->_meta_add($entity, $key);
+  }
 }
 
 sub add {

@@ -45,15 +45,6 @@ sub get_relations {
   return @children;
 }
 
-sub get_entity {
-    my $self = shift;
-    my $name = shift;
-
-    my $e = $self->dosql_select( "SELECT * FROM MetaEntity WHERE stop is null and entity = ?", [ $name ] );
-
-    return $e->[0]->{entity};
-}
-
 sub properties {
     my $self = shift;
     my $entity = shift;
@@ -65,16 +56,6 @@ sub properties {
 	push @props, $prop unless $prop =~ /^_/;
     }
     return @props;
-}
-
-sub get_property {
-    my $self     = shift;
-    my $entity   = shift;
-    my $property = shift;
-
-    my $e = $self->dosql_select( "SELECT * FROM MetaProperty WHERE stop is null and entity = ? and property = ?", [ $entity, $property ] );
-    
-    return $e->[0]->{property};
 }
 
 sub _prepare_sql {
@@ -140,12 +121,22 @@ sub exists {
     my $self      = shift;
     my $structure = shift;
     my $id        = shift;
+    my $subkey    = shift || '';
+
+    print "SQL::Exists( $self, $structure, $id, $subkey)\n";
 
     if ($structure =~ s/^Yggdrasil:://) {
-	my $table = "Meta$structure";
-	my $field = lc $structure;
-	my $e = $self->dosql_select( "SELECT * FROM $table WHERE stop is null and $field = ?", [ $id ] );
-	return $e->[0]->{$field};
+	print "$structure\n";
+	if ($structure eq 'Relation' || $structure eq 'Entity') {
+	    my $table = "Meta$structure";
+	    my $field = lc $structure;
+	    my $e = $self->dosql_select( "SELECT * FROM $table WHERE stop is null and $field = ?", [ $id ] );
+	    print $e->[0]->{$field}?"HIT":"MISS", "\n";
+	    return $e->[0]->{$field};
+	} elsif ($structure eq 'Property') {
+	    my $e = $self->dosql_select( "SELECT * FROM MetaProperty WHERE stop is null and entity = ? and property = ?", [ $id, $subkey ] );
+	    return $e->[0]->{property};
+	}
     } else {
 	my $e = $self->dosql_select( "SELECT * FROM $structure WHERE visual_id = ? ", [ $id ] );
 	return $e->[0]->{id} || undef;
@@ -197,10 +188,12 @@ sub update {
       $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and (entity1 = ? and entity2 = ?) or (entity1 = ? and entity2 = ?) and (requirement != ? or 1=1)", [ $data{entity1}, $data{entity2}, $data{entity2}, $data{entity1}, 0] );
     }
     elsif( $schema eq "MetaEntity" ) {
-      $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and entity = ?", [$data{entity}] );
+	$e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and entity = ?", [$data{entity}] );
     }
     elsif( $schema =~ /_R_/ ) {
-      $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and ( (lval = ? and rval = ?) or (rval = ? and lval = ?) )", [ $data{lval}, $data{rval}, $data{rval}, $data{lval} ] );
+	$e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and ( (lval = ? and rval = ?) or (rval = ? and lval = ?) )", [ $data{lval}, $data{rval}, $data{rval}, $data{lval} ] );
+	my $h = $e->[0];
+	return $h->{id} if $h->{id};
     }
     # Do we have an active property value that's different from the one we're trying to insert.
     elsif( $schema =~ /_/ ) {

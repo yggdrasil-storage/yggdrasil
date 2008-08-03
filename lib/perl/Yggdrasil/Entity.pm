@@ -26,7 +26,7 @@ sub _define {
     }
 
     my $package = join '::', $self->{namespace}, $name;
-    unless ($self->get( $name )) {
+    unless (__PACKAGE__->exists( $name )) {
 	# --- Tell Storage to create SCHEMA    
 	$self->{storage}->dosql_update( $SCHEMA, { name => $name } );
 
@@ -41,13 +41,6 @@ sub _define {
     }
     
     return $package;
-}
-
-sub get {
-    my $self = shift;
-    my $name = shift;
-
-    return $self->{storage}->get_entity( $name );
 }
 
 sub add {

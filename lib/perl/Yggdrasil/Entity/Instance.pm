@@ -1,6 +1,6 @@
 package Yggdrasil::Entity::Instance;
 
-use base 'Yggdrasil::MetaProperty';
+use base 'Yggdrasil::Meta';
 
 use strict;
 use warnings;
@@ -66,12 +66,12 @@ sub _define {
   my $entity = $self->_extract_entity();
   my $name = join("_", $entity, $property);
 
-  unless ($self->get_property( $entity, $property )) { 
+  unless ($self->property_exists( $entity, $property )) { 
       # --- Create Property table
       $self->{storage}->dosql_update( $SCHEMA, { name => $name, entity => $entity } );
       
       # --- Add to MetaProperty
-      $self->_meta_add($entity, $property);
+      $self->{storage}->update( "MetaProperty", entity => $entity, property => $property );
   }  
 
   return $property;
@@ -113,7 +113,10 @@ sub link :method {
   my $schema = $storage->fetch( "MetaRelation", entity1 => $e1, entity2 => $e2 );
   print "-----------> [$schema]\n";
 
-  $storage->update( $schema, lval => $self->{_id}, rval => $instance->{_id} );
+  # Check to see if the relationship between the entities is defined
+  if ($schema) {
+      $storage->update( $schema, lval => $self->{_id}, rval => $instance->{_id} );
+  }
 }
 
 sub unlink :method {

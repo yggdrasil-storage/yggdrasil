@@ -34,12 +34,4 @@ sub _meta_add {
   $self->{storage}->update( "MetaProperty", entity => $entity, property => $key );
 }
 
-sub get_property {
-    my $self     = shift;
-    my $entity   = shift;
-    my $property = shift;
-
-    return $self->{storage}->get_property( $entity, $property );    
-}
-
 1;

@@ -13,6 +13,7 @@ use Yggdrasil::MetaInheritance;
 use Yggdrasil::Storage;
 use Yggdrasil::Entity;
 use Yggdrasil::Relation;
+use Yggdrasil::Property;
 
 our $STORAGE;
 our $NAMESPACE;
@@ -91,15 +92,20 @@ sub bootstrap {
 
 sub exists {
     my $caller = shift;
-    my $visual_id = shift;
-    
+
     if (ref $caller) {
+	warn "Calling exists with a reference from $caller...\n";
 	my $entity = $caller->_extract_entity();
-	return $caller->{storage}->exists( $entity, $visual_id );
+	return $caller->{storage}->exists( $caller, @_ );
     } else {
 	$caller =~ s/^${NAMESPACE}:://;
-	return $STORAGE->exists( $caller, $visual_id );
+	return $STORAGE->exists( $caller, @_ );
     }
+}
+
+sub property_exists {
+    my $caller = shift;
+    return Yggdrasil::Property->exists( @_ );    
 }
 
 1;
