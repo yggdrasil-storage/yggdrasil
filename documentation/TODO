@@ -2,9 +2,34 @@
 
 * Provide a larger test suite.
 
-* Rename "Entity" to "Class"?  The term just doesn't sit well.
-
 * Type support
 
 * Transactions.  They must be "requested" by Yggdrasil and handled by
    the storage layer as best possible.
+
+* Historic information.
+
+  How should this be presented?  String of objects, one for every
+   timestamp with changes.  However, what if one has two changes
+   within 1ms of eachother and enough resolution in the database?
+
+  What do we do with properties and their validity?  If you wish to
+   dig up information about Hosts( name, ip, serial ) between
+   2008-07-01 and 2008-08-01 and serial was added 2008-07-14, what
+   do we return for objects before that timestamp?  Die()ing on a call
+   to request the invalid Property would entail having to check
+   MetaProperty for the valid Properties for every single object we
+   return.  Would that be expensive?  How would it relate to userland?
+   Do we guarantee that all Propserties from all objects are valid for
+   all objects?
+
+  We might wish to pre-populate the data, it's not current, so there
+   is no real reason to ask the database after the initial get.  We
+   could set the keys in the objects returned, in essence dumping a
+   load of data on userland and saying "here, do what you like with
+   this".  We also don't support writing to this data.
+
+* Correction of old data?  What if data has been wrong for a while,
+   only in the database though, not in the real world.  It'd show up
+   on historic overview as a change today, even if it maybe
+   shouldn't.  Tagging updates?
