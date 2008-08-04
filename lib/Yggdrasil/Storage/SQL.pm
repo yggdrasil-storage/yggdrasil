@@ -157,7 +157,7 @@ sub fetch {
   }
   elsif(  $schema =~ /_/ ) {
       my ($entity, $property) = split /_/, $schema;
-      return undef unless $self->exists( "Yggdrasil::MetaProperty", $entity, $property );
+      return undef unless $self->exists( "Yggdrasil::Property", $entity, $property );
       
       $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and id = ?", [$data{id}] );
       return $e->[0]->{value};

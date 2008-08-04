@@ -28,7 +28,7 @@ sub _define {
   $self->{entity_name} = $entity->{name};
   $self->{name}   = join("_", $entity->{name}, $key);
 
-  unless (__PACKAGE->exists()) {
+  unless (__PACKAGE__->exists()) {
       # --- Create Property table
       $self->{storage}->dosql_update( $SCHEMA, $self );
       
