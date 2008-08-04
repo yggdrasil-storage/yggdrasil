@@ -167,8 +167,8 @@ Version 0.01
 
 =head1 ABSTRACT
 
-Yggdrasil aims to a "dynamic relational temporal object database". In
-essence, Yggdrasil aims to add two abstractions to the traditional
+Yggdrasil aims to be a "dynamic relational temporal object database".
+In essence, Yggdrasil aims to add two abstractions to the traditional
 view of a relational database: implicit temporal storage and a simple
 object model to represent the data stored. In addition to this
 Yggdrasil allows the relations of the entities stored within to be
