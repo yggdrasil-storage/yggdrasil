@@ -152,12 +152,15 @@ sub fetch {
   my $e;
   if( $schema eq "MetaRelation" ) {
     $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and ( (entity1 = ? and entity2 = ?) or ( entity1 = ? and entity2 = ?) ) ", [ $data{entity1}, $data{entity2}, $data{entity2}, $data{entity1}] );
-
+    
     return $e->[0]->{relation};
   }
   elsif(  $schema =~ /_/ ) {
-    $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and id = ?", [$data{id}] );
-    return $e->[0]->{value};
+      my ($entity, $property) = split /_/, $schema;
+      return undef unless $self->exists( "Yggdrasil::MetaProperty", $entity, $property );
+      
+      $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and id = ?", [$data{id}] );
+      return $e->[0]->{value};
     
   } else {
     $e = $self->dosql_select( "SELECT * FROM $schema WHERE visual_id = ?", [$data{visual_id}] );
