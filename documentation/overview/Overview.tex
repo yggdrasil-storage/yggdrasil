@@ -3,7 +3,30 @@
 \usepackage{babel,moreverb}
 \usepackage[pdftex]{graphicx}
 \usepackage{wrapfig}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{color}
  
+\lstset{ %
+language=Perl,                  % choose the language of the code
+basicstyle=\small,              % the size of the fonts that are used for the code
+numbers=none,                   % where to put the line-numbers
+numberstyle=\footnotesize,      % the size of the fonts that are used for the line-numbers
+stepnumber=2,                   % the step between two line-numbers. If it's 1 each line will be numbered
+numbersep=5pt,                  % how far the line-numbers are from the code
+backgroundcolor=\color{white},  % choose the background color. You must add \usepackage{color}
+showspaces=false,               % show spaces adding particular underscores
+showstringspaces=false,         % underline spaces within strings
+showtabs=false,                 % show tabs within strings adding particular underscores
+frame=single,                   % adds a frame around the code
+tabsize=2,                      % sets default tabsize to 2 spaces
+captionpos=b,                   % sets the caption-position to bottom
+breaklines=true,                % sets automatic line breaking
+breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+escapeinside={\%*}{*)}          % if you want to add a comment within
+                                % your code
+}
+
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
 
 \begin{document}
@@ -30,12 +53,32 @@ In Yggdrasil lingo you can think of an entity as a ``class'' from the
 OO world.  The ``object'' is an instance of this entity, each object
 existing in several temporal versions within the system.
 
+Initializing Yggdrasil happens as follows, the parameters are all sent
+to the back end storage layer, and both their meaning and their
+necessity varies depending on said layer.  Look at the documentation
+for Yggdrasil::Storage and its engines if in doubt.  The ``namespace''
+parameter defines which namespace will house the entities we'll create
+later.  This is, in essence, your class hierarchy.  You'll want to
+ensure it's uncluttered.  
+
+\lstset{caption=Initializing Yggrasil,label=ygginit,float=tp,aboveskip=0.7cm}
+\begin{lstlisting}
+new Yggdrasil(
+              user      => user,
+              password  => password,
+              host      => host,
+              db        => databasename,
+              engine    => engine,
+              namespace => 'Ygg',
+             );
+\end{lstlisting}
+
 \subsection{Objects}
 
 An object is an instance of an entity within the system.  This
 instance is the primary working set that Yggdrasil operates on.
-Objects contain properties which are their key / value pairs.  Objects
-are identified by a unique name within each entity.
+Objects contain properties which are key / value pairs.  Objects are
+identified by a unique name within each entity.
 
 %\begin{wrapfigure}{l}{5cm}
 %  \begin{center}
@@ -46,13 +89,34 @@ are identified by a unique name within each entity.
 
 An object within Yggdrasil isn't a singular instance of grouped data.
 As any change to this object is kept, every version of the object
-throughout its existence is stored.  
+throughout its existence is stored.  The default object is the
+``current'' object, defined as the set of properties that are
+currently active and not expired.
 
 The limitations are currently bound to the objects being fairly
 simple, they are not allowed to store anything more complex than
 anything that can be mapped into a text field, and their only
 relations to other objects are the ones defined by the setup of
-Yggdrasil.
+Yggdrasil.  
+
+To define an entity ``Host'' within Yggdrasil.  This will create
+access to the class ``Ygg::Host'', as we earlier defined the namespace
+for Yggdrasil to work in previously to be named ``Ygg''.  We'll then
+create a ``Host'' object called ``nommo'' and one called
+``ninhursaga''.
+
+\lstset{caption=Defining entities,label=entity}
+\begin{lstlisting}
+$hostclass = define Yggdrasil::Entity 'Host';
+my $nommo = $hostclass->new( 'nommo' );
+my $ninhursaga = Ygg::Host->new( 'ninhursaga' );
+\end{lstlisting}
+
+The return value from a ``define'' of ``Yggdrasil::Entity'' is the
+class the structure represents.  It will always be
+``Namespace::Entityname'', and using the return value lets you rely on
+Perls warnings and strict pragmas (assuming you use them) in case of a
+typo.
 
 \subsubsection{Properties}
 
@@ -64,9 +128,39 @@ Yggdrasil can either be flexible and treat all property values as a
 default type, or you can select between a set of types Yggdrasil
 guarantees no matter the back end it's running on.
 
+\lstset{caption=Defining properties,label=properties}
+\begin{lstlisting}
+define Yggdrasil::Entity 'ip', 'Type' => 'IP';
+define $hostclass 'comment';
+\end{lstlisting}
+
 \subsection{Relations}
 
-All relations within Yggdrasil exist between entities.  
+All relations within Yggdrasil exist between entities.  To create
+relations between entities, define them, but we'll need another entity
+to relate things to, since we have some hosts, let's make ourself some
+rooms.
+
+\lstset{caption=Defining relations,label=relations}
+\begin{lstlisting}
+# Create another entity, "Room".
+my $roomclass = define Yggdrasil::Entity 'Room';
+# Create a room object, 'b701'.
+my $b701 = $roomclass->new( 'B701' );
+
+# Now create the relation between rooms and hosts.
+# $hostclass = 'Ygg::Host', $roomclass = 'Ygg::Room'
+define Yggdrasil::Relation $hostclass, $roomclass; 
+\end{lstlisting}
+
+This however doesn't do us much good, we need to link objects
+together, and we do that as follows:
+
+\lstset{caption=Linking ``nommo'' to ``b701'',label=linking}
+\begin{lstlisting}
+# Now, links the host 'nommo' to the room 'b701'
+$nommo->link( $b701 );
+\end{lstlisting}
  
 \subsection{Temporal dimension}
 
@@ -90,32 +184,26 @@ permanently delete any data.
 New entities and new relations between entities can be issued on the
 fly while the system is running live.  
 
-\section{API}
+% \subsection{Defining structure}
 
-An important note is to remember to bootstrap your Yggdrasil
-installation before it's used.  If you're using the Yggdrasil library
-directly, call bootstrap() once in the lifespan of the installation.
+% Creating structure within Yggdrasil is done via commands prefixed
+% ``define''.  This accounts for defining entities, properties and
+% relations.  
 
-\subsection{Defining structure}
+% \begin{table}[h]
+% \centering
+% \caption{Define statements in Yggdrasil}
 
-Creating structure within Yggdrasil is done via commands prefixed
-``define''.  This accounts for defining entities, properties and
-relations.  
+% \begin{tabular}{l l}
+% \hline\hline %inserts double horizontal lines
+% Statement & Parameters \\
+% \hline
+% define\_entity  & Name-of-entity \\
+% define\_property & Name-of-entity, Name-of-property \\
+% define\_relation & Name-of-entity1, Name-of-entity2 \\
+% \end{tabular}
 
-\begin{table}[h]
-\centering
-\caption{Define statements in Yggdrasil}
-
-\begin{tabular}{l l}
-\hline\hline %inserts double horizontal lines
-Statement & Parameters \\
-\hline
-define\_entity  & Name-of-entity \\
-define\_property & Name-of-entity, Name-of-property \\
-define\_relation & Name-of-entity1, Name-of-entity2 \\
-\end{tabular}
-
-\end{table}
+% \end{table}
 
 
 \end{document}
