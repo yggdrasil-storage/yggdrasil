@@ -19,7 +19,7 @@ SQL
 sub _define {
     my $self = shift;
 
-    unless ($self->{storage}->get_meta('MetaEntity')) {
+    unless ($self->{storage}->meta_exists('MetaEntity')) {
 	$self->{storage}->dosql_update($SCHEMA);
     }    
 }

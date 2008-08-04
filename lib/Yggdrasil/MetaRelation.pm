@@ -22,7 +22,7 @@ SQL
 sub _define {
   my $self = shift;
   
-  unless ($self->{storage}->get_meta('MetaRelation')) {
+  unless ($self->{storage}->meta_exists('MetaRelation')) {
       $self->{storage}->dosql_update($SCHEMA);
   }
 }

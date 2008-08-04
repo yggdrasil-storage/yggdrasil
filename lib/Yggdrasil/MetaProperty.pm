@@ -21,7 +21,7 @@ SQL
 sub _define {
     my $self = shift;
 
-    unless ($self->{storage}->get_meta('MetaProperty')) {
+    unless ($self->{storage}->meta_exists('MetaProperty')) {
     	$self->{storage}->dosql_update($SCHEMA);
     }
 }

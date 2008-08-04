@@ -21,7 +21,7 @@ sub new {
   return $self;
 }
 
-sub get_meta {
+sub meta_exists {
     my $self = shift;
     my $meta = shift;
     

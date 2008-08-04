@@ -21,7 +21,7 @@ SQL
 sub _define {
     my $self = shift;
 
-    unless ($self->{storage}->get_meta('MetaInheritance')) {
+    unless ($self->{storage}->meta_exists('MetaInheritance')) {
 	$self->{storage}->dosql_update($SCHEMA);
     }
 }
