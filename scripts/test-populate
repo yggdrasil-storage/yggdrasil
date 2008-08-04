@@ -110,7 +110,7 @@ for my $e (qw /Telephone Contractor Room/ ) {
 
   if (@res) {
     for my $p ( @res ) {
-      print "ZOOM * ", $terje->id(), " has $e ", $p->id(), "\n";
+      print "ZOOM * ", $terje->id(), " has $e ", $p->id(), " in ", $p->pathlength(), " steps.\n";
 
       my @res2 = $p->fetch_related( $person );
 
@@ -127,11 +127,6 @@ for my $e (qw /Telephone Contractor Room/ ) {
     print "ZOOM * ", $terje->id(), " is not related to $e.\n";
   }
 }
-
-
-__DATA__
-
-
 
 define Yggdrasil::Entity 'Person';
 define Yggdrasil::Entity 'Student', 'Person';

@@ -140,6 +140,11 @@ sub id {
   return $self->{visual_id};
 }
 
+sub pathlength {
+    my $self = shift;
+    return $self->{_pathlength};
+}
+
 sub fetch_related {
   my $self = shift;
   my $relative = shift;
@@ -201,14 +206,15 @@ sub fetch_related {
     foreach my $r ( @$res ) {
       my $name = "$self->{namespace}::$relative";
       my $obj = $name->new( $r->{visual_id} );
-
+      $obj->{_pathlength} = scalar @$path - 1;
+      
       $result{$r->{visual_id}} = $obj;
 
       print "ZOOM ---> [ID] = [$obj->{_id}]\n";
     }
   }
 
-  return values %result;
+  return sort { $a->{_pathlength} <=> $b->{_pathlength} } values %result;
 }
 
 sub _relation_side {
