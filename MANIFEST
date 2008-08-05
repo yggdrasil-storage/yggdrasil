@@ -32,6 +32,7 @@ lib/Yggdrasil/Storage/Pg.pm
 lib/Yggdrasil/Storage/SQL.pm
 Makefile.PL
 MANIFEST
+MANIFEST.SKIP
 META.yml
 README
 scripts/bootstrap

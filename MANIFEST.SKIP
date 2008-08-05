@@ -1,0 +1,13 @@
+etc/log4perl-debug
+^blib/
+~$
+\.bak$
+^MANIFEST\.SKIP$
+^Makefile$
+^MakeMaker-\d
+\.old$
+\.svn
+^pm_to_blib
+^#
+\.gz$
+/#.+#$

@@ -5,8 +5,10 @@ use warnings;
 use v5.006;
 
 use Carp;
-
-use Log::Log4perl qw(get_logger :levels);
+use Cwd qw(abs_path);
+use File::Basename;
+use File::Spec;
+use Log::Log4perl qw(get_logger :levels :nowarn);
 
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
@@ -48,8 +50,14 @@ sub _init {
 	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
 	die "No storage layer initalized, aborting.\n" unless $STORAGE;
 
-	$params{logconfig} ||= '../etc/log4perl-debug';
-	Log::Log4perl->init( $params{logconfig} );
+	my $project_root = $self->_project_root() || ".";
+
+	my $logconfig = "$project_root/etc/log4perl-debug";
+	if( -e $logconfig ) {
+	    $params{logconfig} = $logconfig;
+	    Log::Log4perl->init( $params{logconfig} );
+	}
+
 	$self->{logger} = $YGGLOGGER = get_logger();
 	
 	$self->_db_init();
@@ -58,6 +66,21 @@ sub _init {
 	$self->{namespace} = $NAMESPACE;
 	$self->{logger} = get_logger( __PACKAGE__ );
     }
+}
+
+
+sub _project_root {
+    my $self = shift;
+
+    my $file = __PACKAGE__ . ".pm";
+    $file =~ s|::|/|g;
+
+    my $path = $INC{$file};
+    return unless $path;
+
+    $path = File::Spec->catdir( dirname($path), File::Spec->updir() );
+
+    return abs_path($path);
 }
 
 # Defines structures based on the database if there is anything
