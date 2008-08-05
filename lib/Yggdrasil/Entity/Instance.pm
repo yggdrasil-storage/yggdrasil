@@ -113,9 +113,15 @@ sub link :method {
   my $schema = $storage->fetch( "MetaRelation", entity1 => $e1, entity2 => $e2 );
   print "-----------> [$schema]\n";
 
+  my $e1_side = $self->_relation_side( $schema, $e1 );
+  my $e2_side = $self->_relation_side( $schema, $e2 );
+
+
   # Check to see if the relationship between the entities is defined
   if ($schema) {
-      $storage->update( $schema, lval => $self->{_id}, rval => $instance->{_id} );
+      $storage->update( $schema, 
+			$e1_side => $self->{_id},
+			$e2_side => $instance->{_id} );
   }
 }
 

@@ -148,16 +148,13 @@ ok( @v == 1, "One provider for phones related to Mindy" );
 is( $v[0]->id(), "SuperPhone", "SuperPhone provides phone service for phones in rooms where Mindy hangs out" );
 
 
-TODO: {
-    local $TODO = "here be a bug";
-
-    # --- Sandy get a personal phone
-    define Yggdrasil::Relation $person, $phone;
-    $phones{'555-Sandy'} = $phone->new('555-Sandy');
-    $phones{'555-Sandy'}->link( $girls{Sandy} );
+# --- Sandy get a personal phone
+define Yggdrasil::Relation $person, $phone;
+$phones{'555-Sandy'} = $phone->new('555-Sandy');
+$phones{'555-Sandy'}->link( $girls{Sandy} );
     
-    # --- On what numbers can we reach Sandy?
-    @v = $girls{Sandy}->fetch_related( $phone );
-    ok( @v == 3, "Sandy can now be reached with three numbers" );
-    ok( (grep { $_->id() eq '555-Sandy' } @v), "and one of the numbers are 555-Sandy" );
-}
+# --- On what numbers can we reach Sandy?
+@v = $girls{Sandy}->fetch_related( $phone );
+ok( @v == 3, "Sandy can now be reached with three numbers" );
+ok( (grep { $_->id() eq '555-Sandy' } @v), "and one of the numbers are 555-Sandy" );
+
