@@ -10,7 +10,7 @@ unless( defined $ENV{YGG_ENGINE} ) {
     plan skip_all => q<Don't know how to connect to any storage engines>;
 }
 
-plan tests => 35;
+plan tests => 36;
 
 # --- Initialize Yggdrasil
 my $ygg;
@@ -131,6 +131,9 @@ $phones{'555-9999'}->link( $providers{SuperPhone} );
 for my $name ( keys %girls ) {
     my $girl = $girls{$name};
     my @v = $girl->fetch_related( $phone );
+
+    print "------------> [@v]\n";
+    print "------------>", join(" ", map { $_->id() } @v ), "\n";
     ok( @v == 2, "$name can be reached with two phone numbers" );
     ok( (grep { $_->id() eq '555-1234' } @v), "$name can be reached with 555-1234" );
     ok( (grep { $_->id() eq '555-9999' } @v), "$name can be reached with 555-9999" );
@@ -158,3 +161,7 @@ $phones{'555-Sandy'}->link( $girls{Sandy} );
 ok( @v == 3, "Sandy can now be reached with three numbers" );
 ok( (grep { $_->id() eq '555-Sandy' } @v), "and one of the numbers are 555-Sandy" );
 
+# --- Sandy drops new phone into the toilet
+$girls{Sandy}->unlink( $phones{'555-Sandy'} );
+@v = $girls{Sandy}->fetch_related( $phone );
+ok( @v == 2, "Sandy can now only be reached with two numbers again" );

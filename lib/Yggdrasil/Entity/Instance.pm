@@ -137,7 +137,11 @@ sub unlink :method {
   my $schema = $storage->fetch( "MetaRelation", entity1 => $e1, entity2 => $e2 );
   print "-----------> [$schema]\n";
 
-  $storage->expire( $schema, lval => $self->{_id}, rval => $instance->{_id} );
+  my $e1_side = $self->_relation_side( $schema, $e1 );
+  my $e2_side = $self->_relation_side( $schema, $e2 );
+  
+
+  $storage->expire( $schema, $e1_side => $self->{_id}, $e2_side => $instance->{_id} );
 }
 
 sub id {

@@ -173,7 +173,7 @@ sub expire {
   my $schema = shift;
   my %data = @_;
 
-  $self->dosql_update( "UPDATE $schema SET stop = NOW() WHERE stop is null and ( (lval = ? and rval = ?) or (lval = ? and rval = ?) )", [$data{lval}, $data{rval}, $data{rval}, $data{lval}] );
+  $self->dosql_update( "UPDATE $schema SET stop = NOW() WHERE stop is null and lval = ? and rval = ?", [$data{lval}, $data{rval}] );
 }
 
 
@@ -194,7 +194,7 @@ sub update {
 	$e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and entity = ?", [$data{entity}] );
     }
     elsif( $schema =~ /_R_/ ) {
-	$e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and ( (lval = ? and rval = ?) or (rval = ? and lval = ?) )", [ $data{lval}, $data{rval}, $data{lval}, $data{rval} ] );
+	$e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and lval = ? and rval = ?", [ $data{lval}, $data{rval} ] );
 	my $h = $e->[0];
 	return $h->{id} if $h->{id};
     }

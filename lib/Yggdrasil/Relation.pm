@@ -40,16 +40,4 @@ sub _define {
   
 }
 
-sub add {
-  my $self      = shift;
-  my $instance1 = shift;
-  my $instance2 = shift;
-
-  my $id1 = $instance1->{id};
-  my $id2 = $instance1->{id};
-
-  $self->{storage}->dosql_update( qq<INSERT INTO [name](lval,rval,start) VALUES(?,?,NOW())>, $self, [$id1, $id2] );
-}
-
-
 1;
