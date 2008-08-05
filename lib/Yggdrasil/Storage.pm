@@ -29,6 +29,9 @@ sub new {
     die $@ if $@;
     #  $class->import();
     $storage = $engine_class->new(@_);
+
+    $storage->{logger} = Yggdrasil::get_logger( ref $storage );
+    
     return $storage;
   }
 }

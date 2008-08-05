@@ -65,7 +65,7 @@ sub _prepare_sql {
 
   $sql =~ s/\[(.+?)\]/$data->{$1}/ge; #'"/
 
-  print $sql, "\n";
+  $self->{logger}->debug( $sql );
 
   return $sql;
 }
@@ -82,7 +82,7 @@ sub dosql_select {
   confess( "no sth?" ) unless $sth;
 
   my $args_str = join(", ", map { defined()?$_:"NULL" } @$args);
-  print " Args: [$args_str]\n";
+  $self->{logger}->debug( "Args: [$args_str]" );
 
   $sth->execute(@$args) 
     || confess( "execute??" );
@@ -109,7 +109,7 @@ sub dosql_update {
   confess( "failed to prepare '$sql'") unless $sth;
 
   my $args_str = join(", ", map { defined()?$_:"NULL" } @$args);
-  print " Args: [$args_str]\n";
+  $self->{logger}->debug( "Args: [$args_str]" );
 
   $sth->execute(@$args) 
     || confess( "failed to execute '$sql' with arguments [$args_str]" );
@@ -123,15 +123,15 @@ sub exists {
     my $id        = shift;
     my $subkey    = shift || '';
 
-    print "SQL::Exists( $self, $structure, $id, $subkey)\n";
+    $self->{logger}->info( "SQL::Exists( $self, $structure, $id, $subkey)" );
 
     if ($structure =~ s/^Yggdrasil:://) {
-	print "$structure\n";
+	$self->{logger}->debug( $structure );
 	if ($structure eq 'Relation' || $structure eq 'Entity') {
 	    my $table = "Meta$structure";
 	    my $field = lc $structure;
 	    my $e = $self->dosql_select( "SELECT * FROM $table WHERE stop is null and $field = ?", [ $id ] );
-	    print $e->[0]->{$field}?"HIT":"MISS", "\n";
+	    $self->{logger}->debug( $e->[0]->{$field}?"HIT":"MISS" );
 	    return $e->[0]->{$field};
 	} elsif ($structure eq 'Property') {
 	    my $e = $self->dosql_select( "SELECT * FROM MetaProperty WHERE stop is null and entity = ? and property = ?", [ $id, $subkey ] );
@@ -234,7 +234,7 @@ sub update {
 	
 	$self->dosql_update( "UPDATE $schema SET stop = NOW() WHERE $where", \@values );
       } else {
-	print "Why here?\n";
+	$self->{logger}->error( "Why here?" );
 	return $e->[0]->{id};
       }
     }

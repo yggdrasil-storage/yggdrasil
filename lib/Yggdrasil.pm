@@ -6,6 +6,8 @@ use v5.006;
 
 use Carp;
 
+use Log::Log4perl qw(get_logger :levels);
+
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
@@ -20,6 +22,8 @@ our $VERSION = '0.01';
 
 our $STORAGE;
 our $NAMESPACE;
+
+our $YGGLOGGER; 
 
 sub new {
     my $class = shift;
@@ -37,18 +41,22 @@ sub new {
 
 sub _init {
     my $self = shift;
-    
+
     if( ref $self eq __PACKAGE__ ) {
 	my %params = @_;
 	$self->{namespace} = $NAMESPACE = $params{namespace} || '';
 	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
-
 	die "No storage layer initalized, aborting.\n" unless $STORAGE;
 
+	$params{logconfig} ||= '../etc/log4perl-debug';
+	Log::Log4perl->init( $params{logconfig} );
+	$self->{logger} = $YGGLOGGER = get_logger();
+	
 	$self->_db_init();
     } else {
 	$self->{storage} = $STORAGE;
 	$self->{namespace} = $NAMESPACE;
+	$self->{logger} = get_logger( __PACKAGE__ );
     }
 }
 
@@ -74,7 +82,7 @@ sub _register_namespace {
     my $self = shift;
     my $package = shift;
 
-    print "Registering namespace '$package'...\n";
+    $self->{logger}->info( "Registering namespace '$package'..." );
     
     eval "package $package; use base qw(Yggdrasil::Entity::Instance);";
     return $package;
@@ -97,7 +105,7 @@ sub exists {
     my $caller = shift;
 
     if (ref $caller) {
-	warn "Calling exists with a reference from $caller...\n";
+	$caller->{logger}->error( "Calling exists with a reference from $caller!" );
 	my $entity = $caller->_extract_entity();
 	return $caller->{storage}->exists( $caller, @_ );
     } else {
