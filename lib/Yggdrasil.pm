@@ -126,7 +126,7 @@ sub bootstrap {
 
 sub exists {
     my $caller = shift;
-
+    
     if (ref $caller) {
 	$caller->{logger}->error( "Calling exists with a reference from $caller!" );
 	my $entity = $caller->_extract_entity();
@@ -137,9 +137,10 @@ sub exists {
     }
 }
 
-sub property_exists {
-    my $caller = shift;
-    return Yggdrasil::Property->exists( @_ );    
+sub entities {
+    my $class = shift;
+
+    return $STORAGE->entities();
 }
 
 1;

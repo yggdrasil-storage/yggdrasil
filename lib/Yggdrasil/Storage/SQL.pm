@@ -144,6 +144,39 @@ sub exists {
     return undef;
 }
 
+sub search {
+    my ($self, $entity, $property, $value) = @_;
+
+    # Check if the entity exists.
+    return undef unless $self->exists( 'Yggdrasil::Entity', $entity );
+
+    # Check if the property exists.
+    return undef unless $self->exists( 'Yggdrasil::Property', $entity, $property );
+
+    my $sql = "SELECT id FROM ${entity}_$property WHERE stop is null and value LIKE '%" . $value . "%'";
+    # Actually search.
+    my $e = $self->dosql_select( $sql );
+    
+    return unless @$e;
+
+    my @ids;
+    for my $row (@$e) {	
+	push @ids, $row->{id};
+    }
+
+    my $idstring = join " or ", 'id = ?' x @ids;
+
+    $sql = "SELECT * FROM ${entity} WHERE $idstring";
+    $e = $self->dosql_select( $sql, [ @ids ]);
+
+    my @visual_ids;
+    for my $row (@$e) {
+	push @visual_ids, $row->{visual_id};
+    }
+
+    return @visual_ids;
+}
+
 sub fetch {
   my $self = shift;
   my $schema = shift;

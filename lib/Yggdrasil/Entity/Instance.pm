@@ -17,7 +17,7 @@ CREATE TABLE [name] (
   CHECK( start < stop )
 );
 SQL
-
+  
 sub new {
   my $class = shift;
 
@@ -45,7 +45,7 @@ sub get {
   my $class = shift;
   my $visual_id = shift;
 
-  print "--------> HERE <----------\n";
+#  print "--------> HERE $class $visual_id <----------\n";
 
   if ($class->exists( $visual_id)) {
       return $class->new( $visual_id );
@@ -66,7 +66,8 @@ sub _define {
   my $entity = $self->_extract_entity();
   my $name = join("_", $entity, $property);
 
-  unless ($self->property_exists( $entity, $property )) { 
+  unless ($self->property_exists( $entity, $property )) {
+      print "Creating property table $entity $property\n";
       # --- Create Property table
       $self->{storage}->dosql_update( $SCHEMA, { name => $name, entity => $entity } );
       
@@ -93,12 +94,39 @@ sub property {
     return $storage->fetch( $name, id => $self->{_id} );
 }
 
+sub property_exists {
+    my ($entity, $property);
+    # If we're called as a class call, we'll get two params.
+    if (@_ == 2) {
+	($entity, $property) = @_;
+	$entity =~ s/.*:://;
+    # Otherwise, we're called a method, three params.
+    } else {
+	my $self = shift;
+	($entity, $property) = @_;
+    }
+    
+    return $Yggdrasil::STORAGE->exists( 'Yggdrasil::Property', $entity, $property );
+}
+
 sub properties {
-    my $self = shift;
-    my $class = ref $self;
+    my $class = shift;
     $class =~ s/.*:://;
     
-    return $self->{storage}->properties( $class );
+    return $Yggdrasil::STORAGE->properties( $class );
+}
+
+sub search {
+    my ($class, $key, $value) = @_;
+    $class =~ s/.*:://;
+    
+    my @nodes;
+    for my $visual_id ($Yggdrasil::STORAGE->search( $class, $key, $value )) {
+	my $namespace = join '::', $Yggdrasil::NAMESPACE, $class;
+	push @nodes, $namespace->get( $visual_id );
+    } 
+
+    return @nodes;
 }
 
 sub link :method {
