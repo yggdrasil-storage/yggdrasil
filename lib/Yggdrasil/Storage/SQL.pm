@@ -164,7 +164,7 @@ sub search {
 	push @ids, $row->{id};
     }
 
-    my $idstring = join " or ", 'id = ?' x @ids;
+    my $idstring = join(" or ", ("id = ?") x scalar @ids);
 
     $sql = "SELECT * FROM ${entity} WHERE $idstring";
     $e = $self->dosql_select( $sql, [ @ids ]);
