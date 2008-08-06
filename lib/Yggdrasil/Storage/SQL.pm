@@ -162,9 +162,10 @@ sub search {
     my @ids;
     for my $row (@$e) {	
 	push @ids, $row->{id};
-    }
-
-    my $idstring = join(" or ", ("id = ?") x scalar @ids);
+   }
+    
+    my @idlist   = ("id = ?") x scalar @ids;
+    my $idstring = join(" or ", @idlist);
 
     $sql = "SELECT * FROM ${entity} WHERE $idstring";
     $e = $self->dosql_select( $sql, [ @ids ]);
