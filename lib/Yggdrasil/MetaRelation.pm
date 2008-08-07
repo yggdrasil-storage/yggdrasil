@@ -7,12 +7,13 @@ use base qw(Yggdrasil::Meta);
 
 our $SCHEMA = <<SQL;
 CREATE TABLE MetaRelation (
-  relation VARCHAR(255) NOT NULL,
-  entity1  VARCHAR(255) NOT NULL,
-  entity2  VARCHAR(255) NOT NULL,
-  requirement VARCHAR(255) NULL,
-  start     DATETIME NOT NULL,
-  stop      DATETIME NULL,
+  relation     VARCHAR(255) NOT NULL,
+  entity1      VARCHAR(255) NOT NULL,
+  entity2      VARCHAR(255) NOT NULL,
+  tablename    VARCHAR(64) NOT NULL,
+  requirement  VARCHAR(255) NULL,
+  start        DATETIME NOT NULL,
+  stop         DATETIME NULL,
 
   PRIMARY KEY( relation ),
   CHECK( start < stop )

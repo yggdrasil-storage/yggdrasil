@@ -189,9 +189,6 @@ sub fetch_related {
   my $source = $self->_extract_entity();
 
   my $paths = $self->_fetch_related( $source, $relative );
-  
-
-
 
   my @relations = $self->{storage}->relations();
   my %table_map;
@@ -213,12 +210,12 @@ sub fetch_related {
        $node = $step;
      }
 
-    my $from = join(", ", @ordered,$path->[-1]);
 
     my @where;
     my $first = $ordered[0];
     my $side = $self->_relation_side( $first, $source );
-    push( @where, "$first.$side = $self->{_id} and $first.stop is null" );
+    my $firsttable = $self->_map_table_name( $first );
+    push( @where, "$firsttable.$side = $self->{_id} and $firsttable.stop is null" );
     my $prev = $first;
     for( my $i=1; $i<@ordered; $i++ ) {
       my $table = $ordered[$i];
@@ -227,15 +224,24 @@ sub fetch_related {
       
       my $current = $self->_relation_side( $table, $path->[$i] );
       my $next    = $self->_relation_side( $prev, $path->[$i] );
-						     
-      push( @where, "$table.$current = $prev.$next and $table.stop is null");
+      my $tabname = $self->_map_table_name( $table );
+      my $prevtab = $self->_map_table_name( $prev );
+      
+      push( @where, "$tabname.$current = $prevtab.$next and $tabname.stop is null");
       $prev = $table;
     }
     
     $side = $self->_relation_side( $ordered[-1], $path->[-1] );
-    push(@where, "$ordered[-1].$side = $path->[-1].id" );
+    my ($ordtab, $pathtab) = ($self->_map_table_name( $ordered[-1] ), $self->_map_table_name( $path->[-1] ));
+    push(@where, "$ordtab.$side = $pathtab.id" );
 
-    my $sql = "SELECT $path->[-1].visual_id FROM $from WHERE ". join(" and ", @where);
+    my $pathtable  = $self->_map_table_name( $path->[-1] );
+
+    my $from = join(", ", map { $self->_map_table_name( $_) } @ordered, $path->[-1] );
+
+    print "\n**$from\n";
+    
+    my $sql = "SELECT $pathtable.visual_id FROM $from WHERE ". join(" and ", @where);
     print "ZOOM * * *  $sql\n";
     my $res = $self->{storage}->dosql_select( $sql, [] );
     
@@ -272,7 +278,6 @@ sub _relation_side {
   }
 }
 
-
 sub _fetch_related {
   my $self = shift;
   my $start = shift;
@@ -294,6 +299,12 @@ sub _fetch_related {
   }
 
   return $all if @$path == 1;
+}
+
+sub _map_table_name {
+    my $self = shift;
+
+    $self->Yggdrasil::Storage::SQL::_map_table_name( @_ );
 }
 
 1;

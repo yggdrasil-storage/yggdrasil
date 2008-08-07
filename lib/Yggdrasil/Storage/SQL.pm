@@ -3,7 +3,23 @@ package Yggdrasil::Storage::SQL;
 use strict;
 use warnings;
 
+use Digest::MD5 qw(md5_hex);
+
 use Carp;
+
+sub _map_table_name {
+    my $self = shift;
+    my $name = shift;
+
+    $self->{logger}->fatal("no name given!") unless $name;
+
+    return $name if $name =~ /^Meta/;
+    
+    my $digest = md5_hex( $name );
+    $digest =~ y/0-9a-f/a-p/;
+
+    return $digest;
+}
 
 sub entities {
     my $self = shift;
@@ -63,6 +79,8 @@ sub _prepare_sql {
   my $sql  = shift;
   my $data = shift;
 
+  $data->{name} = $self->_map_table_name( $data->{name} ) if $data->{name};
+  
   $sql =~ s/\[(.+?)\]/$data->{$1}/ge; #'"/
 
   $self->{logger}->debug( $sql );
@@ -138,6 +156,7 @@ sub exists {
 	    return $e->[0]->{property};
 	}
     } else {
+	$structure = $self->_map_table_name( $structure );
 	my $e = $self->dosql_select( "SELECT * FROM $structure WHERE visual_id = ? ", [ $id ] );
 	return $e->[0]->{id} || undef;
     }
@@ -153,7 +172,10 @@ sub search {
     # Check if the property exists.
     return undef unless $self->exists( 'Yggdrasil::Property', $entity, $property );
 
-    my $sql = "SELECT visual_id, ${entity}.id FROM ${entity}, ${entity}_$property WHERE stop is null and value LIKE '%" . $value . "%' and ${entity}_${property}.id = ${entity}.id";
+    my $et = $self->_map_table_name( $entity );
+    my $pt = $self->_map_table_name( $entity . '_' . $property );
+
+    my $sql = "SELECT visual_id, ${et}.id FROM $et, $pt WHERE stop is null and value LIKE '%" . $value . "%' and ${pt}.id = ${et}.id";
     # Actually search.
     print "$sql\n";
     my $e = $self->dosql_select( $sql );
@@ -182,13 +204,16 @@ sub fetch {
   elsif(  $schema =~ /_/ ) {
       my ($entity, $property) = split /_/, $schema;
       return undef unless $self->exists( "Yggdrasil::Property", $entity, $property );
+
+      my $table = $self->_map_table_name( $schema );
       
-      $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and id = ?", [$data{id}] );
+      $e = $self->dosql_select( "SELECT * FROM $table WHERE stop is null and id = ?", [$data{id}] );
       return $e->[0]->{value};
     
   } else {
-    $e = $self->dosql_select( "SELECT * FROM $schema WHERE visual_id = ?", [$data{visual_id}] );
-    return $e->[0]->{id};
+      my $table = $self->_map_table_name( $schema );
+      $e = $self->dosql_select( "SELECT * FROM $table WHERE visual_id = ?", [$data{visual_id}] );
+      return $e->[0]->{id};
   }
 }
 
@@ -197,7 +222,9 @@ sub expire {
   my $schema = shift;
   my %data = @_;
 
-  $self->dosql_update( "UPDATE $schema SET stop = NOW() WHERE stop is null and lval = ? and rval = ?", [$data{lval}, $data{rval}] );
+  my $table = $self->_map_table_name( $schema );
+  
+  $self->dosql_update( "UPDATE $table SET stop = NOW() WHERE stop is null and lval = ? and rval = ?", [$data{lval}, $data{rval}] );
 }
 
 
@@ -205,6 +232,7 @@ sub update {
     my $self = shift;
     my $schema = shift;
     my %data = @_;
+    my $table = $self->_map_table_name( $schema );
 
     my $e;
     # --- 1. Check for previous value
@@ -218,23 +246,23 @@ sub update {
 	$e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and entity = ?", [$data{entity}] );
     }
     elsif( $schema =~ /_R_/ ) {
-	$e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and lval = ? and rval = ?", [ $data{lval}, $data{rval} ] );
+	$e = $self->dosql_select( "SELECT * FROM $table WHERE stop is null and lval = ? and rval = ?", [ $data{lval}, $data{rval} ] );
 	my $h = $e->[0];
 	return $h->{id} if $h->{id};
     }
     # Do we have an active property value that's different from the one we're trying to insert.
     elsif( $schema =~ /_/ ) {
-      $e = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and id = ? and value != ?", [$data{id}, $data{value}] );
+	$e = $self->dosql_select( "SELECT * FROM $table WHERE stop is null and id = ? and value != ?", [$data{id}, $data{value}] );
       
-      # Are we trying to insert the exact same value for the same property again?
-      # If so, do nothing and return the ID of the previous entry.
-      if (! @$e) {
-	  my $old = $self->dosql_select( "SELECT * FROM $schema WHERE stop is null and id = ? and value = ?", [$data{id}, $data{value}] );
-	  return $old->[0]->{id} if $old->[0]->{id};
-      }
+	# Are we trying to insert the exact same value for the same property again?
+	# If so, do nothing and return the ID of the previous entry.
+	if (! @$e) {
+	    my $old = $self->dosql_select( "SELECT * FROM $table WHERE stop is null and id = ? and value = ?", [$data{id}, $data{value}] );
+	    return $old->[0]->{id} if $old->[0]->{id};
+	}
     }
    else {
-      $e = $self->dosql_select( "SELECT * FROM $schema WHERE visual_id = ?", [$data{visual_id}] );
+       $e = $self->dosql_select( "SELECT * FROM $table WHERE visual_id = ?", [$data{visual_id}] );
     }
 
 
@@ -256,7 +284,7 @@ sub update {
 	}
 	my $where = join(" and ", @fields);
 	
-	$self->dosql_update( "UPDATE $schema SET stop = NOW() WHERE $where", \@values );
+	$self->dosql_update( "UPDATE $table SET stop = NOW() WHERE $where", \@values );
       } else {
 	$self->{logger}->error( "Why here?" );
 	return $e->[0]->{id};
@@ -268,10 +296,9 @@ sub update {
     my $question = join(", ", ("?") x keys %data);
 
       if( $schema =~ /_R_/ || $schema =~ /_/ || grep { $schema eq $_ } 'MetaProperty', 'MetaEntity', 'MetaRelation', 'MetaInheritance'   ) {
-
-	return $self->dosql_update( "INSERT INTO $schema($columns, start) VALUES($question, NOW())", [values %data] );
+	return $self->dosql_update( "INSERT INTO $table($columns, start) VALUES($question, NOW())", [values %data] );
       } else {
-	return $self->dosql_update( "INSERT INTO $schema($columns) VALUES($question)", [values %data] );
+	return $self->dosql_update( "INSERT INTO $table($columns) VALUES($question)", [values %data] );
       }
 }
 

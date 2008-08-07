@@ -10,6 +10,7 @@ CREATE TABLE MetaProperty (
   id            INT NOT NULL AUTO_INCREMENT,
   entity        VARCHAR(255) NOT NULL,
   property      VARCHAR(255) NOT NULL,
+  tablename     VARCHAR(64) NOT NULL,
   start         DATETIME NOT NULL,
   stop          DATETIME NULL DEFAULT NULL,
 

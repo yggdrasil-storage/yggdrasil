@@ -7,9 +7,10 @@ use base qw(Yggdrasil::Meta);
 
 our $SCHEMA = <<SQL;
 CREATE TABLE MetaEntity (
-  entity   VARCHAR(255) NOT NULL,
-  start    DATETIME NOT NULL,
-  stop     DATETIME NULL DEFAULT NULL,
+  entity    VARCHAR(255) NOT NULL,
+  tablename VARCHAR(64) NOT NULL,
+  start     DATETIME NOT NULL,
+  stop      DATETIME NULL DEFAULT NULL,
 
   PRIMARY KEY( entity ),
   CHECK( start < stop )
