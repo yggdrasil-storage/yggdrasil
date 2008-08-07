@@ -153,29 +153,19 @@ sub search {
     # Check if the property exists.
     return undef unless $self->exists( 'Yggdrasil::Property', $entity, $property );
 
-    my $sql = "SELECT id FROM ${entity}_$property WHERE stop is null and value LIKE '%" . $value . "%'";
+    my $sql = "SELECT visual_id FROM ${entity}, ${entity}_$property WHERE stop is null and value LIKE '%" . $value . "%' and ${entity}_${property}.id = ${entity}.id";
     # Actually search.
+    print "$sql\n";
     my $e = $self->dosql_select( $sql );
     
     return unless @$e;
 
     my @ids;
     for my $row (@$e) {	
-	push @ids, $row->{id};
+	push @ids, $row->{visual_id};
    }
     
-    my @idlist   = ("id = ?") x scalar @ids;
-    my $idstring = join(" or ", @idlist);
-
-    $sql = "SELECT * FROM ${entity} WHERE $idstring";
-    $e = $self->dosql_select( $sql, [ @ids ]);
-
-    my @visual_ids;
-    for my $row (@$e) {
-	push @visual_ids, $row->{visual_id};
-    }
-
-    return @visual_ids;
+    return @ids;
 }
 
 sub fetch {
