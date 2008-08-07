@@ -118,15 +118,13 @@ sub properties {
 
 sub search {
     my ($class, $key, $value) = @_;
+    my $package = $class;
     $class =~ s/.*:://;
     
-    my @nodes;
-    for my $visual_id ($Yggdrasil::STORAGE->search( $class, $key, $value )) {
-	my $namespace = join '::', $Yggdrasil::NAMESPACE, $class;
-	push @nodes, $namespace->get( $visual_id );
-    } 
+    my $nodes = $Yggdrasil::STORAGE->search( $class, $key, $value );
 
-    return @nodes;
+    return map { my $new = $package->SUPER::new(); $new->{visual_id} = $_;
+		 $new->{_id} = $nodes->{$_}; $new } keys %$nodes;
 }
 
 sub link :method {
