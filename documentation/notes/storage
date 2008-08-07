@@ -1,0 +1,150 @@
+Yggdrasil.pm
+------------
+ - entities()
+   # list all Entities from MetaEntity
+
+ - exists( $caller, @_ )
+   # ?
+
+
+MetaEntity.pm
+-------------
+ - meta_exists( NAME )
+   # checks to see if meta-table has been defined
+   # Should probably be an internal method in Storage
+
+ - dosql_update($SCHEMA)
+   # Creates the table schema for MetaEntity
+   # This should be define_schema( NAME, { attr1 => type, ... } )
+   # Maybe even define_metaentity(...)
+
+ - update( TABLE, %keys )
+   # Inserts an entity name into MetaEntity
+   # This should be update_metaentity( $name )
+
+
+Entity.pm
+---------
+ - dosql_update($SCHEMA)
+   # Creates the table schema for an Entity
+   # This should be define_entity( $name )
+
+
+MetaInheritance.pm
+------------------
+ - meta_exists( NAME )
+
+ - dosql_update($SCHEMA)
+ 
+ - dosql_update( INSERT INTO ... )
+   # Adds inheritance relationship
+   # Should be update_metainheritance( $parent_ent, $child_ent )
+
+
+MetaProperty.pm
+---------------
+ - meta_exists( NAME )
+
+ - dosql_update($SCHEMA)
+
+ - update( TABLE, %keys )
+   # Adds Entity-name => Property-name pairs to MetaProperty
+   # Should be update_metaproperty( $entity, $property )
+
+
+Property.pm
+-----------
+ - exists( $package )
+   # ?
+
+ - dosql_update($SCHEMA)
+
+ - dosql_update( INSERT INTO ... )
+   # Inserts property value into a property table
+   # Should be add_property( $entity_id, $value )
+
+
+MetaRelation.pm
+---------------
+ - meta_exists( NAME )
+
+ - dosql_update($SCHEMA)
+
+ - update( TABLE, %keys )
+   # Adds the relation entity1 <=> entity2 to MetaRelation
+   # Should be update_metarelation( $entity1, $entity2 )
+
+
+Relation.pm
+-----------
+ - exists( $package, $name )
+   # ?
+
+ - dosql_update($SCHEMA, ...)
+   # Creates the table schema for a Relation
+   # This should be define_relation( $entity1, $entity2 );
+
+
+Instance.pm
+-----------
+ - fetch( $entity, visual_id => $vid )
+   # Returns the numerical id associated with a given Entity-table and a visual_id in that table.
+   # The numerical id should not be visible outside SQL/*
+
+ - update( $entity, visual_id => $vid )
+   # Inserts the visual_id into table $entity, return numerical id
+   # Should be add_instance( $visual_id )
+
+ - dosql_update($SCHEMA, ... )
+
+ - update( TABLE, %keys )
+   # Adds entity => property pairs to MetaProperty
+   # Should be update_metaproperty( $entity, $property )
+
+ - update( $name, %keys )
+   # Updates a property table $name with a new value where numerical id is X
+   # Should be update_property( $entity, $id(visual), $property, $value )
+
+ - fetch( $name, id => $id )
+   # Looks up the value from a property table
+   # Should be fetch_property( $entity, $id(visual) $property )
+
+ - exists( $package, $entity, $property )
+   # ?
+
+ - properties( $class )
+   # Returns all defined properties for an entity
+   # Should be properties( $entity )
+
+ - search( $class, $key, $value )
+   # Finds instances having property $key with value $value
+   # Should be search_instances( $entity, $key, $value )
+
+ - fetch( TABLE, %keys )
+   # Fetches the schema name storing the relation between two entities
+   # This kind of stuff should not be visible outside of Storage
+
+ - update( $schema, %keys )
+   # Inserts the link instance1 <=> instance2 into a Relation table
+   # Should be link( $instance1, $instance2 )
+
+ - expire( $schema, %keys )
+   # Expires a link between two instances
+   # Should be unlink( $instance1, $instance2 )
+
+ - get_relations($entity)
+   # Returns all entities that $entity relates to
+   # Should this be exposed at all?
+
+ - relations()
+   # Returns all defined relations
+   # Should this be exposed at all?
+
+ - dosql_select( SELECT $pathtable.visual_id ... )
+   # does fetch_related
+   # This should probably be in Storage?
+
+ - _map_table_name
+   # Maps normal names into insane names
+   # Should only be something SQL/* knows about. Moving fetch_related into Storage should help somewhat
+ 

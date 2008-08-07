@@ -43,35 +43,4 @@ sub _define {
     return $package;
 }
 
-sub add {
-  my $self      = shift;
-  my $visual_id = shift;
-
-  # --- Insert visual-id info into entity
-  my $id = $self->{storage}->dosql_update( 
-      qq<INSERT INTO [name](visual_id) VALUES(?)>, $self, [$visual_id] );
-
-  # --- Return Instance object representing the added info.
-  return Yggdrasil::Entity::Instance->new( entity => $self, id => $id );
-}
-
-sub fetch {
-    my $self      = shift;
-    my $visual_id = shift;
-
-    my $props = $self->{storage}->dosql_select(
-	qq<SELECT * FROM MetaProperty WHERE entity = ?>, [$self->{name}]);
-
-    my @props = map { $_->{property} } @$props;
-    
-}
-
-sub derive {
-    my $self   = shift;
-    my %derive = @_;
-    
-    my $inherit = Yggdrasil::MetaInheritance->new();
-    $inherit->_meta_add( $self, $derive{from} );
-}
-
 1;
