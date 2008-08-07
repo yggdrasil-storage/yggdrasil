@@ -33,3 +33,9 @@
    only in the database though, not in the real world.  It'd show up
    on historic overview as a change today, even if it maybe
    shouldn't.  Tagging updates?
+
+* Caching of properties, it might be a good idea to facilitate a slurp
+   of several properties at once to save selects to the database, and
+   cache these values for a short time.  Otherwise, just return them
+   into a hash or something, to make large-scale property dumps less
+   select heavy.
