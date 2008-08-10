@@ -5,26 +5,15 @@ use warnings;
 
 use base qw(Yggdrasil::Meta);
 
-our $SCHEMA = <<SQL;
-CREATE TABLE MetaProperty (
-  id            INT NOT NULL AUTO_INCREMENT,
-  entity        VARCHAR(255) NOT NULL,
-  property      VARCHAR(255) NOT NULL,
-  tablename     VARCHAR(64) NOT NULL,
-  start         DATETIME NOT NULL,
-  stop          DATETIME NULL DEFAULT NULL,
-
-  PRIMARY KEY( id ),
-  CHECK( start < stop )
-);
-SQL
-
 sub _define {
     my $self = shift;
 
-    unless ($self->{storage}->meta_exists('MetaProperty')) {
-    	$self->{storage}->dosql_update($SCHEMA);
-    }
+    return $self->{storage}->define( schema   => "MetaProperty",
+				     fields   => { entity   => { type => "VARCHAR(255)", null => 0 },
+						   property => { type => "VARCHAR(255)", null => 0 }.
+						   id       => { type => "SERIAL" } }
+				     temporal => 1,
+				     nomap    => 1 );
 }
 
 sub _meta_add {

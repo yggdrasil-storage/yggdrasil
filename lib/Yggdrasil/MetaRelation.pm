@@ -5,27 +5,17 @@ use warnings;
 
 use base qw(Yggdrasil::Meta);
 
-our $SCHEMA = <<SQL;
-CREATE TABLE MetaRelation (
-  relation     VARCHAR(255) NOT NULL,
-  entity1      VARCHAR(255) NOT NULL,
-  entity2      VARCHAR(255) NOT NULL,
-  tablename    VARCHAR(64) NOT NULL,
-  requirement  VARCHAR(255) NULL,
-  start        DATETIME NOT NULL,
-  stop         DATETIME NULL,
-
-  PRIMARY KEY( relation ),
-  CHECK( start < stop )
-);
-SQL
-
 sub _define {
   my $self = shift;
   
-  unless ($self->{storage}->meta_exists('MetaRelation')) {
-      $self->{storage}->dosql_update($SCHEMA);
-  }
+  return $self->{storage}->define( schema   => "MetaRelation",
+				   fields   => { relation   => { type => "VARCHAR(255)", null => 0 },
+						 entity1    => { type => "VARCHAR(255)", null => 0 },
+						 entity2    => { type => "VARCHAR(255)", null => 0 },
+						 constraint => { type => "VARCHAR(255)", null => 0 },
+					       },
+				   temporal => 1,
+				   nomap    => 1 );
 }
 
 sub _meta_add {

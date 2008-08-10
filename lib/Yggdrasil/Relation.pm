@@ -31,11 +31,15 @@ sub _define {
   my $name = join("_R_", $entity1, $entity2);
 
   unless (__PACKAGE__->exists( $name )) {
-      # --- Create Relation table
-      $self->{storage}->dosql_update($SCHEMA, { name => $name, entity1 => $entity1, entity2 => $entity2 } );
-      
-      # --- Add to MetaRelation
-      $self->_meta_add($name, $entity1, $entity2);
+    # --- Create Relation table
+    $self->{storage}->define( schema   => $name,
+			      fields   => { lval => { type => "INTEGER" },
+					    rval => { type => "INTEGER" },
+					  },
+			      temporal => 1 );
+
+    # --- Add to MetaRelation
+    $self->_meta_add($name, $entity1, $entity2);
   }
   
 }

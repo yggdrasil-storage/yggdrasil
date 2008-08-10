@@ -5,24 +5,13 @@ use warnings;
 
 use base qw(Yggdrasil::Meta);
 
-our $SCHEMA = <<SQL;
-CREATE TABLE MetaEntity (
-  entity    VARCHAR(255) NOT NULL,
-  tablename VARCHAR(64) NOT NULL,
-  start     DATETIME NOT NULL,
-  stop      DATETIME NULL DEFAULT NULL,
-
-  PRIMARY KEY( entity ),
-  CHECK( start < stop )
-);
-SQL
-
 sub _define {
     my $self = shift;
 
-    unless ($self->{storage}->meta_exists('MetaEntity')) {
-	$self->{storage}->dosql_update($SCHEMA);
-    }    
+    return $self->{storage}->define( schema   => "MetaEntity",
+				     fields   => { entity => { type => "VARCHAR(255)", null => 0 } },
+				     temporal => 1,
+				     nomap    => 1 );
 }
 
 sub _meta_add {

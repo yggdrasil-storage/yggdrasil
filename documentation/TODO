@@ -39,3 +39,11 @@
    cache these values for a short time.  Otherwise, just return them
    into a hash or something, to make large-scale property dumps less
    select heavy.
+
+* Handle SET's in _check_valid_types() in Storage.pm
+  Eg. SET( VARCHAR(12) )
+
+* If temporal=1, then (currently) the SQL engines use "start" and
+  "stop" as fieldnames. That means "start" and "stop" are reserved
+  keywords, and a check that the user hasn't requested a field with
+  those names. (Or other reserved keywords ... are there any?)
