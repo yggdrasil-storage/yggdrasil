@@ -47,8 +47,6 @@ sub _init {
     if( ref $self eq __PACKAGE__ ) {
 	my %params = @_;
 	$self->{namespace} = $NAMESPACE = $params{namespace} || '';
-	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
-	die "No storage layer initalized, aborting.\n" unless $STORAGE;
 
 	my $project_root = $self->_project_root() || ".";
 
@@ -59,6 +57,8 @@ sub _init {
 	}
 
 	$self->{logger} = $YGGLOGGER = get_logger();
+	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
+	die "No storage layer initalized, aborting.\n" unless $STORAGE;
 	
 	$self->_db_init();
     } else {
@@ -122,19 +122,6 @@ sub bootstrap {
     define Yggdrasil::MetaRelation;
     define Yggdrasil::MetaProperty;
     define Yggdrasil::MetaInheritance;
-}
-
-sub exists {
-    my $caller = shift;
-    
-    if (ref $caller) {
-	$caller->{logger}->error( "Calling exists with a reference from $caller!" );
-	my $entity = $caller->_extract_entity();
-	return $caller->{storage}->exists( $caller, @_ );
-    } else {
-	$caller =~ s/^${NAMESPACE}:://;
-	return $STORAGE->exists( $caller, @_ );
-    }
 }
 
 sub entities {

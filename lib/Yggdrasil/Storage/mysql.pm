@@ -9,6 +9,11 @@ use base 'Yggdrasil::Storage::SQL';
 
 use DBI;
 
+our %TYPEMAP = (
+		SERIAL => 'INT AUTO_INCREMENT',
+		DATE   => 'DATETIME',		
+	       );
+
 sub new {
   my $class = shift;
   my $self  = {};
@@ -21,21 +26,33 @@ sub new {
   return $self;
 }
 
-sub meta_exists {
+sub _structure_exists {
     my $self = shift;
-    my $meta = shift;
+    my $structure = shift;
     
-    my $e = $self->dosql_select( "SHOW TABLES LIKE '$meta'" );
+    my $e = $self->_sql( "SHOW TABLES LIKE '$structure'" );
 
     for my $row ( @$e ) {
 	for my $table ( values %$row ) {
-	    return $meta if $table eq $meta;
+	    return $structure if $table eq $structure;
 	}    
     } 
     return 0;
-
 }
 
+sub _map_type {
+    my $self = shift;
+    my $type = shift;
+
+    return $TYPEMAP{$type} || $type;
+}
+
+sub _null_comparison_operator {
+    my $self = shift;
+    return 'is';
+}
+
+__DATA__
 sub _get_last_id {
     my $self = shift;
 

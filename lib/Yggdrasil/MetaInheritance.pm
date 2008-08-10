@@ -8,10 +8,10 @@ use base qw(Yggdrasil::Meta);
 sub _define {
     my $self = shift;
 
-    return $self->{storage}->define( schema   => "MetaInheritance",
+    return $self->{storage}->define( "MetaInheritance",
 				     fields   => { parent => { type => "VARCHAR(255)", null => 0 },
 						   child  => { type => "VARCHAR(255)", null => 0 },
-						   id     => { type => "SERIAL" } }
+						   id     => { type => "SERIAL" } },
 				     temporal => 1,
 				     nomap    => 1 );
 }
@@ -21,7 +21,13 @@ sub _meta_add {
     my $child  = shift;
     my $parent = shift;
 
-    $self->{storage}->dosql_update( qq<INSERT INTO MetaInheritance(parent,child,start) VALUES(?, ?, NOW())>, [$parent->{name}, $child->{name}] );
+    $self->{storage}->store('MetaInheritance',
+			    key    => 'id',
+			    fields => {
+				       parent => $parent->{name},
+				       child  => $child->{name},
+				      });
+
 }
 
 1;

@@ -12,9 +12,9 @@ sub _define {
     my $name = shift;
 
     my $package = join '::', $self->{namespace}, $name;
-    unless (__PACKAGE__->exists( $name )) {
+    unless ($self->{storage}->exists( $name )) {
 	# --- Tell Storage to create SCHEMA    
-	$self->{storage}->define( schema   => $name,
+	$self->{storage}->define( $name,
 				  fields   => { visual_id => { type => "TEXT" },
 						id        => { type => "SERIAL" } },
 				  temporal => 0 );
