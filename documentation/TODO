@@ -47,3 +47,29 @@
   "stop" as fieldnames. That means "start" and "stop" are reserved
   keywords, and a check that the user hasn't requested a field with
   those names. (Or other reserved keywords ... are there any?)
+
+* _register_namespace, what do we do if the namespace is already
+  registered?  What is the appropriate behaviour?
+
+* define currently looks like:
+
+  define( Schema',
+          fields   => { field1, 
+                                { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) }
+                        field2, 
+                                { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) } },
+          temporal => BOOL(0),
+          nomap => BOOL(0) );
+
+  This means that the order of the fields is up to the Storage engine.
+  This again makes for painful process_database overviews.  Maybe it'd
+  be better to do:
+
+  define( Schema',
+          fields   => [ field1, 
+                                { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) }
+                        field2, 
+                                { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) } ],
+          temporal => BOOL(0),
+          nomap => BOOL(0) );
+
