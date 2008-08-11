@@ -107,6 +107,8 @@ sub _fetch {
     
     while (@schemalist) {	
 	my ($schema, $queryref) = (shift @schemalist, shift @schemalist);
+	confess( "$queryref isn't a reference" ) unless ref $queryref;
+	
 	my $where    = $queryref->{where};
 	my $operator = $queryref->{operator} || '=';
 
@@ -169,8 +171,8 @@ sub _store {
     my $aref = $self->fetch( $schema, { where => { %$fields } } );
     return 1 if @$aref;
     
-    # Expire the old value.
-    $self->_expire( $schema, $key, $fields ) if $self->_schema_is_temporal( $schema );
+    # Expire the old value
+    $self->_expire( $schema, $key, $fields->{$key} );
 
     # Insert new value
     if ($self->_schema_is_temporal( $schema )) {
@@ -184,13 +186,15 @@ sub _store {
 }
 
 sub _expire {
-    my $self   = shift;
-    my $schema = shift;
-    my $key    = shift;
-    my $fields = shift;
+    my $self        = shift;
+    my $schema      = shift;
+    my $indexfield  = shift;
+    my $index       = shift;
+
+    return unless $self->_schema_is_temporal( $schema );
 
     my $nullopr = $self->_null_comparison_operator();
-    $self->_sql( "UPDATE $schema SET stop = NOW() WHERE stop $nullopr NULL and $key = ?", $fields->{$key} );    
+    $self->_sql( "UPDATE $schema SET stop = NOW() WHERE stop $nullopr NULL and $indexfield = ?", $index );    
 }
 
 # Process return requests, accepting an arrayref or a scalar.
