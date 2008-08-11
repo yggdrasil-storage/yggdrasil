@@ -169,7 +169,10 @@ sub fetch_related {
 
   my $paths = $self->_fetch_related( $source, $relative );
 
-  my @relations = $self->{storage}->relations();
+  my $relations = $self->{storage}->fetch( 'MetaRelation', {} );
+  my @relations = map { [$_->{entity1}, $_->{entity2}, $_->{relation} ] } @$relations;
+
+
   my %table_map;
   foreach my $r ( @relations ) {
     my( $e1, $e2, $rel ) = @$r;
@@ -190,11 +193,12 @@ sub fetch_related {
      }
 
 
-    my @where;
+    my @schema;
     my $first = $ordered[0];
     my $side = $self->_relation_side( $first, $source );
-    my $firsttable = $self->_map_table_name( $first );
-    push( @where, "$firsttable.$side = $self->{_id} and $firsttable.stop is null" );
+    my $firsttable = $self->_map_schema_name( $first );
+    push( @schema, $firsttable => { where => { $side => $self->{_id} } } );
+
     my $prev = $first;
     for( my $i=1; $i<@ordered; $i++ ) {
       my $table = $ordered[$i];
@@ -203,35 +207,28 @@ sub fetch_related {
       
       my $current = $self->_relation_side( $table, $path->[$i] );
       my $next    = $self->_relation_side( $prev, $path->[$i] );
-      my $tabname = $self->_map_table_name( $table );
-      my $prevtab = $self->_map_table_name( $prev );
+      my $tabname = $self->_map_schema_name( $table );
+      my $prevtab = $self->_map_schema_name( $prev );
       
-      push( @where, "$tabname.$current = $prevtab.$next and $tabname.stop is null");
+      push( @schema, $tabname => { where => { $current => \qq<$prevtab.$next> } } );
       $prev = $table;
     }
     
     $side = $self->_relation_side( $ordered[-1], $path->[-1] );
-    my ($ordtab, $pathtab) = ($self->_map_table_name( $ordered[-1] ), $self->_map_table_name( $path->[-1] ));
-    push(@where, "$ordtab.$side = $pathtab.id" );
+    my ($ordtab, $pathtab) = ($self->_map_schema_name( $ordered[-1] ), $self->_map_schema_name( $path->[-1] ));
+    push(@schema, $pathtab => { return => "visual_id", where => { id => \qq<$ordtab.$side> } } );
 
-    my $pathtable  = $self->_map_table_name( $path->[-1] );
+    my $pathtable  = $self->_map_schema_name( $path->[-1] );
 
-    my $from = join(", ", map { $self->_map_table_name( $_) } @ordered, $path->[-1] );
-
-    print "\n**$from\n";
-    
-    my $sql = "SELECT $pathtable.visual_id FROM $from WHERE ". join(" and ", @where);
-    print "ZOOM * * *  $sql\n";
-    my $res = $self->{storage}->dosql_select( $sql, [] );
+    my $res = $self->{storage}->fetch( @schema );
     
     foreach my $r ( @$res ) {
+      $self->{logger}->error( $r->{visual_id} );
       my $name = "$self->{namespace}::$relative";
       my $obj = $name->new( $r->{visual_id} );
       $obj->{_pathlength} = scalar @$path - 1;
       
       $result{$r->{visual_id}} = $obj;
-
-      print "ZOOM ---> [ID] = [$obj->{_id}]\n";
     }
   }
 
@@ -290,7 +287,17 @@ sub _fetch_related {
 
   return $path if $start eq $stop;
 
-  foreach my $child ( $storage->get_relations($start) ) {
+  # FIX: we need to implement "OR"-operator or "SET"-operator. Doing
+  # to fecthes to simulate "OR" sucks.
+  my $rs = $storage->fetch( 'MetaRelation',
+			    { return => "entity2", 
+			      where => { entity1 => $start } } );
+  my $ls = $storage->fetch( 'MetaRelation',
+			    { return => "entity1",
+			      where => { entity2 => $start } } );
+
+  my @siblings = map { $_->{entity1} || $_->{entity2} } @$rs, @$ls;
+  foreach my $child ( @siblings ) {
     my $found_path = $self->_fetch_related( $child, $stop, $path, $all );
 
     push( @$all, $found_path ) if $found_path;
@@ -299,10 +306,11 @@ sub _fetch_related {
   return $all if @$path == 1;
 }
 
-sub _map_table_name {
+sub _map_schema_name {
     my $self = shift;
     
-    $self->Yggdrasil::Storage::SQL::_map_table_name( @_ );
+    return $self->{storage}->_map_schema_name( @_ );
+#Yggdrasil::Storage::SQL::
 }
 
 1;

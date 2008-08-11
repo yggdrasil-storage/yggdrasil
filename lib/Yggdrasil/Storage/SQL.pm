@@ -122,13 +122,23 @@ sub _fetch {
 		$operator = $self->_null_comparison_operator();
 	    }
 
+
 	    $value = '%' . $value . '%' if $operator eq 'LIKE';
 	    my @fqfn = $self->_qualify( $schema, $fieldname );
     
 	    push @requested_fields, @fqfn;
-	    
-	    push @wheres, join " $operator ", $fqfn[0], '?';
-	    push @params, $value;
+
+	    # If the value is a SCALAR reference, it means that it
+	    # should not be treated as real value (not to be bound to
+	    # a placeholder), but rather a reference to another table
+	    # and field. It should thus be put verbatim into the
+	    # generated SQL.
+	    if( ref $value eq "SCALAR" ) {
+		push @wheres, join " $operator ", $fqfn[0], $$value;
+	    } else {
+		push @wheres, join " $operator ", $fqfn[0], '?';
+		push @params, $value;
+	    }
 	}
 	
 	push @returns, $self->_process_return( $schema, $queryref->{return} );
@@ -143,6 +153,7 @@ sub _fetch {
 
     
     @returns = @requested_fields unless @returns;
+    @returns = ('*') unless @returns;
 
     my $sql = 'SELECT ' . join(", ", @returns) . ' FROM ' . join(", ", keys %fromtables);
 
@@ -221,7 +232,7 @@ sub _qualify {
     my $schema = shift;
     my @fields = @_;
 
-    my @fqfn = map { join(".", $schema, $_) } @fields;
+    my @fqfn = map { /\./ ? $_ : join(".", $schema, $_) } @fields;
 
     $self->{logger}->debug( @fqfn );
     return @fqfn;
