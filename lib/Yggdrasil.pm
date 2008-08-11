@@ -20,7 +20,7 @@ use Yggdrasil::Entity;
 use Yggdrasil::Relation;
 use Yggdrasil::Property;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 our $STORAGE;
 our $NAMESPACE;
