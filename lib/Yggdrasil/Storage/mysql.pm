@@ -30,7 +30,7 @@ sub _structure_exists {
     my $self = shift;
     my $structure = shift;
     
-    my $e = $self->_sql( "SHOW TABLES LIKE '$structure'" );
+    my( $e ) = $self->_sql( "SHOW TABLES LIKE '$structure'" );
 
     for my $row ( @$e ) {
 	for my $table ( values %$row ) {

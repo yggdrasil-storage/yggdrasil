@@ -5,19 +5,6 @@ use base 'Yggdrasil::Meta';
 use strict;
 use warnings;
 
-our $SCHEMA = <<SQL;
-CREATE TABLE [name] (
-  id     INT NOT NULL,
-  value  TEXT NULL,
-  start  DATETIME NOT NULL,
-  stop   DATETIME NULL,
-
-  PRIMARY KEY( id, value(50), start ),
-  FOREIGN KEY( id ) REFERENCES [entity]( id ),
-  CHECK( start < stop )
-);
-SQL
-  
 sub new {
   my $class = shift;
 
@@ -31,10 +18,13 @@ sub new {
   $self->{visual_id} = $visual_id;
 
   my $entity = $self->_extract_entity();
-  $self->{_id} = $self->{storage}->fetch( $entity, visual_id => $visual_id );
+  $self->{_id} = $self->{storage}->fetch( $entity =>
+					  { return => "id", where => { visual_id => $visual_id } } );
 
   unless ($self->{_id}) { 
-    $self->{_id} = $self->{storage}->update( $entity, visual_id => $visual_id );
+      $self->{storage}->store( $entity, fields => { visual_id => $visual_id } );
+      $self->{_id} = $self->{storage}->fetch( $entity =>
+					      { return => "id", where => { visual_id => $visual_id } } );
     $self->property( "_$entity" => $visual_id );
   }
 
@@ -69,10 +59,13 @@ sub _define {
   unless ($self->property_exists( $entity, $property )) {
       print "Creating property table $entity $property\n";
       # --- Create Property table
-      $self->{storage}->dosql_update( $SCHEMA, { name => $name, entity => $entity } );
+      $self->{storage}->define( $name,
+				fields   => { id    => { type => "INTEGER" },
+					      value => { type => "TEXT" } },
+				temporal => 1 );
       
       # --- Add to MetaProperty
-      $self->{storage}->update( "MetaProperty", entity => $entity, property => $property );
+      $self->{storage}->store( "MetaProperty", key => "id", fields => { entity => $entity, property => $property } );
   }  
 
   return $property;
@@ -88,10 +81,10 @@ sub property {
     my $name = join("_", $entity, $key );
       
     if ($value) {
-      $storage->update( $name, id => $self->{_id}, value => $value );
+      $storage->store( $name, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 
-    return $storage->fetch( $name, id => $self->{_id} );
+    return $storage->fetch( $name => { return => "value", where => { id => $self->{_id} } } );
 }
 
 sub property_exists {

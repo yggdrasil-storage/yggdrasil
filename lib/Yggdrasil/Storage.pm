@@ -119,7 +119,8 @@ sub store {
 # We remap the schema names (the non-reference parameters here
 sub fetch {
     my $self = shift;
-    
+    $self->{logger}->warn( "fetch( @_ )" );
+   
     return $self->_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_ );
 }
 

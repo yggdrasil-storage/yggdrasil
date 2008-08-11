@@ -65,15 +65,23 @@ sub _sql {
     my $sql  = shift;
     my @attr = @_;
     
-    my $sth = $self->{dbh}->prepare( $sql );
-    confess( "no sth?" ) unless $sth;
-    
+    my $dbh = $self->{dbh};
+    my $sth = $dbh->prepare( $sql );
+    confess( "no sth? " . $dbh->errstr ) unless $sth;
+
     my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);
     $self->{logger}->debug( "$sql -> Args: [$args_str]" );
     
-    $sth->execute(@attr) 
-      || confess( "execute??" );
-    
+    $sth->execute(@attr) || confess( "execute??" );
+
+    # FIX: if we do some DDL stuff, doing a fetch later on will make
+    # DBD::mysql warn about calling fetch before execute. So if we do
+    # DDL stuff, just return. Don't bother to fetch anything.
+    # This should probably either be implemented as its own _ddlsql
+    # or at least there should be some better way of figuring out
+    # if we are doing DDL stuff.
+    return if $sql =~ /^(CREATE|INSERT)/i;
+ 
     return $sth->fetchall_arrayref( {} );
 }
 
@@ -82,6 +90,7 @@ sub _sql {
 sub _fetch {
     my $self = shift;
     my @schemalist = @_;
+    $self->{logger}->warn( "_fetch( @_ )" );
 
     my (%fromtables, %temporals, @returns, @wheres, @params, @requested_fields);
     
