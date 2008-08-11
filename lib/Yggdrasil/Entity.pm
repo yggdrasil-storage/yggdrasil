@@ -12,22 +12,18 @@ sub _define {
     my $name = shift;
 
     my $package = join '::', $self->{namespace}, $name;
-    unless ($self->{storage}->exists( $name )) {
-	# --- Tell Storage to create SCHEMA    
-	$self->{storage}->define( $name,
-				  fields   => { visual_id => { type => "TEXT" },
-						id        => { type => "SERIAL" } },
-				  temporal => 0 );
 
-	# --- Add to MetaEntity;
-	$self->_meta_add($name);
-
-	# --- Create namespace
-	$self->_register_namespace( $package );
-	
-	# --- Create property to store visual_id changes
-	define $package "_$name";
-    }
+    # --- Tell Storage to create SCHEMA, noop if it exists.
+    $self->{storage}->define( $name,
+			      fields   => { visual_id => { type => "TEXT" },
+					    id        => { type => "SERIAL" } },
+			      temporal => 0 );
+    
+    # --- Add to MetaEntity, noop if it exists.
+    $self->_meta_add($name);
+    
+    # --- Create namespace, redefined if it exists.
+    $self->_register_namespace( $package );
     
     return $package;
 }
