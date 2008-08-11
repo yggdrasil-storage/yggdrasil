@@ -35,8 +35,15 @@ sub _define {
 
 	push @keys, "key ($fieldname)" if $type eq 'SERIAL';
 
-	$type = $self->_map_type( $type );	
-	push @sqlfields, "$fieldname $type $null";
+	$type = $self->_map_type( $type );
+
+	# FUGLY hack to ensure that id fields come first in the listings.
+	if ($fieldname eq 'id') {
+	    unshift @sqlfields, "$fieldname $type $null";
+	} else {
+	    push @sqlfields, "$fieldname $type $null";
+	}
+	
     }
 
     if ($temporal) {
@@ -53,7 +60,11 @@ sub _define {
     $sql .= ");\n";
 
     $self->{logger}->debug( $sql );
-    $self->_sql( $sql );   
+    $self->_sql( $sql );
+
+    # Find a way to deal with return values from here, worked / didn't
+    # would be nice.
+    return 1;
 }
 
 # Perform a prewritten statement that is not expected to return
@@ -80,8 +91,8 @@ sub _sql {
     # This should probably either be implemented as its own _ddlsql
     # or at least there should be some better way of figuring out
     # if we are doing DDL stuff.
-    return if $sql =~ /^(CREATE|INSERT)/i;
- 
+    return if $sql =~ /^(CREATE|INSERT|UPDATE)/i;
+
     return $sth->fetchall_arrayref( {} );
 }
 
