@@ -5,6 +5,8 @@ use base 'Yggdrasil::Meta';
 use strict;
 use warnings;
 
+use Carp;
+
 sub new {
   my $class = shift;
 
@@ -58,17 +60,14 @@ sub _define {
   my $entity = $self->_extract_entity();
   my $name = join("_", $entity, $property);
 
-  unless ($self->property_exists( $entity, $property )) {
-      print "Creating property table $entity $property\n";
-      # --- Create Property table
-      $self->{storage}->define( $name,
-				fields   => { id    => { type => "INTEGER" },
-					      value => { type => "TEXT" } },
-				temporal => 1 );
-      
-      # --- Add to MetaProperty
-      $self->{storage}->store( "MetaProperty", key => "id", fields => { entity => $entity, property => $property } );
-  }  
+  # --- Create Property table
+  $self->{storage}->define( $name,
+			    fields   => { id    => { type => "INTEGER" },
+					  value => { type => "TEXT" } },
+			    temporal => 1 );
+  
+  # --- Add to MetaProperty
+  $self->{storage}->store( "MetaProperty", key => "id", fields => { entity => $entity, property => $property } );
 
   return $property;
 }
@@ -90,18 +89,7 @@ sub property {
 }
 
 sub property_exists {
-    my ($entity, $property);
-    # If we're called as a class call, we'll get two params.
-    if (@_ == 2) {
-	($entity, $property) = @_;
-	$entity =~ s/.*:://;
-    # Otherwise, we're called a method, three params.
-    } else {
-	my $self = shift;
-	($entity, $property) = @_;
-    }
-    
-    return $Yggdrasil::STORAGE->exists( 'Yggdrasil::Property', $entity, $property );
+    confess "Not implemented";
 }
 
 sub properties {
@@ -129,21 +117,18 @@ sub link :method {
   my $e1 = $self->_extract_entity();
   my $e2 = $instance->_extract_entity();
 
-  my $storage = $self->{storage};
-
-  my $schema = $storage->fetch( "MetaRelation", entity1 => $e1, entity2 => $e2 );
-  print "-----------> [$schema]\n";
+  my $schema = $self->_get_relation( $e1, $e2 );
+  
+  # Check to see if the relationship between the entities is defined
+  confess "Undefined relation between $e1 / $e2 requested." unless $schema;
 
   my $e1_side = $self->_relation_side( $schema, $e1 );
   my $e2_side = $self->_relation_side( $schema, $e2 );
 
-
-  # Check to see if the relationship between the entities is defined
-  if ($schema) {
-      $storage->update( $schema, 
-			$e1_side => $self->{_id},
-			$e2_side => $instance->{_id} );
-  }
+  $self->{storage}->store( $schema,
+			   key => 'id',
+			   fields => { $e1_side => $self->{_id},
+				       $e2_side => $instance->{_id} });
 }
 
 sub unlink :method {
@@ -155,8 +140,7 @@ sub unlink :method {
   
   my $storage = $self->{storage};
 
-  my $schema = $storage->fetch( "MetaRelation", entity1 => $e1, entity2 => $e2 );
-  print "-----------> [$schema]\n";
+  my $schema = $storage->fetch( "MetaRelation", => { where => { entity1 => $e1, entity2 => $e2 } });
 
   my $e1_side = $self->_relation_side( $schema, $e1 );
   my $e2_side = $self->_relation_side( $schema, $e2 );
@@ -273,6 +257,25 @@ sub _relation_side {
   }
 }
 
+sub _get_relation {
+    my ($self, $e1, $e2) = @_;
+
+    my $storage = $self->{storage};
+    
+    my $schemaref = $storage->fetch( "MetaRelation" => { return => 'relation',
+							 where => { 'entity1' => $e1, 'entity2' => $e2 } } );
+    my $schema = $schemaref->[0]->{relation};
+    
+    # Sigh, try it the other way around, we don't have operator support yet in the DB.
+    unless ($schema) {
+	$schemaref = $storage->fetch( "MetaRelation" => { return => 'relation',
+							  where => { 'entity2' => $e1, 'entity1' => $e2 } } );
+	$schema = $schemaref->[0]->{relation};
+    }
+    
+    return $schema;
+}
+
 sub _fetch_related {
   my $self = shift;
   my $start = shift;
@@ -298,7 +301,7 @@ sub _fetch_related {
 
 sub _map_table_name {
     my $self = shift;
-
+    
     $self->Yggdrasil::Storage::SQL::_map_table_name( @_ );
 }
 
