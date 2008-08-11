@@ -8,8 +8,11 @@ use Carp;
 use Digest::MD5 qw(md5_hex);
 
 our $storage;
-our $STORAGEMAPPER   = 'Storage_metamapname';
-our $STORAGETEMPORAL = 'Storage_metatemporals';
+our $STORAGEMAPPER   = 'Storage_mapname';
+our $STORAGETEMPORAL = 'Storage_temporals';
+our $STORAGECONFIG   = 'Storage_config';
+our $MAPPER          = 'md5';
+
 our %TYPES = (
 	      TEXT    => 1,
 	      VARCHAR => 255,
@@ -48,6 +51,8 @@ sub new {
 
     $storage->{logger} = Yggdrasil::get_logger( ref $storage );
 
+    $storage->_initialize_config();
+    
     $storage->_initialize_mapper();
     $storage->_initialize_temporal();
 
@@ -79,10 +84,8 @@ sub define {
 	$fieldhash->{type} = $self->_check_valid_type( $type );
     }
 
-    unless ($data{nomap}) {
-	$schema = $self->_map_schema_name( $schema );
-	$self->{logger}->debug( "Remapping $originalname to $schema." );
-    }
+    $schema = $self->_map_schema_name( $schema ) unless $data{nomap};
+
     return if $self->_structure_exists( $schema );
 
     my $retval = $self->_define( $schema, @_ );
@@ -90,6 +93,7 @@ sub define {
    # We might create a schema with name "0", so check for a defined value.
     if (defined $retval) {
 	unless ($data{nomap}) {
+	    $self->{logger}->warn( "Remapping $originalname to $schema." );	
 	    $self->{_mapcacheh2m}->{$originalname} = $schema;
 	    $self->{_mapcachem2h}->{$schema} = $originalname;
 	    $self->store( $STORAGEMAPPER, key => "humanname",
@@ -254,6 +258,40 @@ sub _initialize_temporal {
 		     );
     }
     
+}
+
+# Initialize the STORAGE config, this structure is required to be
+# accessible with the specific configuration for this
+# Yggdrasil::Storage instance and its workings.  TODO, fix mapper setup.
+sub _initialize_config {
+    my $self = shift;
+
+    if ($self->_structure_exists( $STORAGECONFIG )) {
+	my $listref = $self->fetch( $STORAGECONFIG, { return => '*' });
+	for my $temporalpair (@$listref) {
+	    my ($key, $value) = ( $temporalpair->{id}, $temporalpair->{value} );
+	    
+	    $STORAGEMAPPER   = $value if lc $key eq 'mapstruct' && $value && $value =~ /^Storage_/;
+	    $STORAGETEMPORAL = $value if lc $key eq 'temporalstruct' && $value && $value =~ /^Storage_/;
+#	    $MAPPER          = $value if lc $key eq 'mapper' && $self->_valid_mapper( $value );
+	}
+    } else {
+	$self->define( $STORAGECONFIG, 
+		       nomap  => 1,
+		       fields => {
+				  id    => { type => 'TEXT' },
+				  value => { type => 'TEXT' },
+				 },
+		     );
+	$self->store( $STORAGECONFIG, key => "id",
+		      fields => { id => 'mapstruct', value => $STORAGEMAPPER });
+
+	$self->store( $STORAGECONFIG, key => "id",
+		      fields => { id => 'temporalstruct', value => $STORAGETEMPORAL });
+
+	$self->store( $STORAGECONFIG, key => "id",
+		      fields => { id => 'mapper', value => $MAPPER });
+    }
 }
 
 1;
