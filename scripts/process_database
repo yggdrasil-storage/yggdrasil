@@ -10,7 +10,7 @@ my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 1, 0, 1);
 
 GetOptions(
     "zap"         => \$zap,
-    "dump!"        => \$dump,
+    "dump!"       => \$dump,
     "help"        => \&help,
     "bootstrap"   => \$bootstrap,
     "dereference" => \$dereference,
@@ -25,6 +25,9 @@ my ($engine, $db, $host, $user, $password, $port) = ($ENV{YGG_ENGINE},
 						     $ENV{YGG_PORT},
 						    );
 my ($dbh, $sql);
+
+my %mapper;
+my %config;
 
 my %display_tables;
 if ($onlytables) {
@@ -52,23 +55,35 @@ my $tablesref = $dbh->selectall_arrayref( $sql );
 
 for my $row_arrayref (sort stupidsort @$tablesref) {
     my @row_array = @$row_arrayref;
-    print "* ", $row_array[0], "\n" if &display($row_array[0]);
+    my ($mapped_struct, $original_struct) = ($mapper{$row_array[0]} || $row_array[0], $row_array[0]);
+    
+    if (&display($mapped_struct)) {
+	my $displaytext = $mapped_struct;
+	$displaytext = "$mapped_struct ($original_struct)" if $mapped_struct ne $original_struct;
+	print "* $displaytext\n";
+    }
     my @tabledata;
     if ($dump) {
-	my $tableref = $dbh->selectall_arrayref( "select * from $row_array[0]" );
+	my $tableref = $dbh->selectall_arrayref( "select * from $original_struct" );	
 	for my $rowref (@$tableref) {
 	    my @row = @$rowref;
-	    if ($row_array[0] =~ /^[^_]+$/ && $row_array[0] !~ /^Meta/) {
-		$idents{$row_array[0]}->{$row[0]} = $row[1];
+	    if ($original_struct =~ /^[^_]+$/ && $original_struct !~ /^Meta/) {
+		$idents{$mapped_struct}->{$row[0]} = $row[1];
 	    } 
 
+	    if ($original_struct eq 'Storage_config') {
+		$config{$row[0]} = $row[1];
+	    } elsif ($original_struct eq 'Storage_mapname') {
+		$mapper{$row[1]} = $row[0];
+	    } 
+		    
  	    my @data;
 	    my $i = 0;
 	    my ($lval, $rval) = ();
 	    for my $c (@row) {
-		if ($dereference && $c && $c =~ /^\d+$/ && $row_array[0] =~ /^([a-z]+)_\w+$/i) {
+		if ($dereference && $c && $c =~ /^\d+$/ && $mapped_struct =~ /^([a-z]+)_\w+$/i) {
 		    my $key = $1;
-		    if ($row_array[0] =~ /^([^_]+)_R_([^_]+)/) {
+		    if ($mapped_struct =~ /^([^_]+)_R_([^_]+)/) {
 			# id | $1 | $2
 			($lval, $rval) = ($1, $2);
 			if ($i == 1 && $idents{$lval} && $idents{$lval}->{$c}) {
@@ -84,12 +99,13 @@ for my $row_arrayref (sort stupidsort @$tablesref) {
 		}
 		$i++;
 		push @data, $c || 'NULL';
+		;
 	    }
 	    push @tabledata, \@data;
 	}
 
 	my @widths;
-	if (&display($row_array[0])) {
+	if (&display($mapped_struct)) {
 	    for my $rowref (@tabledata) {
 		my $index = 0;
 		for my $entry (@$rowref) {
@@ -109,7 +125,7 @@ for my $row_arrayref (sort stupidsort @$tablesref) {
 	    }
 	}
 	
-	print "\n" if &display($row_array[0]);
+	print "\n" if &display($mapped_struct);
     } 
     
     if ($zap) {
@@ -131,11 +147,14 @@ sub display {
 }
 
 sub stupidsort {
-    if ( $a->[0] =~ /_/ ) {
+    if ($a->[0] =~ /^Meta/) {
+	return -1
+    } elsif ($a->[0] =~ /^Storage_config/) {
 	return 1
     } else {
-	return -1
-    } 
+	$a->[0] cmp $b->[0]
+    }
+    
 }
 
 sub help {
