@@ -18,31 +18,33 @@ sub new {
   $self->{visual_id} = $visual_id;
 
   my $entity = $self->_extract_entity();
-  $self->{_id} = $self->{storage}->fetch( $entity =>
-					  { return => "id", where => { visual_id => $visual_id } } );
+  $self->{_id} = $self->_get_id(); 
 
   unless ($self->{_id}) { 
       $self->{storage}->store( $entity, fields => { visual_id => $visual_id } );
-      $self->{_id} = $self->{storage}->fetch( $entity =>
-					      { return => "id", where => { visual_id => $visual_id } } );
-    $self->property( "_$entity" => $visual_id );
+      $self->{_id} = $self->_get_id();
   }
-
+  
   return $self;
+}
+
+sub _get_id {
+    my $self = shift;
+    my $entity = $self->_extract_entity();
+    my $idfetch = $self->{storage}->fetch( $entity =>
+					   { return => "id", where => { visual_id => $self->id() } } );
+    return $idfetch->[0]->{id};
 }
 
 sub get {
   my $class = shift;
   my $visual_id = shift;
 
-#  print "--------> HERE $class $visual_id <----------\n";
-
-  if ($class->exists( $visual_id)) {
+  if ($class->exists( $visual_id )) {
       return $class->new( $visual_id );
   } else {
       return undef;
   }
-
 }
 
 sub _define {
@@ -79,9 +81,9 @@ sub property {
 
     my $entity = $self->_extract_entity();
     my $name = join("_", $entity, $key );
-      
+
     if ($value) {
-      $storage->store( $name, key => "id", fields => { id => $self->{_id}, value => $value } );
+	$storage->store( $name, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 
     return $storage->fetch( $name => { return => "value", where => { id => $self->{_id} } } );
