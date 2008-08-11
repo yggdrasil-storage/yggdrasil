@@ -130,6 +130,22 @@ sub entities {
     return $STORAGE->entities();
 }
 
+# Generic exist method for non-instanced calls across Yggdrasil to see
+# if a given instance of a given entity exists.  This requires
+# $STORAGE to access the backend layer.  It is called as
+# "Ygg::Host->exists( 'nommo' )", or "Ygg::Room->exists( 'B810' ) etc.
+sub exists {
+    my $class = shift;
+    my $visual_id = shift;
+    
+    my $entity = (split '::', $class)[-1];
+
+    my $fetchref = $STORAGE->fetch( $entity, { return => 'id', where => { visual_id => $visual_id } } );
+
+    return undef unless $fetchref->[0];
+    return $fetchref->[0]->{id};
+}
+
 1;
 
 =head1 NAME
