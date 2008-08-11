@@ -50,6 +50,7 @@ sub _define {
 	my $datefield = $self->_map_type( 'DATE' );
 	push @sqlfields, "start $datefield NOT NULL";
 	push @sqlfields, "stop  $datefield NULL";
+	push @sqlfields, "index (stop)";
 	push @sqlfields, "check ( start < stop )";
     }
     
@@ -181,9 +182,9 @@ sub _store {
 
     my $aref = $self->fetch( $schema, { where => { %$fields } } );
     return 1 if @$aref;
-    
+
     # Expire the old value
-    $self->_expire( $schema, $key, $fields->{$key} );
+    $self->_expire( $schema, $key, $fields->{$key}); 
 
     # Insert new value
     if ($self->_schema_is_temporal( $schema )) {
