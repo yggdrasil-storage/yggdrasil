@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Carp;
+use Yggdrasil::Storage::Mapper;
 
 our $storage;
 our $STORAGEMAPPER   = 'Storage_mapname';
@@ -277,7 +278,7 @@ sub _initialize_config {
 	    $STORAGEMAPPER   = $value if lc $key eq 'mapstruct' && $value && $value =~ /^Storage_/;
 	    $STORAGETEMPORAL = $value if lc $key eq 'temporalstruct' && $value && $value =~ /^Storage_/;
 	    $MAPPER          = $self->set_mapper( $value )
-	      if lc $key eq 'mapper' && $self->_valid_mapper( $value );
+	      if lc $key eq 'mapper';
 	}
     } else {
 	$self->define( $STORAGECONFIG, 
@@ -315,20 +316,7 @@ sub set_mapper {
     my $self = shift;
     my $mappername = shift;
     
-    my $mapper_class = join("::", __PACKAGE__, 'Mapper', $mappername );
-    eval qq( require $mapper_class );
-    die $@ if $@;
-
-    return $mapper_class->new( @_ );
-}
-
-sub _valid_mapper {
-    my $self = shift;
-    my $mappername = shift;
-
-    my $path = join('/', $self->_storage_path(), 'Mapper', "$mappername.pm");
-
-    return -r $path;
+    return Yggdrasil::Storage::Mapper->new( $mappername );
 }
 
 1;
