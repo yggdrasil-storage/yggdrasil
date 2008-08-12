@@ -12,6 +12,8 @@ our $STORAGETEMPORAL = 'Storage_temporals';
 our $STORAGECONFIG   = 'Storage_config';
 our $MAPPER;
 
+our $ADMIN = undef;
+
 our %TYPES = (
 	      TEXT    => 1,
 	      VARCHAR => 255,
@@ -39,8 +41,7 @@ sub new {
   opendir( my $dh, $path ) || die "Unable to open $path: $!\n";
   my( $db ) = grep { $_ eq $engine } readdir $dh;
   closedir $dh;
-  
-  
+
   if( $db ) {
     $db =~ s/\.pm//;
     my $engine_class = join("::", __PACKAGE__, 'Engine', $db );
@@ -49,7 +50,14 @@ sub new {
     #  $class->import();
     $storage = $engine_class->new(@_);
 
-    $storage->{logger} = Yggdrasil::get_logger( ref $storage );
+    if ($data{admin}) {
+	$ADMIN = 1;
+	use Log::Log4perl qw(get_logger :levels :nowarn);
+	$storage->{logger} = get_logger( ref $storage );
+    } else {
+	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
+    }
+    
 
     $storage->_initialize_config();
     $storage->_initialize_mapper();
@@ -317,6 +325,56 @@ sub set_mapper {
     my $mappername = shift;
     
     return Yggdrasil::Storage::Mapper->new( $mappername );
+}
+
+# Admin interface, not for normal use.
+
+# Require the "admin" parameter to Storage to be set to a true value to access any admin method.
+sub _admin_verify {
+    my $self = shift;
+    confess "Administrative interface unavailable without explicit request" unless $ADMIN;
+}
+
+# Returns a list of all the structures, guarantees the order as Meta*, Storage*, everything else.
+sub _admin_list_structures {
+    my $self = shift;
+
+    $self->_admin_verify();
+
+    return sort _admin_sort_structures $self->_list_structures();
+}
+
+sub _admin_dump_structure {
+    my $self = shift;
+    $self->_admin_verify();
+
+    return $self->_dump_structure( @_ );
+}
+
+# Delete a named structure.
+sub _admin_delete_structure {
+    my $self = shift;
+
+    $self->_admin_verify();
+    $self->_delete_structure( @_ );
+}
+
+# Truncate a named structure.
+sub _admin_truncate_structure {
+    my $self = shift;
+
+    $self->_admin_verify();
+    $self->_truncate_structure( @_ );
+}
+
+sub _admin_sort_structures {
+    if ($a =~ /^Meta/) {
+	return -1
+    } elsif ($a =~ /^Storage_config/) {
+	return 1
+    } else {
+	$a cmp $b
+    }
 }
 
 1;

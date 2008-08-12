@@ -3,8 +3,12 @@
 use strict;
 use warnings;
 
-use DBI;
 use Getopt::Long;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Yggdrasil::Storage;
 
 my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 1, 0, 1);
 
@@ -17,17 +21,20 @@ GetOptions(
     "tables=s"    => \$onlytables,
     );
 
-my ($engine, $db, $host, $user, $password, $port) = ($ENV{YGG_ENGINE},
-						     $ENV{YGG_DB},
-						     $ENV{YGG_HOST},
-						     $ENV{YGG_USER},
-						     $ENV{YGG_PASSWORD},
-						     $ENV{YGG_PORT},
-						    );
+my $storage = new Yggdrasil::Storage(
+				     engine   => $ENV{YGG_ENGINE},
+				     db       => $ENV{YGG_DB},
+				     host     => $ENV{YGG_HOST},
+				     user     => $ENV{YGG_USER},
+				     password => $ENV{YGG_PASSWORD},
+				     port     => $ENV{YGG_PORT},
+				     admin    => 1,
+				    );
 my ($dbh, $sql);
 
 my %mapper;
 my %config;
+my %idents;
 
 my %display_tables;
 if ($onlytables) {
@@ -40,40 +47,28 @@ if ($onlytables) {
     }
 }
 
-if (lc $engine eq 'mysql') {
-    $sql = "SHOW TABLES";        
-} elsif (lc $engine eq 'pg') {    
-    $sql = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
-}
-
-$dbh = DBI->connect("DBI:$engine:database=$db;host=$host;port=$port", $user, $password );
-
-
-my %idents;
-
-my $tablesref = $dbh->selectall_arrayref( $sql );
-
-for my $row_arrayref (sort stupidsort @$tablesref) {
-    my @row_array = @$row_arrayref;
-    my ($mapped_struct, $original_struct) = ($mapper{$row_array[0]} || $row_array[0], $row_array[0]);
+# Give me all structures (deref will need 'em even if they're not to be displayed)
+for my $structure ($storage->_admin_list_structures()) {
+    my $mapped_struct = $mapper{$structure} || $structure;
     
     if (&display($mapped_struct)) {
 	my $displaytext = $mapped_struct;
-	$displaytext = "$mapped_struct ($original_struct)" if $mapped_struct ne $original_struct;
+	$displaytext = "$mapped_struct ($structure)" if $mapped_struct ne $structure;
 	print "* $displaytext\n";
     }
     my @tabledata;
     if ($dump) {
-	my $tableref = $dbh->selectall_arrayref( "select * from $original_struct" );	
+	# Give me a row (an array reference) for every row in the structure in question.
+	my $tableref = $storage->_dump_structure( $structure );
 	for my $rowref (@$tableref) {
 	    my @row = @$rowref;
-	    if ($original_struct =~ /^[^_]+$/ && $original_struct !~ /^Meta/) {
+	    if ($structure =~ /^[^_]+$/ && $structure !~ /^Meta/) {
 		$idents{$mapped_struct}->{$row[0]} = $row[1];
 	    } 
 
-	    if ($original_struct eq 'Storage_config') {
+	    if ($structure eq 'Storage_config') {
 		$config{$row[0]} = $row[1];
-	    } elsif ($original_struct eq 'Storage_mapname') {
+	    } elsif ($structure eq 'Storage_mapname') {
 		$mapper{$row[1]} = $row[0];
 	    } 
 		    
@@ -129,12 +124,15 @@ for my $row_arrayref (sort stupidsort @$tablesref) {
     } 
     
     if ($zap) {
-	$dbh->do( "DROP TABLE $row_array[0]" );
+	# Drop a named structure
+	$storage->_admin_delete_structure( $structure );
     } elsif ($bootstrap) {
-	if ($row_array[0] =~ /Meta/) {
-	    $dbh->do( "TRUNCATE TABLE $row_array[0]");
+	if ($structure =~ /Meta/) {
+	    # Truncate a named structure
+	    $storage->_admin_truncate_structure( $structure );
 	} else {
-	    $dbh->do( "DROP TABLE $row_array[0]" );
+	    # Drop a named structure
+	    $storage->_admin_delete_structure( $structure );
 	}
     }
 }
@@ -144,17 +142,6 @@ sub display {
 
     return 1 if ! keys %display_tables || $display_tables{$table};
     return 0;
-}
-
-sub stupidsort {
-    if ($a->[0] =~ /^Meta/) {
-	return -1
-    } elsif ($a->[0] =~ /^Storage_config/) {
-	return 1
-    } else {
-	$a->[0] cmp $b->[0]
-    }
-    
 }
 
 sub help {

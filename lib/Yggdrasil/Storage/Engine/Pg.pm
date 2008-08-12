@@ -9,6 +9,10 @@ use base 'Yggdrasil::Storage::Engine::Shared::SQL';
 
 use DBI;
 
+our %TYPEMAP = (
+		DATE   => 'TIMESTAMP',		
+	       );
+
 sub new {
   my $class = shift;
   my $self  = {};
@@ -16,32 +20,54 @@ sub new {
 
   bless $self, $class;
 
-  print "Connecting\n";
-  
   $self->{dbh} = DBI->connect( "DBI:Pg:database=$data{db};host=$data{host};port=$data{port}", $data{user}, $data{password}, { RaiseError => 0 } );
-
-  print "Connected\n";
   
   return $self;
 }
 
-sub meta_exists {
+sub _structure_exists {
     my $self = shift;
-    my $meta = shift;
-    
-    my $e = $self->dosql_select( "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'" );
+    my $structure = shift;
 
-    print "* $e";
-    
-    for my $row ( @$e ) {
-	print " - $row\n";;
-	for my $table ( values %$row ) {
-	    print "  | $table\n";
-	    return $meta if lc $table eq lc $meta;
-	}    
-    } 
+    for my $table ( $self->_list_structures() ) {
+	return $structure if $table eq $structure;
+    }    
     return 0;
 }
+
+sub _list_structures {
+    my $self = shift;
+    my $structure = shift;
+
+    # And table name LIKE?  Fix this.
+    my $string = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'";
+    
+    my( $e ) = $self->_sql( $string );
+
+    my @tables;
+    for my $row ( @$e ) {
+	for my $table ( values %$row ) {
+	    push @tables, $table;
+	}
+    }
+    return @tables;
+}
+
+sub _map_type {
+    my $self = shift;
+    my $type = shift;
+
+    return $TYPEMAP{$type} || $type;
+}
+
+sub _null_comparison_operator {
+    my $self = shift;
+    return 'is';
+}
+
+1;
+
+__DATA__
 
 sub _get_last_id {
     my $self = shift;

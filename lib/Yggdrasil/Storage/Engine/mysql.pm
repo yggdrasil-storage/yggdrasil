@@ -29,15 +29,29 @@ sub new {
 sub _structure_exists {
     my $self = shift;
     my $structure = shift;
-    
-    my( $e ) = $self->_sql( "SHOW TABLES LIKE '$structure'" );
 
+    for my $table ( $self->_list_structures( $structure ) ) {
+	return $structure if $table eq $structure;
+    }    
+    return 0;
+}
+
+sub _list_structures {
+    my $self = shift;
+    my $structure = shift;
+
+    my $string = "SHOW TABLES";
+    $string .= " LIKE '%" . $structure . "'" if $structure;
+    
+    my( $e ) = $self->_sql( $string );
+
+    my @tables;
     for my $row ( @$e ) {
 	for my $table ( values %$row ) {
-	    return $structure if $table eq $structure;
-	}    
-    } 
-    return 0;
+	    push @tables, $table;
+	}
+    }
+    return @tables;
 }
 
 sub _map_type {
@@ -50,13 +64,6 @@ sub _map_type {
 sub _null_comparison_operator {
     my $self = shift;
     return 'is';
-}
-
-__DATA__
-sub _get_last_id {
-    my $self = shift;
-
-    return $self->{dbh}->{mysql_insertid};
 }
 
 1;

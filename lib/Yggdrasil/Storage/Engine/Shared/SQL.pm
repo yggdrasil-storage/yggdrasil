@@ -92,7 +92,7 @@ sub _sql {
     # This should probably either be implemented as its own _ddlsql
     # or at least there should be some better way of figuring out
     # if we are doing DDL stuff.
-    return if $sql =~ /^(CREATE|INSERT|UPDATE)/i;
+    return if $sql =~ /^(CREATE|INSERT|UPDATE|DROP|TRUNCATE)/i;
 
     return $sth->fetchall_arrayref( {} );
 }
@@ -243,6 +243,34 @@ sub get_default_mapper {
     my $self = shift;
     
     return $self->set_mapper( 'MD5' );
+}
+
+
+# Admin interface follows, it is expected that Storage has verified that these calls are valid.
+
+sub _delete_structure {
+    my $self   = shift;
+    my $schema = shift;
+    return unless $self->_structure_exists( $schema );
+    
+    $self->_sql( "DROP TABLE $schema" );
+}
+
+sub _truncate_structure {
+    my $self   = shift;
+    my $schema = shift;
+    return unless $self->_structure_exists( $schema );
+
+    $self->_sql( "TRUNCATE TABLE $schema" );
+}
+
+sub _dump_structure {
+    my $self   = shift; 
+    my $schema = shift;
+    return unless $self->_structure_exists( $schema );
+    
+    my $dbh = $self->{dbh};
+    return $dbh->selectall_arrayref( "select * from $schema" );
 }
 
 1;
