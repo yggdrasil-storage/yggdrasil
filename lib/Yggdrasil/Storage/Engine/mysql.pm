@@ -41,7 +41,7 @@ sub _list_structures {
     my $structure = shift;
 
     my $string = "SHOW TABLES";
-    $string .= " LIKE '%" . $structure . "'" if $structure;
+    $string .= " LIKE '%" . $structure . "%'" if $structure;
     
     my( $e ) = $self->_sql( $string );
 
