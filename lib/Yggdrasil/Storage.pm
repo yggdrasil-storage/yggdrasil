@@ -34,16 +34,16 @@ sub new {
   my $engine = join(".", $data{engine}, "pm" );
 
   my $file = join('.', join('/', split '::', __PACKAGE__), "pm" );
-  my $path = $INC{$file};
+  my $path = join('/', $INC{$file}, 'Engine');
   $path =~ s/\.pm//;
   opendir( my $dh, $path ) || die "Unable to open $path: $!\n";
-  my( $db ) = grep { $_ eq  $engine } readdir $dh;
+  my( $db ) = grep { $_ eq $engine } readdir $dh;
   closedir $dh;
   
   
   if( $db ) {
     $db =~ s/\.pm//;
-    my $engine_class = join("::", __PACKAGE__, $db );
+    my $engine_class = join("::", __PACKAGE__, 'Engine', $db );
     eval qq( require $engine_class );
     die $@ if $@;
     #  $class->import();

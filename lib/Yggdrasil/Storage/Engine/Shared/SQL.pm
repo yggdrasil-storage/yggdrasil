@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::SQL;
+package Yggdrasil::Storage::Engine::Shared::SQL;
 
 use strict;
 use warnings;
