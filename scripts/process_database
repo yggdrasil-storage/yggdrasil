@@ -139,7 +139,9 @@ for my $structure ($storage->_admin_list_structures()) {
 
 sub display {
     my $table = shift;
-
+    
+    return 0 if $zap;
+    
     return 1 if ! keys %display_tables || $display_tables{$table};
     return 0;
 }
