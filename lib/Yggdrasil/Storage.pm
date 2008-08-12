@@ -5,13 +5,11 @@ use warnings;
 
 use Carp;
 
-use Digest::MD5 qw(md5_hex);
-
 our $storage;
 our $STORAGEMAPPER   = 'Storage_mapname';
 our $STORAGETEMPORAL = 'Storage_temporals';
 our $STORAGECONFIG   = 'Storage_config';
-our $MAPPER          = 'md5';
+our $MAPPER;
 
 our %TYPES = (
 	      TEXT    => 1,
@@ -33,9 +31,10 @@ sub new {
 
   my $engine = join(".", $data{engine}, "pm" );
 
-  my $file = join('.', join('/', split '::', __PACKAGE__), "pm" );
-  my $path = join('/', $INC{$file}, 'Engine');
-  $path =~ s/\.pm//;
+  # Throw-away object, used to get access to class methods.
+  bless $self, $class;
+  
+  my $path = join('/', $self->_storage_path(), 'Engine');
   opendir( my $dh, $path ) || die "Unable to open $path: $!\n";
   my( $db ) = grep { $_ eq $engine } readdir $dh;
   closedir $dh;
@@ -52,7 +51,6 @@ sub new {
     $storage->{logger} = Yggdrasil::get_logger( ref $storage );
 
     $storage->_initialize_config();
-    
     $storage->_initialize_mapper();
     $storage->_initialize_temporal();
 
@@ -169,11 +167,9 @@ sub _map_schema_name {
     my $schema = shift;
 
     confess "no schema" unless $schema;
-
-    my $digest = md5_hex( $schema );
-    $digest =~ y/0-9a-f/a-p/;
-
-    return $digest;
+    confess "early call of mapper" unless $MAPPER;
+    
+    return $MAPPER->map( $schema );
 }
 
 # Get the schema name for a schema, if it is mapped, it'll be located
@@ -280,7 +276,8 @@ sub _initialize_config {
 	    
 	    $STORAGEMAPPER   = $value if lc $key eq 'mapstruct' && $value && $value =~ /^Storage_/;
 	    $STORAGETEMPORAL = $value if lc $key eq 'temporalstruct' && $value && $value =~ /^Storage_/;
-#	    $MAPPER          = $value if lc $key eq 'mapper' && $self->_valid_mapper( $value );
+	    $MAPPER          = $self->set_mapper( $value )
+	      if lc $key eq 'mapper' && $self->_valid_mapper( $value );
 	}
     } else {
 	$self->define( $STORAGECONFIG, 
@@ -296,9 +293,42 @@ sub _initialize_config {
 	$self->store( $STORAGECONFIG, key => "id",
 		      fields => { id => 'temporalstruct', value => $STORAGETEMPORAL });
 
+
+	$MAPPER = $self->get_default_mapper();
+	my $mappername = ref $MAPPER;
+	$mappername =~ s/.*::(.*)$/$1/;
 	$self->store( $STORAGECONFIG, key => "id",
-		      fields => { id => 'mapper', value => $MAPPER });
-    }
+		      fields => { id => 'mapper', value => $mappername });
+    }    
+}
+
+sub _storage_path {
+    my $self = shift;
+    
+    my $file = join('.', join('/', split '::', __PACKAGE__), "pm" );
+    my $path = $INC{$file};
+    $path =~ s/\.pm$//;
+    return $path;
+}
+
+sub set_mapper {
+    my $self = shift;
+    my $mappername = shift;
+    
+    my $mapper_class = join("::", __PACKAGE__, 'Mapper', $mappername );
+    eval qq( require $mapper_class );
+    die $@ if $@;
+
+    return $mapper_class->new( @_ );
+}
+
+sub _valid_mapper {
+    my $self = shift;
+    my $mappername = shift;
+
+    my $path = join('/', $self->_storage_path(), 'Mapper', "$mappername.pm");
+
+    return -r $path;
 }
 
 1;

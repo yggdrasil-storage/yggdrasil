@@ -235,8 +235,14 @@ sub _qualify {
 
     my @fqfn = map { /\./ ? $_ : join(".", $schema, $_) } @fields;
 
-    $self->{logger}->debug( @fqfn );
     return @fqfn;
+}
+
+# Provides a default mapper for SQL engines.
+sub get_default_mapper {
+    my $self = shift;
+    
+    return $self->set_mapper( 'MD5' );
 }
 
 1;
