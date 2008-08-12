@@ -28,9 +28,11 @@ lib/Yggdrasil/MetaRelation.pm
 lib/Yggdrasil/Property.pm
 lib/Yggdrasil/Relation.pm
 lib/Yggdrasil/Storage.pm
-lib/Yggdrasil/Storage/mysql.pm
-lib/Yggdrasil/Storage/Pg.pm
-lib/Yggdrasil/Storage/SQL.pm
+lib/Yggdrasil/Storage/Engine/mysql.pm
+lib/Yggdrasil/Storage/Engine/Pg.pm
+lib/Yggdrasil/Storage/Engine/Shared/SQL.pm
+lib/Yggdrasil/Storage/Mapper.pm
+lib/Yggdrasil/Storage/Mapper/MD5.pm
 Makefile.PL
 MANIFEST
 META.yml

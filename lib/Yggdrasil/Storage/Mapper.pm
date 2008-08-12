@@ -13,7 +13,7 @@ sub new {
     my $self = {};
     bless $self, $class; 
     
-    confess "Bad mapper requested" unless $self->_valid_mapper( $mappername );
+    confess "Bad mapper '$mappername' requested" unless $self->_valid_mapper( $mappername );
     
     my $mapper_class = join("::", __PACKAGE__, $mappername );
     eval qq( require $mapper_class );
@@ -27,6 +27,7 @@ sub _valid_mapper {
     my $mappername = shift;
 
     my $path = join('/', $self->_mapper_path(), "$mappername.pm");
+
     return -r $path;
 }
 

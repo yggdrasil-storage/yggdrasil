@@ -38,10 +38,10 @@ my %idents;
 
 my %display_tables;
 if ($onlytables) {
-    if ($onlytables =~ /,/) {
-	for my $t (split /,/, $onlytables) {
+    if ($onlytables =~ m|,|) {
+	for my $t (split m|,|, $onlytables) {
 	    $display_tables{$t}++;
-	} 
+	}
     } else {
 	$display_tables{$onlytables}++;
     }

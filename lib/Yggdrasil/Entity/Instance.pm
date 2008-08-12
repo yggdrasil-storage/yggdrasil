@@ -85,7 +85,8 @@ sub property {
 	$storage->store( $name, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 
-    return $storage->fetch( $name => { return => "value", where => { id => $self->{_id} } } );
+    my $r = $storage->fetch( $name => { return => "value", where => { id => $self->{_id} } } );
+    return $r->[0]->{value};
 }
 
 sub property_exists {
