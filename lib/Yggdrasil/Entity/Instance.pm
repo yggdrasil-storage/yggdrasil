@@ -141,7 +141,7 @@ sub unlink :method {
   
   my $storage = $self->{storage};
 
-  my $schema = $storage->fetch( "MetaRelation", => { where => { entity1 => $e1, entity2 => $e2 } });
+  my $schema = $self->_get_relation( $e1, $e2 );
 
   my $e1_side = $self->_relation_side( $schema, $e1 );
   my $e2_side = $self->_relation_side( $schema, $e2 );

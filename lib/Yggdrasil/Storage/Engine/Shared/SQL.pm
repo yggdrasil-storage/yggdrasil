@@ -180,6 +180,7 @@ sub _store {
     my $key    = $data{key};
     my $fields = $data{fields};
 
+    # Check if we already have the value
     my $aref = $self->fetch( $schema, { where => { %$fields } } );
     return 1 if @$aref;
 
