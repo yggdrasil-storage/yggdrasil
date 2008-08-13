@@ -12,7 +12,7 @@ sub _define {
 				   fields   => { relation    => { type => "VARCHAR(255)", null => 0 },
 						 entity1     => { type => "VARCHAR(255)", null => 0 },
 						 entity2     => { type => "VARCHAR(255)", null => 0 },
-						 requirement => { type => "VARCHAR(255)", null => 0 },
+						 requirement => { type => "VARCHAR(255)", null => 1 },
 					       },
 				   temporal => 1,
 				   nomap    => 1 );
