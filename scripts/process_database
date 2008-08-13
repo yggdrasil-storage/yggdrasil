@@ -66,9 +66,9 @@ for my $structure ($storage->_admin_list_structures()) {
 		$idents{$mapped_struct}->{$row[0]} = $row[1];
 	    } 
 
-	    if ($structure eq 'Storage_config') {
+	    if (lc $structure eq 'storage_config') {
 		$config{$row[0]} = $row[1];
-	    } elsif ($structure eq 'Storage_mapname') {
+	    } elsif (lc $structure eq 'storage_mapname') {
 		$mapper{$row[1]} = $row[0];
 	    } 
 		    
@@ -78,7 +78,7 @@ for my $structure ($storage->_admin_list_structures()) {
 	    for my $c (@row) {
 		if ($dereference && $c && $c =~ /^\d+$/ && $mapped_struct =~ /^([a-z]+)_\w+$/i) {
 		    my $key = $1;
-		    if ($mapped_struct =~ /^([^_]+)_R_([^_]+)/) {
+		    if ($mapped_struct =~ /^([^_]+)_[Rr]_([^_]+)/) {
 			# id | $1 | $2
 			($lval, $rval) = ($1, $2);
 			if ($i == 1 && $idents{$lval} && $idents{$lval}->{$c}) {
@@ -127,7 +127,7 @@ for my $structure ($storage->_admin_list_structures()) {
 	# Drop a named structure
 	$storage->_admin_delete_structure( $structure );
     } elsif ($bootstrap) {
-	if ($structure =~ /Meta/) {
+	if ($structure =~ /Meta/i) {
 	    # Truncate a named structure
 	    $storage->_admin_truncate_structure( $structure );
 	} else {
