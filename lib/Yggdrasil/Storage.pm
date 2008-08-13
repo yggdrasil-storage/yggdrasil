@@ -290,7 +290,7 @@ sub _initialize_config {
 	    $STORAGETEMPORAL = $value if lc $key eq 'temporalstruct' && $value && $value =~ /^Storage_/;
 
 	    if (lc $key eq 'mapper') {
-		$self->{logger}->warn( "Requested $MAPPER as mapper, the Storage layer is using $value, using $value" ) if $MAPPER && $MAPPER ne $value;
+		$self->{logger}->warn( "Ignoring request to use $MAPPER as the mapper, the Storage requires $value" ) if $MAPPER && $MAPPER ne $value;
 		$MAPPER = $self->set_mapper( $value )
 	    }
 	    
