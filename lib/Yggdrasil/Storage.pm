@@ -50,6 +50,8 @@ sub new {
     #  $class->import();
     $storage = $engine_class->new(@_);
 
+    $MAPPER = $data{mapper};
+    
     if ($data{admin}) {
 	$ADMIN = 1;
 	use Log::Log4perl qw(get_logger :levels :nowarn);
@@ -57,7 +59,6 @@ sub new {
     } else {
 	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
     }
-    
 
     $storage->_initialize_config();
     $storage->_initialize_mapper();
@@ -287,8 +288,12 @@ sub _initialize_config {
 	    
 	    $STORAGEMAPPER   = $value if lc $key eq 'mapstruct' && $value && $value =~ /^Storage_/;
 	    $STORAGETEMPORAL = $value if lc $key eq 'temporalstruct' && $value && $value =~ /^Storage_/;
-	    $MAPPER          = $self->set_mapper( $value )
-	      if lc $key eq 'mapper';
+
+	    if (lc $key eq 'mapper') {
+		$self->{logger}->warn( "Requested $MAPPER as mapper, the Storage layer is using $value, using $value" ) if $MAPPER && $MAPPER ne $value;
+		$MAPPER = $self->set_mapper( $value )
+	    }
+	    
 	}
     } else {
 	$self->define( $STORAGECONFIG, 
@@ -305,7 +310,12 @@ sub _initialize_config {
 		      fields => { id => 'temporalstruct', value => $STORAGETEMPORAL });
 
 
-	$MAPPER = $self->get_default_mapper();
+	if ($MAPPER) {
+	    my $mappername = $MAPPER;
+	    $MAPPER = $self->set_mapper( $mappername );
+	} else {
+	    $MAPPER = $self->get_default_mapper();
+	}
 	my $mappername = ref $MAPPER;
 	$mappername =~ s/.*::(.*)$/$1/;
 	$self->store( $STORAGECONFIG, key => "id",
