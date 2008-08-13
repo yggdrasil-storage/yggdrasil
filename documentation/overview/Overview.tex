@@ -37,7 +37,9 @@ escapeinside={\%*}{*)}          % if you want to add a comment within
 
 \newpage
 
-\section{What is Yggdrasil?}
+\section{Introductions}
+
+\subsection{What is Yggdrasil?}
 
 Yggdrasil aims to a ``dynamic relational temporal object database''.
 In essence, Yggdrasil aims to add two abstractions to the traditional
@@ -53,25 +55,14 @@ In Yggdrasil lingo you can think of an entity as a ``class'' from the
 OO world.  The ``object'' is an instance of this entity, each object
 existing in several temporal versions within the system.
 
-Initializing Yggdrasil happens as follows, the parameters are all sent
-to the back end storage layer, and both their meaning and their
-necessity varies depending on said layer.  Look at the documentation
-for Yggdrasil::Storage and its engines if in doubt.  The ``namespace''
-parameter defines which namespace will house the entities we'll create
-later.  This is, in essence, your class hierarchy.  You'll want to
-ensure it's uncluttered.  
-
-\lstset{caption=Initializing Yggrasil,label=ygginit,float=tp,aboveskip=0.7cm}
-\begin{lstlisting}
-new Yggdrasil(
-              user      => user,
-              password  => password,
-              host      => host,
-              db        => databasename,
-              engine    => engine,
-              namespace => 'Ygg',
-             );
-\end{lstlisting}
+Initializing Yggdrasil has one special and specific feature.  You need
+to give Yggdrasil a namespace to work within.  This ``namespace''
+parameter defines which namespace will house the entities you access
+This is, in essence, your class hierarchy.  You'll want to ensure it's
+uncluttered.  The rest of the parameters are all sent to the back end
+storage layer, and both their meaning and their necessity varies
+depending on said layer.  Look at the documentation for
+Yggdrasil::Storage and its engines if in doubt.
 
 \subsection{Objects}
 
@@ -95,14 +86,115 @@ currently active and not expired.
 
 The limitations are currently bound to the objects being fairly
 simple, they are not allowed to store anything more complex than
-anything that can be mapped into a text field, and their only
-relations to other objects are the ones defined by the setup of
-Yggdrasil.  
+anything that can be mapped into a Yggdrasil type\footnote{See table
+  \ref{types} on page \pageref{types} for more information on
+  Yggdrasil types}, and their only relations to other objects are the
+ones defined by linking objects together.  References will be
+flattened, so you don't want to store them in Yggdrasil.  Using
+Storable is usually a sign something is wrong, either due to something
+missing from Yggdrasil or just faulty usage of the library.
 
-To define an entity ``Host'' within Yggdrasil.  This will create
-access to the class ``Ygg::Host'', as we earlier defined the namespace
-for Yggdrasil to work in previously to be named ``Ygg''.  We'll then
-create a ``Host'' object called ``nommo'' and one called
+
+\subsubsection{Properties}
+
+Depending on the way Yggdrasil is set up you may or may note have
+defined types for your properties, and you may or may not have
+constraints to the data stored for each property.  
+
+Yggdrasil can either be flexible and treat all property values as a
+default type, or you can select between a set of types Yggdrasil
+guarantees no matter the back end it's running on.  The supported
+types are listed in the type table.
+
+\begin{table}[h]
+\centering
+\caption{Types in Yggdrasil}
+\label{types}
+
+\begin{tabular}{l l}
+\hline %inserts double horizontal lines
+Name & Definition  \\
+\hline
+TEXT & UTF-8 field of some size \\
+BOOLEAN & A field which only accepts 0 or 1 as its values \\
+VARCHAR(size) & A shorter text field, 1 to 255 units long \\
+SERIAL & An automatically incrementing field \\
+INTEGER & Signed, integers up to $2^16$ can be stored \\
+FLOAT & Signed, floats of some size \\
+DATE & A full date and time field, resolution varies \\
+\end{tabular}
+\end{table}
+
+
+\subsection{Relations}
+
+To prepare Yggdrasil for relations between objects there needs to be a
+relation between the entities the objects represent.  This is to say
+one defines between what entities relations exist, then objects are
+linked together directly.  
+
+This link allows Yggdrasil to trace connections within the system, and
+Yggdrasil will follow any links to any length it needs to find all
+possible relations between objects.  The idea here is that the user is
+freed from providing anything but direct relations, while Yggdrasil
+will do the work of building a network from this information.
+ 
+\subsection{Temporal dimension}
+
+A principal idea of Yggdrasil is that data is only inserted, never
+deleted.  This also means that there is a clear distinction between
+``available'' and ``current'' data contained within the system.
+As long as no time frame, or slice, is requested, all requests work on
+the ``current'' dataset. 
+
+% Deletion only happens if and only if the object structure (``entity''
+% in Yggdrasil lingo) they belong to is deleted, and that deleted
+% structure is ``purged''.  Deletion of an entity is therefore, in some
+% circumstances, reversible.
+
+Changes in the structure will retain the information if possible, the
+system will inform you at any time if any action you take will
+permanently delete any data.
+
+\subsection{Dynamic storage}
+
+New entities and new relations between entities can be issued on the
+fly while the system is running live.  
+
+\section{Using Yggdrasil}
+
+\subsection{The basics}
+
+Yggdrasil has a few design rules it tries very hard to stay true to.
+One of the big ones here is the only objects you'll ever see are those
+from your namespace.  Neither Yggdrasil nor its own classes ever
+return objects to user space.  This has been done to avoid any
+thoughts about Yggdrasil meta structures having an impact on the data
+that is being stored.  Your objects are your data, always.
+
+\subsection{Initializing Yggdrasil}
+
+Initializing Yggdrasil is fairly straight forward.
+
+\lstset{caption=Initializing Yggrasil,label=ygginit,float=tp,aboveskip=0.7cm}
+\begin{lstlisting}
+new Yggdrasil(
+              user      => user,
+              password  => password,
+              host      => host,
+              db        => databasename,
+              engine    => engine,
+              namespace => 'Ygg',
+              mapper    => 'SHA1',
+             );
+\end{lstlisting}
+
+\subsection{Creating entities}
+
+When an entity, say ``Host'', is defined within Yggdrasil, access will
+be created to the class ``Ygg::Host''.  as we earlier defined the
+namespace for Yggdrasil to work in previously to be named ``Ygg''.
+We'll then create a ``Host'' object called ``nommo'' and one called
 ``ninhursaga''.
 
 \lstset{caption=Defining entities,label=entity}
@@ -118,39 +210,53 @@ class the structure represents.  It will always be
 Perls warnings and strict pragmas (assuming you use them) in case of a
 typo.
 
-\subsubsection{Properties}
+\subsection{Creating properties}
 
-Depending on the way Yggdrasil is set up you may or may note have
-defined types for your properties, and you may or may not have
-constraints to the data stored for each property.  
-
-Yggdrasil can either be flexible and treat all property values as a
-default type, or you can select between a set of types Yggdrasil
-guarantees no matter the back end it's running on.
+Objects are created to store values, and to do this Yggdrasil requires
+its user to define properties to its entities.  After we've defined
+the property, it is instantly accessible for objects of the class in
+question.
 
 \lstset{caption=Defining properties,label=properties}
 \begin{lstlisting}
-define Yggdrasil::Entity 'ip', 'Type' => 'IP';
+define Ygg::Host 'ip', 'Type' => 'IP';
 define $hostclass 'comment';
+
+# Set
+$nommo->property( 'ip', '129.240.222.1' );
+# Get
+$nommo->property( 'ip' );
 \end{lstlisting}
 
-\subsection{Relations}
+\subsection{Creating relations}
 
-All relations within Yggdrasil exist between entities.  To create
-relations between entities, define them, but we'll need another entity
-to relate things to, since we have some hosts, let's make ourself some
-rooms.
+Relations are a fundamental piece of how Yggdrasil works.  Relations
+create the edges in a network with entities as the nodes.  Yggdrasil
+treats all edges as bidirectional and with identical weight.  
+
+It is worth contemplating what kind of a network one is building.  In
+a traditional case of three entities, ``Room'', ``Host'' and
+``Person'', you can easily form a triangle.  Both a ``Person'' and a
+``Host'' resides in a ``Room'', but a ``Host'' might also belong
+directly to a ``Person'', not to a ``Room''.
+
+This means we have a loop in our system, and if we ask Yggdrasil to
+find what ``Host'' belongs to a specific person we can get two
+distinct paths as the answer: Person->Room and Person->Host->Room.
+Let us look at some code.
 
 \lstset{caption=Defining relations,label=relations}
 \begin{lstlisting}
 # Create another entity, "Room".
 my $roomclass = define Yggdrasil::Entity 'Room';
-# Create a room object, 'b701'.
+my $personclass = define Yggdrasil::Entity 'Person';
+# Create a room object, 'b701' and a person object, 'terjekv'.
 my $b701 = $roomclass->new( 'B701' );
+my $terjekv = Ygg::Person->new( 'terjekv' );
 
 # Now create the relation between rooms and hosts.
 # $hostclass = 'Ygg::Host', $roomclass = 'Ygg::Room'
-define Yggdrasil::Relation $hostclass, $roomclass; 
+define Yggdrasil::Relation $hostclass, $roomclass;
 \end{lstlisting}
 
 This however doesn't do us much good, we need to link objects
@@ -160,50 +266,53 @@ together, and we do that as follows:
 \begin{lstlisting}
 # Now, links the host 'nommo' to the room 'b701'
 $nommo->link( $b701 );
+
+# What rooms are nommo related to?
+my @hits = $nommo->fetch_related( 'Room' );
+# $hits[0] will be $b701.
 \end{lstlisting}
- 
-\subsection{Temporal dimension}
 
-A principal idea of Yggdrasil is that data is only inserted, never
-deleted.  This also means that there is a clear distinction between
-``available'' and ``current'' data contained within the system.
-As long as no time frame, or slice, is requested, all requests work on
-the ``current'' dataset. 
 
-Deletion only happens if and only if the object structure (``entity''
-in Yggdrasil lingo) they belong to is deleted, and that deleted
-structure is ``purged''.  Deletion of an entity is therefore, in some
-circumstances, reversible.
+\lstset{caption=Creating a loop,label=looping}
+\begin{lstlisting}
+# Let us create the loop
+define Yggdrasil::Relation $hostclass, $personclass;
+define Yggdrasil::Relation $room, $personclass;
 
-Changes in the structure will retain the information if possible, the
-system will inform you at any time if any action you take will
-permanently delete any data.
+$nommo->link( $terjekv );
+$b701->link( $terjekv );
 
-\subsection{Dynamic storage}
+# Getting nommos room will again return B701.
+@hits = $nommo->fetch_related( 'Room' );
+\end{lstlisting}
 
-New entities and new relations between entities can be issued on the
-fly while the system is running live.  
+Now, a small naughty...  Yggdrasil does \textit{not} require that all
+answers of the same entities to be identical.  From the earlier
+example, we now have two paths between Persons and Rooms: Person->Room
+and Person->Host->Room.  Right now, those paths return the same
+answer, but we're more than allowed to do something about that.
 
-% \subsection{Defining structure}
+\lstset{caption=Two paths giving different answers,label=funpaths}
+\begin{lstlisting}
+my $b810 = $roomclass->new( 'B810' );
 
-% Creating structure within Yggdrasil is done via commands prefixed
-% ``define''.  This accounts for defining entities, properties and
-% relations.  
+$b701->unlink( $terjekv );
+$b810->link( $terjekv );
+\end{lstlisting}
 
-% \begin{table}[h]
-% \centering
-% \caption{Define statements in Yggdrasil}
+Oddly enough, we're now in the situation where two paths leading to
+the same entity / class gives different objects.  Person->Room gives
+us ``B810'' now, but Person->Host->Room goes terjekv->nommo->b701 and
+thus gives us ``B701''.  Which one of these are correct?  Well, they
+both are.  Which one you want can be controlled by specifying the
+maximum distance allowed between the objects.   
 
-% \begin{tabular}{l l}
-% \hline\hline %inserts double horizontal lines
-% Statement & Parameters \\
-% \hline
-% define\_entity  & Name-of-entity \\
-% define\_property & Name-of-entity, Name-of-property \\
-% define\_relation & Name-of-entity1, Name-of-entity2 \\
-% \end{tabular}
+A future addition to Yggdrasil might allow for constraints requiring
+all paths leading between entities to give the same answer.  
 
-% \end{table}
+\subsection{Object operations}
+
+\section{Internals}
 
 
 \end{document}
