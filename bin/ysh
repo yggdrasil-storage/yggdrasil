@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+
+use Term::ReadLine;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Yggdrasil;
+
+my $namespace = 'Ygg';
+my $backendname = $ENV{YGG_DB};
+
+new Yggdrasil(
+	      user      => $ENV{YGG_USER},
+	      password  => $ENV{YGG_PASSWORD},
+	      host      => $ENV{YGG_HOST},
+	      port      => $ENV{YGG_PORT},
+	      db        => $ENV{YGG_DB},
+	      engine    => $ENV{YGG_ENGINE},
+	      namespace => 'Ygg',
+	      admin     => 1,
+	     );
+
+my $term = new Term::ReadLine 'Yggdrasil Shell';
+my $prompt = "$namespace / $backendname: ";
+my $OUT = $term->OUT || \*STDOUT;
+while ( defined ($_ = $term->readline($prompt)) ) {
+    my $res = eval($_);
+    warn $@ if $@;
+    print $OUT $res, "\n" unless $@;
+    $term->addhistory($_) if /\S/;
+}
+
