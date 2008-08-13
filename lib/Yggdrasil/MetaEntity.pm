@@ -9,7 +9,7 @@ sub _define {
     my $self = shift;
 
     return $self->{storage}->define( "MetaEntity",
-				     fields   => { entity => { type => "VARCHAR(255)", null => 0 } },
+				     fields   => { entity => { type => "VARCHAR(255)", null => 0, index => 1 } },
 				     temporal => 1,
 				     nomap    => 1 );
 }
