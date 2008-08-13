@@ -66,4 +66,8 @@ sub _null_comparison_operator {
     return 'is';
 }
 
+sub _engine_requires_serial_as_key {
+    my $self = shift;
+    return 1;
+}
 1;

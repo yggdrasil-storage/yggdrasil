@@ -30,7 +30,7 @@ sub _structure_exists {
     my $structure = shift;
 
     for my $table ( $self->_list_structures() ) {
-	return $structure if $table eq $structure;
+	return $structure if lc $table eq lc $structure;
     }    
     return 0;
 }

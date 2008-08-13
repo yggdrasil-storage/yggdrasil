@@ -22,20 +22,21 @@ sub _define {
 
     my $sql = "CREATE TABLE $schema (\n";
     
-    my (@sqlfields, @keys);
+    my (@sqlfields, @keys, @indexes);
     for my $fieldname (keys %$fields) {
 	my $field = $fields->{$fieldname};
-	my ($type, $null) = ($field->{type}, $field->{null});
-
+	my ($type, $null, $index) = ($field->{type}, $field->{null}, $field->{index});
+	
 	if ($null) {
 	    $null = 'NULL';
 	} else {
 	    $null = 'NOT NULL';
 	}
 
-	push @keys, "key ($fieldname)" if $type eq 'SERIAL';
+	push @keys, "KEY ($fieldname)" if $type eq 'SERIAL' && $self->_engine_requires_serial_as_key();
 
 	$type = $self->_map_type( $type );
+	push @indexes, [$fieldname, $type] if $index;
 
 	# FUGLY hack to ensure that id fields come first in the listings.
 	if ($fieldname eq 'id') {
@@ -43,14 +44,14 @@ sub _define {
 	} else {
 	    push @sqlfields, "$fieldname $type $null";
 	}
-	
+
     }
 
     if ($temporal) {
 	my $datefield = $self->_map_type( 'DATE' );
 	push @sqlfields, "start $datefield NOT NULL";
 	push @sqlfields, "stop  $datefield NULL";
-	push @sqlfields, "index (stop)";
+	push @indexes, ['stop', $datefield ];
 	push @sqlfields, "check ( start < stop )";
     }
     
@@ -62,10 +63,35 @@ sub _define {
 
     $self->{logger}->debug( $sql );
     $self->_sql( $sql );
+    
+    for my $indexref (@indexes) {
+	my $indexsql = $self->_create_index_sql($schema, $indexref->[0], $indexref->[1]);
+	$self->{logger}->fatal( $indexsql );
+	$self->_sql( $indexsql );
+    }
+    
 
     # Find a way to deal with return values from here, worked / didn't
     # would be nice.
     return 1;
+}
+
+# Create an index as per the default SQL method of doing so, this 
+# should be overridden by engines with regards to fields that 
+# require specific treatment, optimizing options or size limitations
+# for indexes, but, at least this is a fallback.  This generic
+# version does nothing with regards to the type at all.
+sub _create_index_sql {
+    my ($self, $schema, $field, $type) = @_;
+    
+    return "CREATE INDEX ${schema}_${field}_index ON $schema ($field)";
+}
+
+# Overload this in the engines if you require your serial fields to be
+# keys.
+sub _engine_requires_serial_as_key {
+    my $self = shift;
+    return 0;
 }
 
 # Perform a prewritten statement that is not expected to return
