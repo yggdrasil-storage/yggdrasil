@@ -156,6 +156,24 @@ sub exists :method {
     return $self->fetch( $schema, { return => '*', where => { @_ } });
 }
 
+# search ( entity, property, value )
+sub search {
+    my ($self, $entity, $property, $value) = @_;
+
+    my $propertytable = $self->_get_schema_name( $entity . '_' . $property );
+    my $entitytable   = $self->_get_schema_name( $entity );
+
+    my ($e) = $self->fetch( $propertytable, { operator => 'LIKE',
+					      where  => { value => $value }},
+			    $entitytable,   { return => [ 'id', 'visual_id' ], 
+					      where  => { "${entitytable}.id" => \qq<$propertytable.id> }});
+    my %hits;
+    for my $hitref (@$e) {
+	$hits{$hitref->{visual_id}} = $hitref->{id};
+    }
+    return \%hits;
+}
+  
 # entities, returns all the entities known to Yggdrasil.
 sub entities {
     my $self = shift;
@@ -164,6 +182,7 @@ sub entities {
     return map { $_->{entity} } @$aref;
 }
 
+# relations, returns all the relations known to Yggdrasil.
 sub relations {
     my $self = shift;
     my $aref = $self->fetch( 'MetaRelation', { return => 'relation' });

@@ -128,14 +128,14 @@ sub _sql {
 sub _fetch {
     my $self = shift;
     my @schemalist = @_;
-    $self->{logger}->warn( "_fetch( @_ )" );
+#    $self->{logger}->warn( "_fetch( @_ )" );
 
     my (%fromtables, %temporals, @returns, @wheres, @params, @requested_fields);
     
     while (@schemalist) {	
 	my ($schema, $queryref) = (shift @schemalist, shift @schemalist);
 	confess( "$queryref isn't a reference" ) unless ref $queryref;
-	
+
 	my $where    = $queryref->{where};
 	my $operator = $queryref->{operator} || '=';
 
@@ -145,7 +145,7 @@ sub _fetch {
 	    # for NULL.  This might make us require using "is" as the
 	    # operator for comparisons even if we were given '=', ask
 	    # the engine for the appropriate NULL comparison operator.
-	    unless (defined $value && $operator eq '=') {
+	    if (! defined $value && $operator eq '=') {
 		$operator = $self->_null_comparison_operator();
 	    }
 
@@ -169,7 +169,6 @@ sub _fetch {
 	}
 	
 	push @returns, $self->_process_return( $schema, $queryref->{return} );
-
 	$fromtables{$schema}++;
 
 	if (!$temporals{$schema} && $self->_schema_is_temporal( $schema )) {
