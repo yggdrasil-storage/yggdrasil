@@ -31,3 +31,22 @@ while ( defined ($_ = $term->readline($prompt)) ) {
     $term->addhistory($_) if /\S/;
 }
 
+sub reload {
+    my $packagename = shift;
+    my $file = "$Bin/../lib/$packagename";
+    $file =~ s|::|/|g;
+    $file .= '.pm';
+
+    print " *** Reloading $packagename / $file\n";
+    require "$file";
+    import $packagename;
+}
+
+sub reload_all {
+    for my $package (sort keys %INC) {
+	next unless $package =~ /Yggdrasil/;
+	$package =~ s/\.pm$//;
+	reload( $package );
+    }
+
+}
