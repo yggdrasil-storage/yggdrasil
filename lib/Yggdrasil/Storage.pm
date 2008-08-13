@@ -69,9 +69,11 @@ sub new {
 
 # define( Schema',
 #         fields   => { field1, 
-#                               { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) }
+#                               { null => BOOL(0), type => type(TEXT),
+#                                 index => BOOL(0), constraint => constraint(undef) }
 #                       field2, 
-#                               { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) } },
+#                               { null => BOOL(0), type => type(TEXT), 
+#                                 index => BOOL(0), constraint => constraint(undef) }
 #         temporal => BOOL(0),
 #         nomap => BOOL(0) );
 
