@@ -32,6 +32,8 @@ my $storage = new Yggdrasil::Storage(
 				    );
 my ($dbh, $sql);
 
+print "$ENV{YGG_USER}\@$ENV{YGG_HOST}:$ENV{YGG_DB}\n";
+
 my %mapper;
 my %config;
 my %idents;
