@@ -96,8 +96,13 @@ sub property_exists {
 sub properties {
     my $class = shift;
     $class =~ s/.*:://;
+
+    my $aref = $Yggdrasil::STORAGE->fetch( 'MetaProperty', 
+					   { return => 'property', 
+					     where => { entity => $class } 
+					   } );
     
-    return $Yggdrasil::STORAGE->properties( $class );
+    return map { $_->{property} } @$aref;    
 }
 
 sub search {

@@ -1,3 +1,4 @@
+bin/ysh
 Changes
 documentation/notes/db-schema
 documentation/notes/interface
@@ -33,6 +34,7 @@ lib/Yggdrasil/Storage/Engine/Pg.pm
 lib/Yggdrasil/Storage/Engine/Shared/SQL.pm
 lib/Yggdrasil/Storage/Mapper.pm
 lib/Yggdrasil/Storage/Mapper/MD5.pm
+lib/Yggdrasil/Storage/Mapper/SHA1.pm
 Makefile.PL
 MANIFEST
 META.yml
