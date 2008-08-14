@@ -236,6 +236,23 @@ sub _check_valid_type {
     return $type;
 }
 
+sub _get_relation {
+    my ($self, $e1, $e2) = @_;
+
+    my $schemaref = $self->fetch( "MetaRelation" => { return => 'relation',
+							 where => { 'entity1' => $e1, 'entity2' => $e2 } } );
+    my $schema = $schemaref->[0]->{relation};
+    
+    # Sigh, try it the other way around, we don't have operator support yet in the DB.
+    unless ($schema) {
+	$schemaref = $self->fetch( "MetaRelation" => { return => 'relation',
+							  where => { 'entity2' => $e1, 'entity1' => $e2 } } );
+	$schema = $schemaref->[0]->{relation};
+    }
+    
+    return $schema;
+}
+
 # Ask if a schema is temporal.  Schema presumed to be mapped, or a
 # schema which had nomap set.
 sub _schema_is_temporal {

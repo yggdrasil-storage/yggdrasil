@@ -28,6 +28,9 @@ sub _define {
   $entity1 =~ s/.*:://;
   $entity2 =~ s/.*:://;
 
+  my $schema = $self->{storage}->_get_relation( $entity1, $entity2 );
+  return $schema if $schema;
+  
   my $name = join("_R_", $entity1, $entity2);
 
   # --- Create Relation table

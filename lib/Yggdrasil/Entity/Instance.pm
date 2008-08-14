@@ -118,7 +118,7 @@ sub link :method {
   my $e1 = $self->_extract_entity();
   my $e2 = $instance->_extract_entity();
 
-  my $schema = $self->_get_relation( $e1, $e2 );
+  my $schema = $self->{storage}->_get_relation( $e1, $e2 );
   
   # Check to see if the relationship between the entities is defined
   confess "Undefined relation between $e1 / $e2 requested." unless $schema;
@@ -141,7 +141,7 @@ sub unlink :method {
   
   my $storage = $self->{storage};
 
-  my $schema = $self->_get_relation( $e1, $e2 );
+  my $schema = $storage->_get_relation( $e1, $e2 );
 
   my $e1_side = $self->_relation_side( $schema, $e1 );
   my $e2_side = $self->_relation_side( $schema, $e2 );
@@ -253,25 +253,6 @@ sub _relation_side {
 
     return 'rval';
   }
-}
-
-sub _get_relation {
-    my ($self, $e1, $e2) = @_;
-
-    my $storage = $self->{storage};
-    
-    my $schemaref = $storage->fetch( "MetaRelation" => { return => 'relation',
-							 where => { 'entity1' => $e1, 'entity2' => $e2 } } );
-    my $schema = $schemaref->[0]->{relation};
-    
-    # Sigh, try it the other way around, we don't have operator support yet in the DB.
-    unless ($schema) {
-	$schemaref = $storage->fetch( "MetaRelation" => { return => 'relation',
-							  where => { 'entity2' => $e1, 'entity1' => $e2 } } );
-	$schema = $schemaref->[0]->{relation};
-    }
-    
-    return $schema;
 }
 
 sub _fetch_related {
