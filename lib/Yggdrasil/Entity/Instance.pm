@@ -183,7 +183,7 @@ sub fetch_related {
 
   my %result;
   for my $path ( @$paths ) {
-    print "ZOOM ",  join( " -> ", @$path), "\n";
+#    print "ZOOM ",  join( " -> ", @$path), "\n";
   
     my @tmp_path = @$path;
     my $node = shift @tmp_path;
