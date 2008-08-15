@@ -80,3 +80,5 @@
 * Store with SERIAL fields need to handle their IDs automatically, we
    can't send an ID value, while not doing so creates undefined values
    in SQL::_store.
+
+* Being able to set a field to undef.
