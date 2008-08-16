@@ -82,3 +82,9 @@
    in SQL::_store.
 
 * Being able to set a field to undef.
+
+* Working on an undefined property fails hard, 
+  DBD::mysql::st execute failed: Table 'miami4.Jack_comment' doesn't
+   exist at /site/lib/perl/Yggdrasil/Storage/Engine/Shared/SQL.pm line
+   113
+  Wee!
