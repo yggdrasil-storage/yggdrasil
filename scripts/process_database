@@ -49,8 +49,31 @@ if ($onlytables) {
     }
 }
 
+my @structures = $storage->_admin_list_structures();
+
+my $configstruct = $storage->_dump_structure( 'Storage_config' );
+for my $rowref (@$configstruct) {
+    $config{$rowref->[0]} = $rowref->[1];
+}
+
+my $mapstruct = $storage->_dump_structure( 'Storage_mapname' );
+for my $rowref (@$mapstruct) {
+    $mapper{$rowref->[1]} = $rowref->[0];
+}
+
+for my $structure (@structures) {
+    my $mapped_struct = $mapper{$structure} || $structure;
+    if ($mapped_struct =~ /^[^_]+$/ && $mapped_struct !~ m|^Meta|i) { 
+	my $tableref = $storage->_dump_structure( $structure );
+	for my $rowref (@$tableref) {
+	    my @row = @$rowref;
+	    $idents{$mapped_struct}->{$row[0]} = $row[1];
+	}
+    }
+}
+
 # Give me all structures (deref will need 'em even if they're not to be displayed)
-for my $structure ($storage->_admin_list_structures()) {
+for my $structure (@structures) {
     my $mapped_struct = $mapper{$structure} || $structure;
     
     if (&display($mapped_struct)) {
@@ -64,16 +87,7 @@ for my $structure ($storage->_admin_list_structures()) {
 	my $tableref = $storage->_dump_structure( $structure );
 	for my $rowref (@$tableref) {
 	    my @row = @$rowref;
-	    if ($structure =~ /^[^_]+$/ && $structure !~ /^Meta/) {
-		$idents{$mapped_struct}->{$row[0]} = $row[1];
-	    } 
 
-	    if (lc $structure eq 'storage_config') {
-		$config{$row[0]} = $row[1];
-	    } elsif (lc $structure eq 'storage_mapname') {
-		$mapper{$row[1]} = $row[0];
-	    } 
-		    
  	    my @data;
 	    my $i = 0;
 	    my ($lval, $rval) = ();
