@@ -22,7 +22,7 @@ new Yggdrasil(
 # --- Define Hosts
 my $host = define Yggdrasil::Entity 'Host';
 my $ip = define $host 'ip', 'Type' => 'IP';
-my $serial = define $host 'Serial';
+my $serial = define $host 'serial';
 
 my $nommo  = Ygg::Host->new( 'nommo' );
 my $baal   = Ygg::Host->new( 'baal' );
@@ -33,16 +33,16 @@ $nommo->property( 'ip' , 'n3' );
 
 #sleep 2;
 #$nommo->property( 'ip' , 'n1' );
-$nommo->property( 'Serial', 'nserial');
+$nommo->property( 'serial', 'nserial');
 
 $baal->property( 'ip' , 'b1' );
 $baal->property( 'ip' , 'b2' );
-$baal->property( 'Serial', 'bserial');
+$baal->property( 'serial', 'bserial');
 
-$escher->property( 'Serial', 'eserial');
+$escher->property( 'serial', 'eserial');
 $escher->property( 'ip', 'e1');
 
-$nommo = Ygg::Host->get( 'nommo' );
+($nommo) = Ygg::Host->get( 'nommo' );
 print "------>>>> $nommo->{_id}\n";
 
 # --- Define Rooms
@@ -132,3 +132,38 @@ define Yggdrasil::Entity 'Person';
 define Yggdrasil::Entity 'Student', 'Person';
 define Yggdrasil::Entity 'Student', 'Person';
 
+
+# --- Test instances representing points in time
+my $dinner = define $host 'dinner';
+
+$nommo->property( $dinner => "Kylling" );
+$baal->property( $dinner => "Aspargis" );
+
+my $sleep = 2;
+sleep $sleep;
+
+$nommo->property( $dinner => "Poterer" );
+
+sleep $sleep;
+
+$nommo->property( $dinner => "Mer Poteter" );
+
+sleep $sleep;
+
+$baal->property( $dinner => "Saus" );
+
+my $now = time();
+print "ZOOM ", "-" x 70, "\n";
+for my $historic_nommo (get $host 'nommo', undef, undef) {
+    print "ZOOM dinner: ", $historic_nommo->property( 'dinner' ), " -> ",  $historic_nommo->{_start}, " - ", $historic_nommo->{_stop},  "<--\n";
+}
+
+
+
+
+sub now {
+  my @t = localtime( shift || time() );
+
+  return sprintf( "%04d-%02d-%02d %02d:%02d:%02d",
+		  $t[5]+1900, $t[4]+1, $t[3], $t[2], $t[1], $t[0] );
+}

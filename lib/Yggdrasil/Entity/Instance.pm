@@ -13,10 +13,18 @@ sub new {
   my( $pkg ) = caller();
   my $self = $class->SUPER::new(@_);
 
-  return $self if $pkg ne 'Yggdrasil::Entity::Instance' && $pkg =~ /^Yggdrasil::/;
+  return $self if $pkg ne __PACKAGE__ && $pkg =~ /^Yggdrasil::/;
 
   # --- do stuff
   my $visual_id = shift;
+
+  if( $pkg eq __PACKAGE__ ) {
+    my @time = @_;
+
+    $self->{_start} = $time[0];
+    $self->{_stop}  = $time[1];
+  }
+
   $self->{visual_id} = $visual_id;
 
   my $entity = $self->_extract_entity();
@@ -41,13 +49,105 @@ sub _get_id {
 sub get {
   my $class = shift;
   my $visual_id = shift;
+  my @time = @_;
 
-  if ($class->exists( $visual_id )) {
-      return $class->new( $visual_id );
-  } else {
-      return undef;
+  # If the user only specifies one time argument, then stop should be set equal to start,
+  # meaning get is called for a specific moment in time.
+  if( @time == 1 ) {
+    push( @time, $time[0] );
   }
+  
+  my @objects;
+  for my $dataref ($class->_get_in_time( $visual_id, @time )) {
+      push @objects, $class->new( $visual_id, $dataref->{start}, $dataref->{stop} );
+  }
+  return @objects;  
 }
+
+sub _get_in_time {
+    my $class = shift;
+    my $visual_id = shift;
+    my @time = @_;
+
+    my $entity = (split '::', $class)[-1];
+
+    my $fetchref = $Yggdrasil::STORAGE->fetch( "MetaProperty" => { return => "property", where => { entity => $entity } },
+					       { start => $time[0], stop => $time[1] } );
+
+    my @wheres;
+
+    push( @wheres, $entity => { join => "left", where => { visual_id => $visual_id } } );
+
+    foreach my $prop ( map { $_->{property} } @$fetchref ) {
+	my $table = join("_", $entity, $prop);
+
+	push( @wheres, $table => { join => "left" } );
+    }
+
+    my $ref = $Yggdrasil::STORAGE->fetch( @wheres,
+					  { start => $time[0], stop => $time[1] } );
+    
+
+    # ... fetch all uniq start-times, filter only starts between $time[0] and $time[1] and return
+    my %times;
+    if( defined $time[0] || defined $time[1] ) {
+	if (defined $time[0] && defined $time[1] && $time[0] == $time[1] && @$ref) {
+	    return {
+		    start => $time[0],
+		    stop  => $time[0]
+		   };
+	}
+
+	foreach my $e ( @$ref ) {
+	    foreach my $key ( keys %$e ) {
+		next unless $key =~ /_start$/;
+		
+		my $val = $e->{$key};
+
+		print "VAL = $key $val $time[0] :: $time[1]\n";
+		my $good;
+		if( defined $time[0] ) {
+		    if( defined $time[1] ) {
+			$good = $time[0] <= $val && $val < $time[1];
+		    } else {
+			$good = $val >= $time[0];
+		    }
+		} elsif( defined $time[1] ) {
+		    $good = $val < $time[1];
+		}
+		
+		if( $good ) {
+		    print "GOOD VAL = $val\n";
+		    $times{$val} = { start => $val };
+		}
+	    }
+	}
+
+	my @sorted = map { $times{$_} } sort { $a <=> $b } keys %times;
+	for( my $i = 0; $i < @sorted; $i++ ) {
+	    my $e = $sorted[$i];
+	    my $next = $sorted[$i+1] || {};
+
+	    if( $i == 0 ) {
+		$e->{start} = $time[0];
+	    }
+
+	    $e->{stop} = $next->{start} || $time[1];
+	}
+
+	use Data::Dumper;
+	print Dumper( \@sorted), "\n\n\n\n\n";
+
+
+
+
+	return @sorted;
+    }
+    
+    
+    return @$ref;
+}
+
 
 sub _define {
   my $self     = shift;
@@ -81,11 +181,17 @@ sub property {
     my $entity = $self->_extract_entity();
     my $name = join("_", $entity, $key );
 
+
     if ($value) {
+	if( defined $self->{_start} || defined $self->{_stop} ) {
+	    die "Temporal objects are immutable";
+	}
+
 	$storage->store( $name, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 
-    my $r = $storage->fetch( $name => { return => "value", where => { id => $self->{_id} } } );
+    my $r = $storage->fetch( $name => { return => "value", where => { id => $self->{_id} } },
+			   { start => $self->{_start}, stop => $self->{_stop} } );
     return $r->[0]->{value};
 }
 

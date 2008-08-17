@@ -137,10 +137,12 @@ sub entities {
 sub exists {
     my $class = shift;
     my $visual_id = shift;
-    
+    my @time = @_;
+
     my $entity = (split '::', $class)[-1];
 
-    my $fetchref = $STORAGE->fetch( $entity, { return => 'id', where => { visual_id => $visual_id } } );
+    my $fetchref = $STORAGE->fetch( $entity, { return => 'id', where => { visual_id => $visual_id } },
+				    { start => $time[0], stop => $time[1] } );
 
     return undef unless $fetchref->[0];
     return $fetchref->[0]->{id};

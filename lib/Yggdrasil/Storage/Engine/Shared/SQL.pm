@@ -130,14 +130,36 @@ sub _fetch {
     my @schemalist = @_;
 #    $self->{logger}->warn( "_fetch( @_ )" );
 
-    my (%fromtables, %temporals, @returns, @wheres, @params, @requested_fields);
+    my($start,$stop);
+    if( @schemalist % 2 ) {
+	my $time = pop @schemalist;
+	die "Expected HASH-ref" unless ref $time;
+
+	use Data::Dumper;
+	print Dumper( $time ), "\n\n\n\n\\n";
+
+
+	($start,$stop) = ( $self->_convert_time($time->{start}),
+			   $self->_convert_time($time->{stop}) );
+
+	print "-" x 20, " < Start=[$start], Stop=[$stop] > \n";
+    }
+
+    # FIXME: This is not beautiful
+    my $join = $schemalist[1]->{join};
+
+
+    my (%fromtables, %temporals, @returns, @temporal_returns, 
+	@wheres, @params, @requested_fields, $counter);
     
+    $counter = 0;
     while (@schemalist) {	
 	my ($schema, $queryref) = (shift @schemalist, shift @schemalist);
 	confess( "$queryref isn't a reference" ) unless ref $queryref;
 
 	my $where    = $queryref->{where};
 	my $operator = $queryref->{operator} || '=';
+	my $as       = $queryref->{as};
 
 	for my $fieldname (keys %$where) {
 	    my $value = $where->{$fieldname};
@@ -167,13 +189,44 @@ sub _fetch {
 		push @params, $value;
 	    }
 	}
-	
+
 	push @returns, $self->_process_return( $schema, $queryref->{return} );
-	$fromtables{$schema}++;
+	$fromtables{$schema} = $counter++;
 
 	if (!$temporals{$schema} && $self->_schema_is_temporal( $schema )) {
 	    $temporals{$schema}++;
-	    push @wheres, ($self->_qualify( $schema, 'stop' ))[0] . ' ' . $self->_null_comparison_operator() . " NULL";
+	    
+	    my( $qstart ) = $self->_qualify($schema, 'start');
+	    my( $qstop )  = $self->_qualify($schema, 'stop');
+	    my $isnull = $self->_null_comparison_operator();
+
+
+	    if( defined $start ) {
+		if (! defined $stop ) {
+#		    $stop = $start;
+#		    push @wheres, "$qstart <= $stop and ( $qstop > $start or $qstop $isnull NULL )";
+		    push @wheres, "( not $qstop <= $start or $qstop $isnull NULL )";
+		} else {
+		    if ($stop eq $start) {
+			push @wheres, "$qstart <= $stop and ( $qstop > $start or $qstop $isnull NULL )";		
+		    } else {
+			push @wheres, "$qstart < $stop and ( $qstop > $start or $qstop $isnull NULL )";
+		    }
+		}
+	    } elsif( defined $stop ) {
+		push @wheres, "$qstart <= $stop";
+	    } else {
+		push @wheres, "$qstop $isnull NULL";
+	    }
+
+	    # FIX: Don't use UNIX_TIMESTAMP _here_. Ask the engine what it wants
+	    if( defined $start || defined $stop ) {
+		if( $join ) {
+		    push( @temporal_returns, qq<UNIX_TIMESTAMP($qstart) as "${as}_start">, qq<UNIX_TIMESTAMP($qstop) as "${as}_stop"> );
+		} else {
+		    push( @temporal_returns, "UNIX_TIMESTAMP($qstart)", "UNIX_TIMESTAMP($qstop)" );
+		}
+	    }
 	}
     }
 
@@ -181,7 +234,7 @@ sub _fetch {
     @returns = @requested_fields unless @returns;
     @returns = ('*') unless @returns;
 
-    my $sql = 'SELECT ' . join(", ", @returns) . ' FROM ' . join(", ", keys %fromtables);
+    my $sql = 'SELECT ' . join(", ", @returns, @temporal_returns) . ' FROM ' . $self->_create_from( $join, \%fromtables );
 
     if (@wheres) {
 	$sql .= ' WHERE ';
@@ -190,6 +243,32 @@ sub _fetch {
     
     $self->{logger}->debug( $sql, " with [", join(", ", @params), "]" );
     return $self->_sql( $sql, @params ); 
+}
+
+
+sub _create_from {
+    my $self = shift;
+    my $isjoin = shift;
+    my $tables = shift;
+
+    if( $isjoin) {
+	my @from;
+	my $first = 1;
+	for my $t (sort { $tables->{$a} <=> $tables->{$b} } keys %$tables ) {
+	    if( $first ) {
+		push @from, $t;
+		$first = 0;
+	    } else {
+		unshift @from, "(";
+		push( @from, "left join $t using(id)" );
+		push( @from, ")" );
+	    }
+	}
+
+	return join(" ", @from);
+    } else {
+	return join(", ", keys %$tables);
+    }
 }
 
 # Store a value in a table.  Insert new values as a new row unless the
@@ -210,7 +289,9 @@ sub _store {
     return 1 if @$aref;
 
     # Expire the old value
-    $self->_expire( $schema, $key, $fields->{$key}); 
+    if( defined $key && exists $fields->{$key} ) {
+      $self->_expire( $schema, $key, $fields->{$key}); 
+    }
 
     # Insert new value
     if ($self->_schema_is_temporal( $schema )) {

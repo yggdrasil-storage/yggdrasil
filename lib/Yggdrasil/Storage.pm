@@ -134,7 +134,28 @@ sub store {
 sub fetch {
     my $self = shift;
 
-    return $self->_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_ );
+    my $time;
+    if( @_ % 2 ) {
+	$time = pop @_;
+    } else {
+	$time = {};
+    }
+
+    # Convert the given timeformat to the engines preferred format
+    foreach my $key ( keys %$time ) {
+	$time->{$key} = $self->_convert_time( $time->{$key} );
+    }
+
+    # Add "as" parameter that can be used later to prefix returned values from the query
+    # (to esure uniqe return values, eg. Foo_stop, Bar_stop, ... )
+    for( my $i=0; $i < @_; $i += 2 ) {
+	my( $schema, $queryref ) = ($_[$i], $_[$i+1]);
+	next unless $queryref->{join};
+
+	$queryref->{as} = $schema;
+    }
+
+    return $self->_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_, $time );
 }
 
 # expire ( $schema, $indexfield, $key )
@@ -188,6 +209,27 @@ sub relations {
     my $aref = $self->fetch( 'MetaRelation', { return => 'relation' });
 
     return map { $_->{relation} } @$aref;
+}
+
+sub _convert_time {
+    my $self = shift;
+    my $time = shift;
+
+    return $time;
+}
+
+sub _isepoch {
+    my $self = shift;
+    my $time = shift;
+
+    return 1 if $time =~ /^\d+$/;
+}
+
+sub _isisodate {
+    my $self = shift;
+    my $time = shift;
+
+    # FIX: Write me!
 }
 
 # Map structure names into a given hash, this is done to allow usage
@@ -260,7 +302,6 @@ sub _schema_is_temporal {
     my $schema = shift;
 
     return $self->{_temporalcache}->{$schema};
-    
 }
 
 # Initalize the mapper cache and, if needed, the schema to store schema

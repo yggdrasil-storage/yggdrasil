@@ -70,4 +70,18 @@ sub _engine_requires_serial_as_key {
     my $self = shift;
     return 1;
 }
+
+sub _convert_time {
+    my $self = shift;
+    my $time = shift;
+
+    return $time unless defined $time;
+
+    if( $self->_isepoch($time) ) {
+	return "FROM_UNIXTIME($time)";
+    } else {
+	return $time;
+    }
+}
+
 1;

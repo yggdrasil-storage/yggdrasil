@@ -9,19 +9,9 @@
 
 * Historic information.
 
-  How should this be presented?  String of objects, one for every
-   timestamp with changes.  However, what if one has two changes
-   within 1ms of eachother and enough resolution in the database?
+  Make current implementation prettier!
 
-  What do we do with properties and their validity?  If you wish to
-   dig up information about Hosts( name, ip, serial ) between
-   2008-07-01 and 2008-08-01 and serial was added 2008-07-14, what
-   do we return for objects before that timestamp?  Die()ing on a call
-   to request the invalid Property would entail having to check
-   MetaProperty for the valid Properties for every single object we
-   return.  Would that be expensive?  How would it relate to userland?
-   Do we guarantee that all Propserties from all objects are valid for
-   all objects?
+  Handle date formats much much better. 
 
   We might wish to pre-populate the data, it's not current, so there
    is no real reason to ask the database after the initial get.  We
