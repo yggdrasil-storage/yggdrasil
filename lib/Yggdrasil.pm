@@ -93,7 +93,7 @@ sub _db_init {
     $self->bootstrap();
     
     # Populate $namespace from entities from MetaEntity.
-    my @entities = $self->{storage}->entities();
+    my @entities = $self->entities();
 
     for my $entity (@entities) {
 	my $package = join '::', $self->{namespace}, $entity;
@@ -126,8 +126,9 @@ sub bootstrap {
 
 sub entities {
     my $class = shift;
-
-    return $STORAGE->entities();
+    my $aref = $STORAGE->fetch( 'MetaEntity', { return => 'entity' } );
+    
+    return map { $_->{entity} } @$aref;
 }
 
 # Generic exist method for non-instanced calls across Yggdrasil to see

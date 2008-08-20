@@ -195,14 +195,6 @@ sub search {
     }
     return \%hits;
 }
-  
-# entities, returns all the entities known to Yggdrasil.
-sub entities {
-    my $self = shift;
-    my $aref = $self->fetch( 'MetaEntity', { return => 'entity' } );
-
-    return map { $_->{entity} } @$aref;
-}
 
 # relations, returns all the relations known to Yggdrasil.
 sub relations {
