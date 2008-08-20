@@ -10,19 +10,67 @@ use base 'Yggdrasil::Storage::Engine::Shared::SQL';
 use DBI;
 
 our %TYPEMAP = (
-		DATE   => 'TIMESTAMP',		
+		DATE   => 'TIMESTAMP',
+		BINARY => 'BYTEA',
 	       );
 
+our %FUNCTIONS = (
+		  "from_unixtime:1" => "
+CREATE OR REPLACE FUNCTION from_unixtime(integer) RETURNS timestamp AS '
+SELECT
+\$1::abstime::timestamp without time zone AS result
+' LANGUAGE 'SQL';",
+		  
+		  "unix_timestamp:0"   => "
+CREATE OR REPLACE FUNCTION unix_timestamp() RETURNS integer AS '
+SELECT
+ROUND(EXTRACT( EPOCH FROM abstime(now()) ))::int4 AS result;
+' LANGUAGE 'SQL';",
+		  
+		  "unix_timestamp:1" => "		  
+CREATE OR REPLACE FUNCTION unix_timestamp(timestamp with time zone) RETURNS integer AS '
+SELECT
+ROUND(EXTRACT( EPOCH FROM ABSTIME(\$1) ))::int4 AS result;
+' LANGUAGE 'SQL';"
+);
+  
 sub new {
   my $class = shift;
   my $self  = {};
   my %data  = @_;
 
   bless $self, $class;
-
-  $self->{dbh} = DBI->connect( "DBI:Pg:database=$data{db};host=$data{host};port=$data{port}", $data{user}, $data{password}, { RaiseError => 0 } );
   
+  $self->{dbh} = DBI->connect( "DBI:Pg:database=$data{db};host=$data{host};port=$data{port}", $data{user}, $data{password}, { RaiseError => 0 } );
+
+  $self->_init();
+
   return $self;
+}
+
+sub _init {
+    my $self = shift;
+
+    my $dbh = $self->{dbh};
+    my $sth = $dbh->prepare( "select proname,pronargs from pg_proc where proname LIKE '%unix%'" );
+    confess( "no sth? " . $dbh->errstr ) unless $sth;
+    $sth->execute() || confess( "execute??" );
+
+    my $data = $sth->fetchall_arrayref();
+    my %proc_exists;
+    
+    for my $proc (@$data) {
+	my ($name, $args) = ($proc->[0], $proc->[1] || 0);
+	$proc_exists{"$name:$args"} = 1;
+    } 
+    
+    for my $proc (qw|unix_timestamp:0 unix_timestamp:1 from_unixtime:1|) {
+	unless ($proc_exists{$proc}) {
+	    print " ******** CREATING #$proc#\n";
+	    $dbh->do( $FUNCTIONS{$proc} );
+	}
+    }
+    
 }
 
 sub _structure_exists {

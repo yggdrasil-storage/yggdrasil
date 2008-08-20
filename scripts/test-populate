@@ -21,7 +21,8 @@ new Yggdrasil(
 
 # --- Define Hosts
 my $host = define Yggdrasil::Entity 'Host';
-my $ip = define $host 'ip', 'Type' => 'IP';
+my $ip = define $host 'ip', 'type' => 'text';
+my $blob = define $host 'blobbie', 'type' => 'binary';
 my $serial = define $host 'serial';
 
 my $nommo  = Ygg::Host->new( 'nommo' );
@@ -154,7 +155,7 @@ $baal->property( $dinner => "Saus" );
 
 my $now = time();
 print "ZOOM ", "-" x 70, "\n";
-for my $historic_nommo (get $host 'nommo', undef, undef) {
+for my $historic_nommo (get $host 'nommo', ($now - 20), undef) {
     print "ZOOM dinner: ", $historic_nommo->property( 'dinner' ), " -> ",  $historic_nommo->{_start}, " - ", $historic_nommo->{_stop},  "<--\n";
 }
 

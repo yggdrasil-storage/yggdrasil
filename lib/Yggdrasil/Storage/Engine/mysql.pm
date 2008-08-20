@@ -11,7 +11,8 @@ use DBI;
 
 our %TYPEMAP = (
 		SERIAL => 'INT AUTO_INCREMENT',
-		DATE   => 'DATETIME',		
+		DATE   => 'DATETIME',
+		BINARY => 'MEDIUMBLOB', # 2^24, 16MiB.
 	       );
 
 sub new {

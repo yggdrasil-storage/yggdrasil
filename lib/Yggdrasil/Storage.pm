@@ -23,6 +23,7 @@ our %TYPES = (
 	      FLOAT   => 1,
 	      DATE    => 1,
 	      SERIAL  => 1,
+	      BINARY  => 1,
 	     );
 
 sub new {
@@ -49,7 +50,7 @@ sub new {
     die $@ if $@;
     #  $class->import();
     $storage = $engine_class->new(@_);
-
+    
     $MAPPER = $data{mapper};
     
     if ($data{admin}) {
