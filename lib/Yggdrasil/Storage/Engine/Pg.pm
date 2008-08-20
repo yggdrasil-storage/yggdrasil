@@ -66,11 +66,9 @@ sub _init {
     
     for my $proc (qw|unix_timestamp:0 unix_timestamp:1 from_unixtime:1|) {
 	unless ($proc_exists{$proc}) {
-	    print " ******** CREATING #$proc#\n";
 	    $dbh->do( $FUNCTIONS{$proc} );
 	}
-    }
-    
+    }   
 }
 
 sub _structure_exists {
