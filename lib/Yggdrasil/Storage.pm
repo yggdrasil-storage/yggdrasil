@@ -78,7 +78,6 @@ sub new {
 #                                 index => BOOL(0), constraint => constraint(undef) }
 #         temporal => BOOL(0),
 #         nomap => BOOL(0) );
-
 sub define {
     my $self = shift;
     my $schema = shift;
@@ -92,14 +91,14 @@ sub define {
 	    $fieldhash->{null} = 0;
 	    $self->{logger}->warn( "Serial fields cannot allow unset values, overriding request." );
 	}
-	$fieldhash->{type} = $self->_check_valid_type( $type );
+	$fieldhash->{type} = $self->_check_valid_type( $type );	
     }
 
     $schema = $self->_map_schema_name( $schema ) unless $data{nomap};
 
     return if $self->_structure_exists( $schema );
 
-    my $retval = $self->_define( $schema, @_ );
+    my $retval = $self->_define( $schema, %data );
 
    # We might create a schema with name "0", so check for a defined value.
     if (defined $retval) {
