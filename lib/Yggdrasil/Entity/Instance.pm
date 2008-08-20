@@ -152,7 +152,8 @@ sub _get_in_time {
 sub _define {
   my $self     = shift;
   my $property = shift;
-
+  my %data     = @_;
+  
   my( $pkg ) = caller(0);
   if( $property =~ /^_/ && $pkg !~ /^Yggdrasil::/ ) {
     die "You bastard! private properties are not for you!\n";
@@ -160,10 +161,13 @@ sub _define {
   my $entity = $self->_extract_entity();
   my $name = join("_", $entity, $property);
 
+  # --- Set the default data type.
+  $data{type} ||= 'TEXT';
+  
   # --- Create Property table
   $self->{storage}->define( $name,
 			    fields   => { id    => { type => "INTEGER" },
-					  value => { type => "TEXT" } },
+					  value => { type => $data{type} } },
 			    temporal => 1 );
   
   # --- Add to MetaProperty
