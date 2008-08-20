@@ -196,14 +196,6 @@ sub search {
     return \%hits;
 }
 
-# relations, returns all the relations known to Yggdrasil.
-sub relations {
-    my $self = shift;
-    my $aref = $self->fetch( 'MetaRelation', { return => 'relation' });
-
-    return map { $_->{relation} } @$aref;
-}
-
 sub _convert_time {
     my $self = shift;
     my $time = shift;

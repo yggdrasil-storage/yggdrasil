@@ -124,11 +124,21 @@ sub bootstrap {
     define Yggdrasil::MetaInheritance;
 }
 
+# entities, returns all the entities known to Yggdrasil.
 sub entities {
     my $class = shift;
     my $aref = $STORAGE->fetch( 'MetaEntity', { return => 'entity' } );
     
     return map { $_->{entity} } @$aref;
+}
+
+
+# relations, returns all the relations known to Yggdrasil.
+sub relations {
+    my $class = shift;
+    my $aref = $STORAGE->fetch( 'MetaRelation', { return => 'relation' });
+
+    return map { $_->{relation} } @$aref;
 }
 
 # Generic exist method for non-instanced calls across Yggdrasil to see
