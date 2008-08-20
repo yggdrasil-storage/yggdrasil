@@ -135,14 +135,13 @@ sub _fetch {
 	my $time = pop @schemalist;
 	die "Expected HASH-ref" unless ref $time;
 
-	use Data::Dumper;
-	print Dumper( $time ), "\n\n\n\n\\n";
-
+#	use Data::Dumper;
+#	print Dumper( $time ), "\n\n\n\n\\n";
 
 	($start,$stop) = ( $self->_convert_time($time->{start}),
 			   $self->_convert_time($time->{stop}) );
 
-	print "-" x 20, " < Start=[$start], Stop=[$stop] > \n";
+#	print "-" x 20, " < Start=[$start], Stop=[$stop] > \n";
     }
 
     # FIXME: This is not beautiful
