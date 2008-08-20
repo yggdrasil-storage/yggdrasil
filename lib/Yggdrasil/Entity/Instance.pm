@@ -156,7 +156,7 @@ sub _define {
   
   my( $pkg ) = caller(0);
   if( $property =~ /^_/ && $pkg !~ /^Yggdrasil::/ ) {
-    die "You bastard! private properties are not for you!\n";
+      die "You bastard! private properties are not for you!\n";
   }
   my $entity = $self->_extract_entity();
   my $name = join("_", $entity, $property);
@@ -205,7 +205,12 @@ sub property_exists {
 
 sub properties {
     my $class = shift;
-    $class =~ s/.*:://;
+
+    if (ref $class) {
+	$class = $class->_extract_entity();
+    } else {
+	$class =~ s/.*:://;
+    }
 
     my $aref = $Yggdrasil::STORAGE->fetch( 'MetaProperty', 
 					   { return => 'property', 
@@ -213,6 +218,27 @@ sub properties {
 					   } );
     
     return map { $_->{property} } @$aref;    
+}
+
+sub relations {
+    my $class = shift;
+
+    if (ref $class) {
+	$class = $class->_extract_entity();
+    } else {
+	$class =~ s/.*:://;
+    }
+    
+    my $lref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
+					   { return => 'entity2', 
+					     where => { entity1 => $class } 
+					   } );
+    my $rref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
+					   { return => 'entity1', 
+					     where => { entity2 => $class } 
+					   } );
+    
+    return map { $_->{entity1} || $_->{entity2} } @$lref, @$rref;    
 }
 
 sub search {
