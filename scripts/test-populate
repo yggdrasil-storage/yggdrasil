@@ -43,7 +43,7 @@ $baal->property( 'serial', 'bserial');
 $escher->property( 'serial', 'eserial');
 $escher->property( 'ip', 'e1');
 
-($nommo) = Ygg::Host->get( 'nommo' );
+$nommo = Ygg::Host->get( 'nommo' );
 print "------>>>> $nommo->{_id}\n";
 
 # --- Define Rooms

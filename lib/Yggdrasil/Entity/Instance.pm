@@ -51,17 +51,25 @@ sub get {
   my $visual_id = shift;
   my @time = @_;
 
+  confess "When calling get with a time slice specified, you will recieve a list"
+    if @time > 1 && ! wantarray;
+  
   # If the user only specifies one time argument, then stop should be set equal to start,
   # meaning get is called for a specific moment in time.
   if( @time == 1 ) {
-    push( @time, $time[0] );
+      push( @time, $time[0] );
   }
   
   my @objects;
   for my $dataref ($class->_get_in_time( $visual_id, @time )) {
       push @objects, $class->new( $visual_id, $dataref->{start}, $dataref->{stop} );
   }
-  return @objects;  
+
+  if (@time && $time[0] && $time[0] ne $time[1]) {
+      return @objects;
+  } else {
+      return $objects[-1];
+  }
 }
 
 sub _get_in_time {
@@ -71,6 +79,18 @@ sub _get_in_time {
 
     my $entity = (split '::', $class)[-1];
 
+    # Short circuit the joins if we're looking for the current object
+    unless (@time) {
+	my $fetchref = $Yggdrasil::STORAGE->fetch( $entity => { return => "id", where => { visual_id => $visual_id } } );
+	my $id = $fetchref->[0]->{id};
+
+	if ($id) {
+	    return { id => $id };
+	} else {
+	    return;
+	}
+    }
+    
     my $fetchref = $Yggdrasil::STORAGE->fetch( "MetaProperty" => { return => "property", where => { entity => $entity } },
 					       { start => $time[0], stop => $time[1] } );
 
