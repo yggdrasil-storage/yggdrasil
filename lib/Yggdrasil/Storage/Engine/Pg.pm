@@ -150,4 +150,12 @@ sub _update_filter {
     return $sql;
 }
 
+
+sub _time_as_epoch {
+    my $self = shift;
+    my $time = shift;
+
+    return "extract(epoch FROM date('$time'))";
+}
+
 1;

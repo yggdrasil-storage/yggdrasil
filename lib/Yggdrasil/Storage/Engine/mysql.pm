@@ -85,4 +85,11 @@ sub _convert_time {
     }
 }
 
+sub _time_as_epoch {
+    my $self = shift;
+    my $time = shift;
+
+    return "UNIX_TIMESTAMP($time)";
+}
+
 1;

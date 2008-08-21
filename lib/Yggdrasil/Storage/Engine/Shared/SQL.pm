@@ -218,12 +218,13 @@ sub _fetch {
 		push @wheres, "$qstop $isnull NULL";
 	    }
 
-	    # FIX: Don't use UNIX_TIMESTAMP _here_. Ask the engine what it wants
 	    if( defined $start || defined $stop ) {
+		my ($startt, $stopt) = ($self->_time_as_epoch( $qstart ),
+				        $self->_time_as_epoch( $qstop ));
 		if( $join ) {
-		    push( @temporal_returns, qq<UNIX_TIMESTAMP($qstart) as "${as}_start">, qq<UNIX_TIMESTAMP($qstop) as "${as}_stop"> );
+		    push( @temporal_returns, qq<$startt as "${as}_start">, qq<$stopt as "${as}_stop"> );
 		} else {
-		    push( @temporal_returns, "UNIX_TIMESTAMP($qstart)", "UNIX_TIMESTAMP($qstop)" );
+		    push( @temporal_returns, $startt, $stopt );
 		}
 	    }
 	}
@@ -243,7 +244,6 @@ sub _fetch {
     $self->{logger}->debug( $sql, " with [", join(", ", @params), "]" );
     return $self->_sql( $sql, @params ); 
 }
-
 
 sub _create_from {
     my $self = shift;
