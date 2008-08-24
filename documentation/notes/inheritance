@@ -1,0 +1,154 @@
+* define Entity
+
+  define Yggdrasil::Entity "Person";
+  - update parent for "Person" to "NULL"
+
+  define Yggdrasil::Entity Student => "Person";
+  - update MetaInheritance( "Student", "Person" )
+
+
+* define Property
+
+  define Ygg::Student 'loan', type => "HUGEINT";
+  - as is.
+
+
+* getting and setting properties
+
+  $instance->property( prop );
+  $instance->property( prop => val );
+
+  Given the defined Entities as above (Person and Student). Lets say
+  "Person" defines a property "name". "Student" should then inherit
+  this property. That probably means we have Person_name as a property
+  table.
+
+  However, given the following tables:
+
+      Person
+      ------
+      1   "joer"
+
+      Student
+      -------
+      1   "linus";
+
+      Person_name
+      -----------
+      1   "Joe Random"
+  
+  How do you store the name for "linus"? id = 1 is already taken by
+  "Joe Random" in "Person".
+
+  One solution for this is to store the entity in all parent classes,
+  giving us the following:
+
+      Person
+      ------
+      1   "joer"
+      2   "linus"
+
+      Student
+      -------
+      1   "linus"
+
+      Person_name
+      -----------
+      1   "Joe Random"
+      2   "Linus T."
+
+  Though there are no "good" link between Student.1 and Person.2
+  However, that also mean it's possible to "get Ygg::Person 'linus'",
+  although he is not only a member of "Person", but also of the more
+  specific "Student" class. It would then be harder to get at
+  "Student" attributes. It should probably be impossible to get at the
+  "Student" properties if instanciated as a "Person".
+
+
+* fetching historic instances
+
+  get Ygg::Student $student, $past, $not_so_past;
+  - must check for changes in MetaInheritance along with any changes
+    to parent entities ([1 "linus"] and [2 "linus"]) and their
+    properties.
+
+
+* defining Relations
+
+  define Yggdrasil::Relation "Person", "Room";
+  - Should the "Person" slot be able to take a "Student" object?
+    ("Student" isa "Person").
+
+    If so, what does that mean for MetaRelation and a relation table?
+    MetaRelation holds what entities a relation concerns. In our
+    example that would be "Person" and "Room". Now in a relation table
+    we have rval and lval, which stores references to "Person" and
+    "Room". rval = 5 would then imply the "Person" entity with id = 5.
+    If we allow "Students" to be stored in the "Person" slot, then
+    rval = 5 does no longer imply that it is the "Person" entity with
+    id = 5. But how would the relation table know?
+
+    Again, if we create the entiity in all parent entites, we would be
+    able to store the reference to the correct instance object.
+    However, we it would still not point at a "Student" instance, it
+    would point at the "Person" instance of it.
+
+
+  define Yggdrasil::Relation "Student", "Person";
+  - If "Person" can take a "Student" object, then does this make sense?
+  It would be the same as the following:
+
+      Yggdrasil::Relation "Person", "Person";
+
+
+* creating instances
+
+  Given the above discussion, when creating a new instance it should
+  also be created in all parent classes. So creating a new "Student"
+  should insert the student into the Student table as well as the
+  Person table.
+
+
+* Tricky things - Redefinitions of entities
+
+  Given:
+
+      define Yggdrasil::Entity "Person";
+      define Yggdrasil::Entity "Student";
+
+      define Person "name";
+      define Student "loan";
+
+      Ygg::Student->new("joer");
+      Ygg::Student->new("linus");
+
+  Now lets try to redefine the "Student" entity as follows:
+
+      define Yggdrasil::Entity Student => "Person";
+
+      Ygg::Student->new("bark");
+
+  Now, saying $bark->property("name") should be valid, since "Student"
+  inherits from "Person" which has a "name" property defined. But what
+  about "linus"? When we defined "linus", "Student" did not inherit
+  from "Person", so we did not insert "linus" into the Person table.
+
+  A possible solution when redefining like this would be to ensure
+  that all instances of the "Student" class also were defined in all
+  parent classes. That's quite a heavy operation if the Student table
+  contains alot of entries. Also, what if we were to redefine
+  "Student" back to the original definition, ie. no parent?
+
+
+* Implementation of MetaInheritance
+
+  Asking for all parents in order of a given entity seems to be a
+  recuring query. However, with a simple "Child"->"Parent" setup, we
+  would have to do a lot of queries if the inheritance tree gets deep.
+  Hence we would like for a way to get at the inheritance list
+  cheaply. Chekcing wheather an entity ISA another entity seems also
+  to be something that will be queried for frequently (ie. "Student"
+  isa? "Human Being")
+
+  Maybe we need a new type TREE? That would leave implementation of
+  such queries up to each engine.
