@@ -64,6 +64,9 @@
   "Student" attributes. It should probably be impossible to get at the
   "Student" properties if instanciated as a "Person".
 
+  SOLUTION: Global IDs.
+  Either via one entity table or a global sequencer.
+
 
 * fetching historic instances
 
@@ -71,6 +74,9 @@
   - must check for changes in MetaInheritance along with any changes
     to parent entities ([1 "linus"] and [2 "linus"]) and their
     properties.
+
+  SOLUTION: Changes in inheritance provokes a "change".  We must
+  otherwise check each valid entity at the time for changes.
 
 
 * defining Relations
@@ -93,12 +99,17 @@
     However, we it would still not point at a "Student" instance, it
     would point at the "Person" instance of it.
 
+  SOLUTION: Any subentity is a valid entity for a relation, on either
+  side.
+
 
   define Yggdrasil::Relation "Student", "Person";
   - If "Person" can take a "Student" object, then does this make sense?
   It would be the same as the following:
 
       Yggdrasil::Relation "Person", "Person";
+
+  SOLUTION: Pending.  Desired but requires logistics. 
 
 
 * creating instances
@@ -107,6 +118,8 @@
   also be created in all parent classes. So creating a new "Student"
   should insert the student into the Student table as well as the
   Person table.
+
+  SOLUTION: Global IDs, we don't need to do duplicate storage.
 
 
 * Tricky things - Redefinitions of entities
@@ -139,6 +152,11 @@
   contains alot of entries. Also, what if we were to redefine
   "Student" back to the original definition, ie. no parent?
 
+  SOLUTION: Global IDs work[tm] and fetch will have to check parent
+  classes for data.
+
+  'define Person "name"' will make 'define Student "name"' invalid.
+
 
 * Implementation of MetaInheritance
 
@@ -152,3 +170,5 @@
 
   Maybe we need a new type TREE? That would leave implementation of
   such queries up to each engine.
+
+  SOLUTION: If A->B and B->C we will also store A->C.
