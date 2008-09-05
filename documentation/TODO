@@ -78,3 +78,10 @@
    exist at /site/lib/perl/Yggdrasil/Storage/Engine/Shared/SQL.pm line
    113
   Wee!
+
+* Generisc webgui library
+
+* DB-dump and restore tools
+
+* Merge all Entity tables into one super Entity table (to get unique
+   ids for all instances [easier to support inheritance])
