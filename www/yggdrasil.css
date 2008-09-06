@@ -1,0 +1,19 @@
+body { margin: 10px; }
+
+h1 { font-size: 1.5em; font-variant: small-caps; border-style: dotted; border-width: 0 0 2px 0; border-color: #0060f0; }
+
+a { color: #0060f0; text-decoration: none; }
+a:hover { color: #0000f0; text-decoration: underline } 
+ul { counter-reset: item; }
+/* ul:after { content: counter(item) " results."; margin-top: 1.2em }
+li { display: block;} 
+li:before { content: counter(item, disc); counter-increment: item } */
+li { counter-increment: item } 
+
+table { padding: 0; margin: 0; width: 100% }
+td:first-child { text-transform: capitalize }
+td { padding: 0.5em; } /* border-style: dotted; border-width: 0 0 1px 0; border-color: #0060f0; } */
+tr.odd { background-color: #f0f0ff }
+tr.even { background-color: #f0fff0 }
+tr:hover { background-color: #c0c0c0; }
+ 
