@@ -261,6 +261,21 @@ sub relations {
     return map { $_->{entity1} || $_->{entity2} } @$lref, @$rref;    
 }
 
+# fetches all current instance for an Entity
+sub instances {
+    my $class = shift;
+
+    if (ref $class) {
+	$class = $class->_extract_entity();
+    } else {
+	$class =~ s/.*:://;
+    }
+    
+    my $instances = $Yggdrasil::STORAGE->fetch( $class, { return => 'visual_id' } );
+    
+    return map { $_->{visual_id} } @$instances;
+}
+
 sub search {
     my ($class, $key, $value) = @_;
     my $package = $class;
