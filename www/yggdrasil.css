@@ -4,7 +4,7 @@ h1 { font-size: 1.5em; font-variant: small-caps; border-style: dotted; border-wi
 
 a { color: #0090f0; text-decoration: none; }
 a:hover { color: #0000f0; text-decoration: underline } 
-ul { counter-reset: item; }
+ul { counter-reset: item; -webkit-column-count: 4; -moz-column-count: 4; }
 /* ul:after { content: counter(item) " results."; margin-top: 1.2em }
 li { display: block;} 
 li:before { content: counter(item, disc); counter-increment: item } */
