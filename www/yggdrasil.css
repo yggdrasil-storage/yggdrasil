@@ -13,7 +13,7 @@ li { counter-increment: item }
 
 table { padding: 0; margin: 0; width: 100%; border-collapse: collapse; border-top: 3px solid #b0b0f0; border-bottom: 3px solid #b0b0f0; }
 td:first-child { text-transform: capitalize; font-weight: bold; border-right: 1px solid #b0b0f0; }
-td { padding: 0.5em; }
+td { padding: 0.5em; width: 50% }
 tr.odd { background-color: #f0f0ff }
 tr.even { background-color: #f0fff0 }
 tr:hover { background-color: #d6d6d6; }
