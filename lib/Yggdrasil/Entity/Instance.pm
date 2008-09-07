@@ -276,6 +276,26 @@ sub instances {
     return map { $_->{visual_id} } @$instances;
 }
 
+
+# Property type function for non-instanced calls.
+# It is called as "Ygg::Entity->type( 'propertyname' );
+sub type {
+    my ($class, $property) = @_;
+
+    if (ref $class) {
+	$class = $class->_extract_entity();
+    } else {
+	$class =~ s/.*:://;
+    }
+    
+    my $ret = $Yggdrasil::STORAGE->fetch( 'MetaProperty',
+					  { return => 'type',
+					    where  => { entity   => $class },
+					              { property => $property }});
+    return map { $_->{type} } @$ret;
+}
+
+
 sub search {
     my ($class, $key, $value) = @_;
     my $package = $class;
