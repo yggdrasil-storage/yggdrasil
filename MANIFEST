@@ -1,6 +1,7 @@
 bin/ysh
 Changes
 documentation/notes/db-schema
+documentation/notes/inheritance
 documentation/notes/interface
 documentation/notes/storage
 documentation/overview/Overview.pdf
@@ -21,11 +22,18 @@ inc/Module/Install/WriteAll.pm
 lib/Yggdrasil.pm
 lib/Yggdrasil/Entity.pm
 lib/Yggdrasil/Entity/Instance.pm
+lib/Yggdrasil/Interface.pm
+lib/Yggdrasil/Interface/WWW.pm
+lib/Yggdrasil/Interface/WWW/Container.pm
 lib/Yggdrasil/Meta.pm
 lib/Yggdrasil/MetaEntity.pm
 lib/Yggdrasil/MetaInheritance.pm
 lib/Yggdrasil/MetaProperty.pm
 lib/Yggdrasil/MetaRelation.pm
+lib/Yggdrasil/Plugin.pm
+lib/Yggdrasil/Plugin/Auth.pm
+lib/Yggdrasil/Plugin/Property/Prioritize.pm
+lib/Yggdrasil/Plugin/Shared.pm
 lib/Yggdrasil/Property.pm
 lib/Yggdrasil/Relation.pm
 lib/Yggdrasil/Storage.pm
@@ -51,3 +59,5 @@ t/30-relation.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
+www/index.cgi
+www/yggdrasil.css
