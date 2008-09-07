@@ -5,15 +5,6 @@ use warnings;
 
 use base qw(Yggdrasil::Plugin::Shared);
 
-sub new {
-    my $class = shift;
-    my $self  = {};
-    my %data  = @_;
-
-    $self->{level} = $data{level} || 0;
-
-    return bless $self, $class;
-}
 
 sub instance {
     my $self = shift;

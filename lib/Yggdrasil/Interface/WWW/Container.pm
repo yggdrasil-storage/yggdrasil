@@ -71,7 +71,7 @@ sub display {
 
     my @elems; 
 
-    foreach my $e ( @{ $self->{elements} } ) {
+    foreach my $e ( sort @{ $self->{elements} } ) {
 	if( $self->type() eq "Entities" ) {
 	    push( @elems, $cgi->li( $cgi->a( {href => "?_mode=entity;_identifier=$e" }, $e ) ) );
 	} elsif( $self->type() eq "Relations" ) {
