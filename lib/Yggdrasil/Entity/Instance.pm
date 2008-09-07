@@ -288,10 +288,9 @@ sub type {
 	$class =~ s/.*:://;
     }
     
-    my $ret = $Yggdrasil::STORAGE->fetch( 'MetaProperty',
-					  { return => 'type',
-					    where  => { entity   => $class },
-					              { property => $property }});
+    my $ret = $Yggdrasil::STORAGE->fetch( 'MetaProperty',{ return => 'type',
+					    where  => { entity   => $class,
+					               property => $property }});
     return map { $_->{type} } @$ret;
 }
 
