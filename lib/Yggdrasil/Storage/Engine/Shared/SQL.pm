@@ -230,7 +230,6 @@ sub _fetch {
 	}
     }
 
-    
     @returns = @requested_fields unless @returns;
     @returns = ('*') unless @returns;
 
