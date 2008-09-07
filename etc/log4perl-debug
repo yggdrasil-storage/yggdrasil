@@ -1,4 +1,4 @@
-log4perl.logger.Yggdrasil=DEBUG, A1
+log4perl.logger.Yggdrasil=OFF, A1
 log4perl.appender.A1=Log::Log4perl::Appender::ScreenColoredLevels
 log4perl.appender.A1.stderr=0
 log4perl.appender.A1.layout=Log::Log4perl::Layout::PatternLayout

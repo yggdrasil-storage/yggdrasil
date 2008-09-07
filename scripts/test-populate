@@ -62,11 +62,18 @@ my $person = define Yggdrasil::Entity "Person";
 define $person "name";
 define $person "position";
 define $person "department";
+define $person "password", type => "PASSWORD";
+define $person "session";
+define $person "change password";
 
 my $terje = $person->new( "terjekv" );
 $terje->property( name => "Terje Kvernes" );
+$terje->property( password => "foo" );
+
+
 my $bard  = $person->new( "bard" );
 $bard->property( name => "Bård" );
+$bard->property( password => "" );
 
 
 
