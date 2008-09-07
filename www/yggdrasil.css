@@ -18,7 +18,7 @@ tr.odd { background-color: #f0f0ff }
 tr.even { background-color: #f0fff0 }
 tr:hover { background-color: #d6d6d6; }
 
-table.login { margin-top: 15%; margin-left: auto; margin-right: auto; background-color: #f0f0ff; width: 50%; border: 4px solid #b0b0f0 }
+table.login { margin-top: 15%; margin-left: auto; margin-right: auto; background-color: #f0f0ff; width: 50%; }
 table.login td + td { text-align: left }
 table.login td:first-child { text-align: right } 
 table.login td[colspan="2"] { text-align: center }
