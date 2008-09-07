@@ -182,7 +182,7 @@ sub _define {
   my $name = join("_", $entity, $property);
 
   # --- Set the default data type.
-  $data{type} ||= 'TEXT';
+  $data{type} = uc $data{type} || 'TEXT';
   
   # --- Create Property table
   $self->{storage}->define( $name,
@@ -191,7 +191,7 @@ sub _define {
 			    temporal => 1 );
   
   # --- Add to MetaProperty
-  $self->{storage}->store( "MetaProperty", key => "id", fields => { entity => $entity, property => $property } );
+  $self->{storage}->store( "MetaProperty", key => "id", fields => { entity => $entity, property => $property, type => $data{type} } );
 
   return $property;
 }

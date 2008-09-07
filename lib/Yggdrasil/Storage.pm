@@ -15,15 +15,16 @@ our $MAPPER;
 our $ADMIN = undef;
 
 our %TYPES = (
-	      TEXT    => 1,
-	      VARCHAR => 255,
-	      BOOLEAN => 1,
-	      SET     => 1,
-	      INTEGER => 1,
-	      FLOAT   => 1,
-	      DATE    => 1,
-	      SERIAL  => 1,
-	      BINARY  => 1,
+	      TEXT     => 1,
+	      VARCHAR  => 255,
+	      BOOLEAN  => 1,
+	      SET      => 1,
+	      INTEGER  => 1,
+	      FLOAT    => 1,
+	      DATE     => 1,
+	      SERIAL   => 1,
+	      BINARY   => 1,
+              PASSWORD => 1,
 	     );
 
 sub new {

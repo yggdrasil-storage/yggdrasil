@@ -10,8 +10,9 @@ use base 'Yggdrasil::Storage::Engine::Shared::SQL';
 use DBI;
 
 our %TYPEMAP = (
-		DATE   => 'TIMESTAMP WITH TIME ZONE',
-		BINARY => 'BYTEA',
+		DATE     => 'TIMESTAMP WITH TIME ZONE',
+		BINARY   => 'BYTEA',
+                PASSWORD => 'VARCHAR(255)',
 	       );
   
 sub new {
