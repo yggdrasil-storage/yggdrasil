@@ -5,12 +5,14 @@ use warnings;
 
 sub new {
     my $class = shift;
-
+    my %data  = @_;
+   
     my $self = {
-	elements => [],
-	type     => undef,
-        id       => undef,
-	class    => undef,
+		elements  => [],
+		type      => undef,
+		id        => undef,
+		class     => undef,
+		maxlength => $data{'maxlength'} || 100,
     };
 
     return bless $self, $class;
@@ -92,9 +94,32 @@ sub display {
 	    my $value = $e->{value};
 
 	    if( defined $e->{access} && $e->{access} eq "write" ) {
-		$value = $cgi->input( { type => "text", name => $id, value => $value } );
-	    } 
+		$value = $cgi->input( { type => "text", name => $id, value => $value } );		
+	    } elsif (length $value > $self->{maxlength}) {
+		# Create expand / collapse functions, the javascript
+		# needs to be sourced from a file given, it is not
+		# included in the page.
 
+		my ($shortdivid, $longdivid, $origlength) = ("${id}_short", "${id}_long", length $value);
+		my $expandedsize = $origlength - $self->{maxlength};
+		my $short = substr( $value, 0, $self->{maxlength} ) . $cgi->a( { class     => "short",
+										 onClick   => "flipper('$shortdivid', '$longdivid')",
+										 href      => '#',
+										 title     => "$expandedsize additional bytes contained in the field, click to expand.",
+									       }, '[...]' );
+		my $long = $value . " " . $cgi->a( { class     => "long",
+						     onClick   => "flipper('$shortdivid', '$longdivid')",
+						     href      => '#',
+						     title     => 'Collapse the field back to its abbreviated form.',
+						   }, '[collapse]' );
+
+		$value = $cgi->div( { class => 'flipper',
+				      id    => $shortdivid }, $short ) .
+					$cgi->div( { style => 'display: none',
+						     class => 'flipper',
+						     id    => $longdivid }, $long );
+	    }
+	    
 	    push( @elems, $cgi->TR( { class => $row_classes[ @elems % 2 ] }, $cgi->td( $id ), $cgi->td( $value ) ) );
 	} elsif( $self->type() eq "Related" ) {
 

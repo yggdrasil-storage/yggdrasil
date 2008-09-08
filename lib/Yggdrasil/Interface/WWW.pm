@@ -54,14 +54,20 @@ sub display {
     my $self = shift;
     my %param = @_;
 
-    my $title = $param{title};
-    my $sheet = $param{style};
+    my $title  = $param{title};
+    my $sheet  = $param{style};
+    my $script = $param{script};
 
     my $cgi = $self->{cgi};
 
     print $cgi->header( %{ $self->{headers} } );
-    print $cgi->start_html( -title => $title,
-			    -style => $sheet,
+    print $cgi->start_html( -title  => $title,
+			    -style  => $sheet,
+			    -script => {
+					language => 'javascript',
+					src      => $script,
+				       },
+			    
 	);
 
     foreach my $container (@{ $self->{elements} }) {
