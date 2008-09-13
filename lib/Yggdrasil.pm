@@ -114,7 +114,12 @@ sub _register_namespace {
 sub _extract_entity {
   my $self = shift;
 
-  return (split '::', ref $self)[-1];
+  # this is because we are confused!
+  if( ref $self) {
+      return (split '::', ref $self)[-1];
+  } else {
+      return (split '::', $self)[-1];
+  }
 }
 
 sub bootstrap {
