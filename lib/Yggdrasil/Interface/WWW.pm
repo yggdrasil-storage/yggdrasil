@@ -11,9 +11,11 @@ sub new {
     my $class = shift;
 
     my $self = {
-	elements => [],
-	headers  => {},
-	cgi      => CGI::Pretty->new()
+		elements => [],
+		headers  => {},
+		cgi      => CGI::Pretty->new(),
+		script   => 'yggdrasil.js',
+		style    => 'yggdrasil.css',
     };
 
     return bless $self, $class;
@@ -55,14 +57,14 @@ sub display {
     my %param = @_;
 
     my $title  = $param{title};
-    my $sheet  = $param{style};
-    my $script = $param{script};
+    my $sheet  = $param{style}  || $self->{style};
+    my $script = $param{script} || $self->{script};
 
     my $cgi = $self->{cgi};
 
     print $cgi->header( %{ $self->{headers} } );
     print $cgi->start_html( -title  => $title,
-			    -style  => $sheet,
+			    -style  => { src => $sheet },
 			    -script => {
 					language => 'javascript',
 					src      => $script,
@@ -81,14 +83,19 @@ sub present_login {
     my $self = shift;
     my %param = @_;
 
-    my $title = $param{title};
-    my $sheet = $param{style};
-
+    my $title  = $param{title};
+    my $sheet  = $param{style} || $self->{style};
+    my $script = $param{script} || $self->{script};
+    
     my $cgi = $self->{cgi};
 
     print $cgi->header();
-    print $cgi->start_html( -title => $title,
-			    -style => $sheet,
+    print $cgi->start_html( -title  => $title,
+			    -style  => { src => $sheet },
+			    -script => {
+					language => 'javascript',
+					src      => $script,
+				       },
 	);
     
     print $cgi->start_form( -method => "POST" );
