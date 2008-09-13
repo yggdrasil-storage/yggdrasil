@@ -5,21 +5,6 @@ use warnings;
 
 use base qw(Yggdrasil::MetaRelation);
 
-our $SCHEMA = <<SQL;
-CREATE TABLE [name] (
-  id    INT NOT NULL AUTO_INCREMENT,
-  lval  INT NOT NULL,
-  rval  INT NOT NULL,
-  start DATETIME NOT NULL,
-  stop  DATETIME NULL,
-
-  PRIMARY KEY( id ),
-  FOREIGN KEY( lval ) REFERENCES [entity1]( id ),
-  FOREIGN KEY( rval ) REFERENCES [entity2]( id ),
-  CHECK( start < stop )
-);
-SQL
-
 sub _define {
   my $self    = shift;
   my $entity1 = shift;
