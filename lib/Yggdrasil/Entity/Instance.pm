@@ -70,7 +70,7 @@ sub get {
       push @objects, $class->new( $visual_id, $dataref->{start}, $dataref->{stop} );
   }
 
-  if (@time && $time[0] && $time[0] ne $time[1]) {
+  if (@time && $time[0] && $time[1] && $time[0] ne $time[1]) {
       return @objects;
   } else {
       return $objects[-1];
@@ -131,20 +131,20 @@ sub _get_in_time {
 		
 		my $val = $e->{$key};
 
-		print "VAL = $key $val $time[0] :: $time[1]\n";
+#		print "VAL = $key $val $time[0] :: $time[1]\n";
 		my $good;
 		if( defined $time[0] ) {
 		    if( defined $time[1] ) {
 			$good = $time[0] <= $val && $val < $time[1];
 		    } else {
-			$good = $val >= $time[0];
+			$good = $val >= $time[0] if $val && $time[0];
 		    }
 		} elsif( defined $time[1] ) {
 		    $good = $val < $time[1];
 		}
 		
 		if( $good ) {
-		    print "GOOD VAL = $val\n";
+#		    print "GOOD VAL = $val\n";
 		    $times{$val} = { start => $val };
 		}
 	    }
