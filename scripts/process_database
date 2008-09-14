@@ -35,6 +35,7 @@ my ($dbh, $sql);
 print "$ENV{YGG_USER}\@$ENV{YGG_HOST}:$ENV{YGG_DB}\n";
 
 my %mapper;
+my %human_to_machine;
 my %config;
 my %idents;
 
@@ -59,20 +60,16 @@ for my $rowref (@$configstruct) {
 my $mapstruct = $storage->_dump_structure( 'Storage_mapname' );
 for my $rowref (@$mapstruct) {
     $mapper{$rowref->[1]} = $rowref->[0];
+    $human_to_machine{$rowref->[0]} = $rowref->[1];
 }
 
-for my $structure (@structures) {
-    my $mapped_struct = $mapper{$structure} || $structure;
-    if ($mapped_struct =~ /^[^_]+$/ && $mapped_struct !~ m|^Meta|i) { 
-	my $tableref = $storage->_dump_structure( $structure );
-	for my $rowref (@$tableref) {
-	    my @row = @$rowref;
-	    $idents{$row[0]} = $row[2];
-	}
-    }
+my $realname = $human_to_machine{'Entities'} || 'Entities';
+my $tableref = $storage->_dump_structure( $realname );
+for my $rowref (@$tableref) {
+    my @row = @$rowref;
+    $idents{$row[0]} = $row[2];
 }
 
-# Give me all structures (deref will need 'em even if they're not to be displayed)
 for my $structure (@structures) {
     my $mapped_struct = $mapper{$structure} || $structure;
     
@@ -83,6 +80,7 @@ for my $structure (@structures) {
     }
     my @tabledata;
     if ($dump) {
+	next unless &display( $mapped_struct );
 	# Give me a row (an array reference) for every row in the structure in question.
 	my $tableref = $storage->_dump_structure( $structure );
 	for my $rowref (@$tableref) {
