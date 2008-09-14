@@ -124,7 +124,3 @@ sub dumper {
     }
 }
 
-
-sub encode_base64 {
-    return shift;
-}
