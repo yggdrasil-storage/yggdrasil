@@ -107,8 +107,11 @@ for my $structure (@structures) {
 		    }
 		}
 		$i++;
-		push @data, $c || 'NULL';
-		;
+		if (defined $c) {
+		    push @data, $c;
+		} else {
+		    push @data, 'NULL';
+		}
 	    }
 	    push @tabledata, \@data;
 	}
