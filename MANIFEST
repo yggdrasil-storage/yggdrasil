@@ -1,3 +1,5 @@
+bin/ydump
+bin/yrestore
 bin/ysh
 Changes
 documentation/notes/db-schema
@@ -61,3 +63,4 @@ t/pod-coverage.t
 t/pod.t
 www/index.cgi
 www/yggdrasil.css
+www/yggdrasil.js
