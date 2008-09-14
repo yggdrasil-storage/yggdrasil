@@ -20,7 +20,7 @@ sub _define {
   # --- Create Property table
   $self->{storage}->define( $name,
 			    fields   => { id    => { type => "INTEGER" },
-					  value => { type => $data{type} } },
+					  value => { type => $data{type}, null => 1 } },
 			    temporal => 1 );
   
   # --- Add to MetaProperty
