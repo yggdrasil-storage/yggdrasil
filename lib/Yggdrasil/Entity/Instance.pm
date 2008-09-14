@@ -186,9 +186,21 @@ sub property {
     my $name = join("_", $entity, $key );
 
 
-    if ($value) {
+    # Check to see if the property exists.
+    my $aref = $storage->fetch( 'MetaProperty', 
+				{ return => 'property', 
+				  where => { entity => $entity, property => $key } 
+				} );
+
+    # The property name might be "0".
+    unless (defined $aref->[0]->{property}) {
+	die "Unable to find property '$key' for entity '$entity', exiting.\n";
+    }
+
+    # Did we get two params, even if one was undef?
+    if (@_ == 2) {
 	if( defined $self->{_start} || defined $self->{_stop} ) {
-	    die "Temporal objects are immutable";
+	    die "Temporal objects are immutable.";
 	}
 
 	$storage->store( $name, key => "id", fields => { id => $self->{_id}, value => $value } );
