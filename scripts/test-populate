@@ -34,8 +34,12 @@ $nommo->property( 'ip' , 'n3' );
 
 #sleep 2;
 #$nommo->property( 'ip' , 'n1' );
-$nommo->property( 'serial', 'nserial');
 
+$nommo->property( 'serial', '1');
+$nommo->property( 'serial', undef);
+$nommo->property( 'serial', '1');
+$nommo->property( 'serial', undef);
+  
 $baal->property( 'ip' , 'b1' );
 $baal->property( 'ip' , 'b2' );
 $baal->property( 'serial', 'bserial');
@@ -165,7 +169,8 @@ $baal->property( $dinner => "Saus" );
 my $now = time();
 print "ZOOM ", "-" x 70, "\n";
 for my $historic_nommo (get $host 'nommo', ($now - 20), undef) {
-    print "ZOOM dinner: ", $historic_nommo->property( 'dinner' ), " -> ",  $historic_nommo->{_start}, " - ", $historic_nommo->{_stop},  "<--\n";
+    print "ZOOM dinner: ", $historic_nommo->property( 'dinner' ), " -> ",  $historic_nommo->{_start} || 'NOSTART',
+      " - ", $historic_nommo->{_stop} || 'NOSTOP',  " <--\n";
 }
 
 

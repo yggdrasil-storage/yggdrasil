@@ -109,7 +109,7 @@ sub _sql {
 
     my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);
     $self->{logger}->debug( "$sql -> Args: [$args_str]" );
-    
+
     $sth->execute(@attr) || confess( "execute??" );
 
     # FIX: if we do some DDL stuff, doing a fetch later on will make
@@ -214,8 +214,8 @@ sub _fetch {
 	$sql .= ' WHERE ';
 	$sql .= join(" and ", @wheres );
     }
-    
-    $self->{logger}->debug( $sql, " with [", join(", ", @params), "]" );
+
+    $self->{logger}->debug( $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]" );
     return $self->_sql( $sql, @params ); 
 }
 
@@ -274,10 +274,10 @@ sub _store {
     # Check if we already have the value
     my $aref = $self->fetch( $schema, { where => { %$fields } } );
     return 1 if @$aref;
-
+    
     # Expire the old value
     if( defined $key && exists $fields->{$key} ) {
-      $self->_expire( $schema, $key, $fields->{$key}); 
+	$self->_expire( $schema, $key, $fields->{$key}); 
     }
 
     # Insert new value
@@ -322,20 +322,20 @@ sub _process_where {
     my $schema   = shift;
     my $where    = shift;
     my $operator = shift;
-
+    
     my( @requested_fields, @wheres, @params );
     for my $fieldname (keys %$where) {
+	my $localoperator = $operator;
 	my $value = $where->{$fieldname};
 	# If the value we're looking for is undef, we're looking
 	# for NULL.  This might make us require using "is" as the
 	# operator for comparisons even if we were given '=', ask
 	# the engine for the appropriate NULL comparison operator.
 	if (! defined $value && $operator eq '=') {
-	    $operator = $self->_null_comparison_operator();
-	}
-
+	    $localoperator = $self->_null_comparison_operator();
+	} 
 	
-	$value = '%' . $value . '%' if $operator eq 'LIKE';
+	$value = '%' . $value . '%' if $localoperator eq 'LIKE';
 	my @fqfn = $self->_qualify( $schema, $fieldname );
     
 	push @requested_fields, @fqfn;
@@ -346,9 +346,9 @@ sub _process_where {
 	# and field. It should thus be put verbatim into the
 	# generated SQL.
 	if( ref $value eq "SCALAR" ) {
-	    push @wheres, join " $operator ", $fqfn[0], $$value;
+	    push @wheres, join " $localoperator ", $fqfn[0], $$value;
 	} else {
-	    push @wheres, join " $operator ", $fqfn[0], '?';
+	    push @wheres, join " $localoperator ", $fqfn[0], '?';
 	    push @params, $value;
 	}
     }
