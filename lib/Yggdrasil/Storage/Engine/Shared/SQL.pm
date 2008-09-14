@@ -160,34 +160,12 @@ sub _fetch {
 	my $operator = $queryref->{operator} || '=';
 	my $as       = $queryref->{as};
 
-	for my $fieldname (keys %$where) {
-	    my $value = $where->{$fieldname};
-	    # If the value we're looking for is undef, we're looking
-	    # for NULL.  This might make us require using "is" as the
-	    # operator for comparisons even if we were given '=', ask
-	    # the engine for the appropriate NULL comparison operator.
-	    if (! defined $value && $operator eq '=') {
-		$operator = $self->_null_comparison_operator();
-	    }
 
+	my($rf_tmp, $w_tmp, $p_tmp) = $self->_process_where($schema, $where, $operator);
+	push( @requested_fields, @$rf_tmp );
+	push( @wheres, @$w_tmp );
+	push( @params, @$p_tmp );
 
-	    $value = '%' . $value . '%' if $operator eq 'LIKE';
-	    my @fqfn = $self->_qualify( $schema, $fieldname );
-    
-	    push @requested_fields, @fqfn;
-
-	    # If the value is a SCALAR reference, it means that it
-	    # should not be treated as real value (not to be bound to
-	    # a placeholder), but rather a reference to another table
-	    # and field. It should thus be put verbatim into the
-	    # generated SQL.
-	    if( ref $value eq "SCALAR" ) {
-		push @wheres, join " $operator ", $fqfn[0], $$value;
-	    } else {
-		push @wheres, join " $operator ", $fqfn[0], '?';
-		push @params, $value;
-	    }
-	}
 
 	push @returns, $self->_process_return( $schema, $queryref->{return} );
 	$fromtables{$schema} = $counter++;
@@ -242,6 +220,20 @@ sub _fetch {
     
     $self->{logger}->debug( $sql, " with [", join(", ", @params), "]" );
     return $self->_sql( $sql, @params ); 
+}
+
+sub _raw_fetch {
+    my $self     = shift;
+    my $schema   = shift;
+    my $queryref = shift;
+
+    my $operator = $queryref->{operator} || '=';
+
+    my( $rf, $where, $params ) = $self->_process_where($schema, $queryref->{where}, $operator);
+
+    my $sql = "SELECT * FROM " . $schema;
+    $sql .= " WHERE " . join(" and ", @$where) if @$where;
+    return $self->_sql( $sql, @$params );
 }
 
 sub _create_from {
@@ -302,6 +294,19 @@ sub _store {
     return 1;
 }
 
+sub _raw_store {
+    my $self = shift;
+    my $schema = shift;
+    my %data = @_;
+
+    my $fields = $data{fields};
+    
+    $self->_sql( "INSERT INTO $schema (" . join(", ", keys %$fields) . ") VALUES ( "
+		 . join(", ", ('?') x keys %$fields) . ')', values %$fields);
+
+    return 1;
+}
+
 sub _expire {
     my $self        = shift;
     my $schema      = shift;
@@ -312,6 +317,46 @@ sub _expire {
 
     my $nullopr = $self->_null_comparison_operator();
     $self->_sql( "UPDATE $schema SET stop = NOW() WHERE stop $nullopr NULL and $indexfield = ?", $index );    
+}
+
+
+sub _process_where {
+    my $self     = shift;
+    my $schema   = shift;
+    my $where    = shift;
+    my $operator = shift;
+
+    my( @requested_fields, @wheres, @params );
+    for my $fieldname (keys %$where) {
+	my $value = $where->{$fieldname};
+	# If the value we're looking for is undef, we're looking
+	# for NULL.  This might make us require using "is" as the
+	# operator for comparisons even if we were given '=', ask
+	# the engine for the appropriate NULL comparison operator.
+	if (! defined $value && $operator eq '=') {
+	    $operator = $self->_null_comparison_operator();
+	}
+
+	
+	$value = '%' . $value . '%' if $operator eq 'LIKE';
+	my @fqfn = $self->_qualify( $schema, $fieldname );
+    
+	push @requested_fields, @fqfn;
+
+	# If the value is a SCALAR reference, it means that it
+	# should not be treated as real value (not to be bound to
+	# a placeholder), but rather a reference to another table
+	# and field. It should thus be put verbatim into the
+	# generated SQL.
+	if( ref $value eq "SCALAR" ) {
+	    push @wheres, join " $operator ", $fqfn[0], $$value;
+	} else {
+	    push @wheres, join " $operator ", $fqfn[0], '?';
+	    push @params, $value;
+	}
+    }
+
+    return (\@requested_fields, \@wheres, \@params);
 }
 
 # Process return requests, accepting an arrayref or a scalar.

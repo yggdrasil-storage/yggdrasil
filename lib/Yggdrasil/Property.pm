@@ -24,9 +24,43 @@ sub _define {
 			    temporal => 1 );
   
   # --- Add to MetaProperty
-  $self->{storage}->store( "MetaProperty", key => "id", fields => { entity => $entity, property => $property, type => $data{type} } );
+  $self->{storage}->store( "MetaProperty", key => "id", fields => { entity => $entity, property => $property, type => $data{type} } ) unless $data{raw};
 
   return $property;
+}
+
+sub _admin_dump {
+    my $self = shift;
+    my $entity = shift;
+    my $property = shift;
+
+    my $schema = join("_", $entity, $property);
+    return $self->{storage}->raw_fetch( $schema );
+}
+
+sub _admin_restore {
+    my $self = shift;
+    my $entity = shift;
+    my $property = shift;
+    my $data = shift;
+
+    my $schema = join("_", $entity, $property);
+
+    $self->{storage}->raw_store( $schema, fields => $data );
+}
+
+sub _admin_define {
+    my $self = shift;
+    my $entity = shift;
+    my $property = shift;
+
+    my $type = $self->{storage}->fetch( "MetaProperty" => { return => "type",
+							    where => { entity => $entity,
+								       property => $property } } );
+    
+    $type = $type->[0]->{type} || "TEXT";
+    $self->_define( $entity, $property, type => $type, raw => 1 );
+    
 }
 
 1;

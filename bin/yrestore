@@ -1,0 +1,156 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use MIME::Base64;
+
+use Yggdrasil;
+
+our %ID_MAP;
+
+new Yggdrasil(
+	      user      => $ENV{YGG_USER},
+	      password  => $ENV{YGG_PASSWORD},
+	      host      => $ENV{YGG_HOST},
+	      port      => $ENV{YGG_PORT},
+	      db        => $ENV{YGG_DB},
+	      engine    => $ENV{YGG_ENGINE},
+	      namespace => 'Ygg',
+	     );
+
+my $store = {
+    MetaEntity   => \&meta_entity,
+    MetaProperty => \&meta_property,
+    MetaRelation => \&meta_relation,
+    Entity   => \&entity,
+    Property => \&property,
+    Relation => \&relation,
+};
+
+my $define = {
+    MetaEntity   => sub {},
+    MetaProperty => sub {},
+    MetaRelation => sub {},
+    Entity   => \&entity_define,
+    Property => \&property_define,
+    Relation => \&relation_define,
+};
+
+
+my( @data, $section, $extra );
+while( my $line = <>) {
+    if( $line eq "\n" ) {
+	$store->{ $section }->( $extra, \@data ) if @data;
+	@data = ();
+	next;
+    } elsif( $line =~ /^\[/ ) {
+	my($header) = $line =~ /\[([^]]+)\]/;
+	( $section, $extra ) = split(":", $header);
+	$define->{ $section }->( $extra );
+	next;
+    }
+
+    die unless $section;
+
+    push( @data, $line );
+}
+
+use Data::Dumper;
+print Dumper( \%ID_MAP );
+
+sub meta_entity {
+    my $schema = shift;
+    my %data = decode(shift);
+
+    Yggdrasil::MetaEntity->admin_restore( \%data );
+}
+
+sub meta_property {
+    my $schema = shift;
+    my %data = decode(shift);
+
+    Yggdrasil::MetaProperty->admin_restore( \%data );
+}
+
+sub meta_relation {
+    my $schema = shift;
+    my %data = decode(shift);
+
+    Yggdrasil::MetaRelation->admin_restore( \%data );
+}
+
+sub entity {
+    my $schema = decode_base64( shift );
+    my @data = decode(shift);
+
+    my $map = Yggdrasil::Entity->admin_restore( $schema, \@data );
+    $ID_MAP{$schema} = $map;
+}
+
+sub entity_define {
+    my $schema = decode_base64( shift );
+
+    Yggdrasil::Entity->admin_define( $schema );
+}
+
+sub property {
+    my $schema = shift;
+    my( $entity, $property ) = map { decode_base64($_) } split ' ', $schema;
+    my %data = decode(shift, map => { id => "id" }, usemap => { id => $entity } ); 
+    
+    Yggdrasil::Property->admin_restore( $entity, $property, \%data );
+}
+
+sub property_define {
+    my $schema = shift;
+    my( $entity, $property ) = map { decode_base64($_) } split ' ', $schema;
+
+    Yggdrasil::Property->admin_define( $entity, $property );    
+}
+
+sub relation {
+    my $schema = decode_base64( shift );
+
+    my( $e1, $e2 ) = split /_R_/, $schema;
+    my %data = decode(shift, 
+		      map    => { rval => "rval", lval => "lval" },
+		      usemap => { lval => $e1, rval => $e2 } );
+    
+    Yggdrasil::Relation->admin_restore( $e1, $e2, \%data );
+}
+
+sub relation_define {
+    my $schema = decode_base64( shift );
+
+    my( $e1, $e2 ) = split /_R_/, $schema;
+    Yggdrasil::Relation->admin_define( $e1, $e2 );    
+}
+
+
+sub decode {
+    my $data = shift;
+    my %param = @_;
+
+    my $map = $param{map} || {};
+    my $usemap = $param{usemap} || {};
+
+    my @list;
+    foreach my $l (@$data) {
+	my( $key, $val ) = split /\s+=>\s+/, $l;
+	$val = decode_base64($val);
+
+	if( exists $map->{$key} ) {
+	    $val = $ID_MAP{ $usemap->{$key} }->{$val};
+	}
+
+	$val = undef unless length $val;
+
+	push( @list, $key, $val );
+    }
+
+    return @list;
+}

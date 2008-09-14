@@ -129,6 +129,13 @@ sub store {
     return $self->_store( $self->_get_schema_name( $schema ), @_ );
 }
 
+sub raw_store {
+    my $self = shift;
+    my $schema = shift;
+    
+    return $self->_raw_store( $self->_get_schema_name( $schema ), @_ );
+}
+
 # fetch ( schema1 { return => [ fieldnames ], where => { s1field => s1value }, operator => operator }
 #         schema2 { return => [ fieldnames ], where => { s2field => s2value }, operator => operator }
 # We remap the schema names (the non-reference parameters here
@@ -157,6 +164,12 @@ sub fetch {
     }
 
     return $self->_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_, $time );
+}
+
+sub raw_fetch {
+    my $self = shift;
+
+    return $self->_raw_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_ );
 }
 
 # expire ( $schema, $indexfield, $key )

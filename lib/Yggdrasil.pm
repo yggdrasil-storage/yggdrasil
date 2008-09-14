@@ -32,8 +32,10 @@ sub new {
 
 #    print "CLASS = $class\n";
 #    use Carp qw/cluck/;
-#    cluck();
+#    print $class, "\n";
+#    cluck() if ref $class;
 
+    
     my $self  = bless {}, $class;
 
     $self->_init(@_);

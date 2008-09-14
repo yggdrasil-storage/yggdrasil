@@ -59,9 +59,11 @@ $b701->property( "use", "Hang-out" );
 
 # --- Define Persons
 my $person = define Yggdrasil::Entity "Person";
-define $person "name";
+define Yggdrasil::Property $person => "name";
 define $person "position";
+define $person "_position";
 define $person "department";
+define $person "depart_ment";
 define $person "password", type => "PASSWORD";
 define $person "session";
 define $person "change password";
@@ -74,7 +76,7 @@ $terje->property( password => "foo" );
 my $bard  = $person->new( "bard" );
 $bard->property( name => "Bård" );
 $bard->property( password => "" );
-
+$bard->property( department => "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" );
 
 
 # --- Define Phones
@@ -137,8 +139,8 @@ for my $e (qw /Telephone Contractor Room/ ) {
 }
 
 define Yggdrasil::Entity 'Person';
-define Yggdrasil::Entity 'Student', 'Person';
-define Yggdrasil::Entity 'Student', 'Person';
+define Yggdrasil::Entity 'Student', inherit => 'Person';
+define Yggdrasil::Entity 'Student', inherit => 'Person';
 
 
 # --- Test instances representing points in time

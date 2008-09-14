@@ -1,0 +1,130 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use MIME::Base64;
+
+use Yggdrasil;
+
+
+new Yggdrasil(
+	      user      => $ENV{YGG_USER},
+	      password  => $ENV{YGG_PASSWORD},
+	      host      => $ENV{YGG_HOST},
+	      port      => $ENV{YGG_PORT},
+	      db        => $ENV{YGG_DB},
+	      engine    => $ENV{YGG_ENGINE},
+	      namespace => 'Ygg',
+	     );
+
+# --- MetaEntity
+print "[MetaEntity]\n";
+my %seen_entity;
+my $entities = Yggdrasil::MetaEntity->admin_dump();
+foreach my $entry ( @$entities ) {
+    dumper( $entry );
+    print "\n";
+
+    my $entity = $entry->{entity};
+    $seen_entity{$entity} = 1;
+}
+print "\n";
+
+# --- MetaProperty
+print "[MetaProperty]\n";
+my %seen_property;
+my $properties = Yggdrasil::MetaProperty->admin_dump();
+foreach my $entry ( @$properties ) {
+    dumper( $entry, exclude => { id => 1 } );
+    print "\n";
+
+    my $entity   = $entry->{entity};
+    my $property = $entry->{property};
+    $seen_property{$entity}->{$property} = 1;
+}
+print "\n";
+
+# --- MetaRelation
+print "[MetaRelation]\n";
+my %seen_relation;
+my $relations = Yggdrasil::MetaRelation->admin_dump();
+foreach my $entry ( @$relations ) {
+    dumper( $entry );
+    print "\n";
+
+    my $relation = $entry->{relation};
+    $seen_relation{$relation} = 1;
+}
+print "\n";
+
+my %id_map;
+# --- Instance Entities
+foreach my $entity ( keys %seen_entity ) {
+    print "[Entity: ", encode_base64($entity, ""), "]\n";
+    my $instances = Yggdrasil::Entity->admin_dump( $entity );
+    foreach my $instance ( @$instances ) {
+	$id_map{$entity}->{$instance->{id}} = $instance->{visual_id};
+	dumper($instance, exclude => { id => 1 } );
+    }
+    print "\n";
+}
+
+# --- Instance Properties
+foreach my $entity ( keys %seen_property ) {
+    my $properties = $seen_property{$entity};
+    foreach my $property ( keys %$properties ) {
+	print "[Property: ", encode_base64($entity, ""), " ", encode_base64($property, ""), "]\n";
+
+	my $instance_property = Yggdrasil::Property->admin_dump( $entity, $property );
+	foreach my $ip ( @$instance_property ) {
+	    dumper($ip, 
+		   usemap => { instance => $id_map{$entity} }, 
+		   map    => { id => "instance" } );
+	    print "\n";
+	}
+    }
+}
+
+# --- Instance Relations
+foreach my $relation ( keys %seen_relation ) {
+    my $instance_relation = Yggdrasil::Relation->admin_dump( $relation );
+    my( $e1, $e2 ) = split /_R_/, $relation;
+    print "[Relation: ", encode_base64($relation, ""), "]\n";
+    foreach my $ir ( @$instance_relation ) {
+	dumper($ir, usemap => { lval => $id_map{$e1}, rval => $id_map{$e2} },
+	       map => { rval => "rval", lval => "lval" },
+	       exclude => { id => 1 } );
+	print "\n";
+    }
+}
+
+sub dumper {
+    my $data  = shift;
+    my %param = @_;
+
+    my $exclude = $param{exclude} || {};
+    my $usemap  = $param{usemap} || {};
+    my $map     = $param{map} || {};
+    
+    foreach my $key ( keys %$data ) {
+	next if $exclude->{$key};
+
+	my $value = $data->{$key};
+
+	if( exists $map->{$key} ) {
+	    $value = $usemap->{ $map->{$key} }->{$value};
+	}
+
+	$value = defined $value ? encode_base64($value, "") : "";
+	print "$key => $value\n";
+    }
+}
+
+
+sub encode_base64 {
+    return shift;
+}
