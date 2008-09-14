@@ -67,7 +67,7 @@ for my $structure (@structures) {
 	my $tableref = $storage->_dump_structure( $structure );
 	for my $rowref (@$tableref) {
 	    my @row = @$rowref;
-	    $idents{$mapped_struct}->{$row[0]} = $row[1];
+	    $idents{$row[0]} = $row[2];
 	}
     }
 }
@@ -94,17 +94,15 @@ for my $structure (@structures) {
 	    for my $c (@row) {
 		if ($dereference && $c && $c =~ /^\d+$/ && $mapped_struct =~ /^([a-z]+)_\w+$/i) {
 		    my $key = $1;
-		    if ($mapped_struct =~ /^([^_]+)_[Rr]_([^_]+)/) {
-			# id | $1 | $2
-			($lval, $rval) = ($1, $2);
-			if ($i == 1 && $idents{$lval} && $idents{$lval}->{$c}) {
-			    $c = "$c (" . $idents{$lval}->{$c} . ")";
-			} elsif ($i == 2 && $idents{$rval} && $idents{$rval}->{$c}) {
-			    $c = "$c (" . $idents{$rval}->{$c} . ")";
+		    if ($mapped_struct =~ /^[^_]+_[Rr]_[^_]+/) {
+			# id | <id1> | <id2>
+			if ($i == 1 || $i == 2) {
+			    $c = "$c (" . $idents{$c} . ")";
 			}
 		    } else {
-			if ($i == 0 && $idents{$key} && $idents{$key}->{$c}) {
-			    $c = "$c (" . $idents{$key}->{$c} . ")";
+			# id | <id>
+			if ($i == 0) {
+			    $c = "$c (" . $idents{$c} . ")";
 			}
 		    }
 		}
