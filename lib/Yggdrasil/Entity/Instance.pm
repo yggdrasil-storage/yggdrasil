@@ -185,18 +185,8 @@ sub property {
     my $entity = $self->_extract_entity();
     my $name = join("_", $entity, $key );
 
-
-    # Check to see if the property exists.
-    my $aref = $storage->fetch( 'MetaProperty', 
-				{ return => 'property', 
-				  where => { entity => $entity, property => $key } 
-				} );
-
-    # The property name might be "0".
-    unless (defined $aref->[0]->{property}) {
-	die "Unable to find property '$key' for entity '$entity', exiting.\n";
-    }
-
+    die "Unable to find property '$key' for entity '$entity', exiting.\n" unless $self->property_exists( $entity, $key );
+    
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
 	if( defined $self->{_start} || defined $self->{_stop} ) {
@@ -212,7 +202,17 @@ sub property {
 }
 
 sub property_exists {
-    confess "Not implemented";
+    my ($self, $entity, $property) = @_;
+    my $storage = $self->{storage};
+    
+    # Check to see if the property exists.
+    my $aref = $storage->fetch( 'MetaProperty', 
+				{ return => 'property', 
+				  where => { entity => $entity, property => $property } 
+				} );
+
+    # The property name might be "0".
+    return defined $aref->[0]->{property}?1:0;
 }
 
 sub properties {
