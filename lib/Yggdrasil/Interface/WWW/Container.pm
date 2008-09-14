@@ -95,7 +95,7 @@ sub display {
 
 	    if( defined $e->{access} && $e->{access} eq "write" ) {
 		$value = $cgi->input( { type => "text", name => $id, value => $value } );		
-	    } elsif (length $value > $self->{maxlength}) {
+	    } elsif ($value && length $value > $self->{maxlength}) {
 		# Create expand / collapse functions, the javascript
 		# needs to be sourced from a file given, it is not
 		# included in the page.
