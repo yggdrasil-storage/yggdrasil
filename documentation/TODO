@@ -2,8 +2,6 @@
 
 * Provide a larger test suite.
 
-* Type support
-
 * Transactions.  They must be "requested" by Yggdrasil and handled by
    the storage layer as best possible.
 
@@ -45,28 +43,6 @@
 * _register_namespace, what do we do if the namespace is already
   registered?  What is the appropriate behaviour?
 
-* define currently looks like:
-
-  define( Schema',
-          fields   => { field1, 
-                                { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) }
-                        field2, 
-                                { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) } },
-          temporal => BOOL(0),
-          nomap => BOOL(0) );
-
-  This means that the order of the fields is up to the Storage engine.
-  This again makes for painful process_database overviews.  Maybe it'd
-  be better to do:
-
-  define( Schema',
-          fields   => [ field1, 
-                                { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) }
-                        field2, 
-                                { null => BOOL(0), type => type(TEXT), constraint => constraint(undef) } ],
-          temporal => BOOL(0),
-          nomap => BOOL(0) );
-
 * Store with SERIAL fields need to handle their IDs automatically, we
    can't send an ID value, while not doing so creates undefined values
    in SQL::_store.
@@ -79,9 +55,4 @@
    113
   Wee!
 
-* Generisc webgui library
-
-* DB-dump and restore tools
-
-* Merge all Entity tables into one super Entity table (to get unique
-   ids for all instances [easier to support inheritance])
+* Make sure sure ydump return unix epoch time for stop and start
