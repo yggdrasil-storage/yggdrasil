@@ -251,7 +251,7 @@ sub instances {
 	$class =~ s/.*:://;
     }
     
-    my $instances = $Yggdrasil::STORAGE->fetch( $class, { return => 'visual_id' } );
+    my $instances = $Yggdrasil::STORAGE->fetch( Entities => { return => 'visual_id', where => { entity => $class } } );
     
     return map { $_->{visual_id} } @$instances;
 }
@@ -392,7 +392,9 @@ sub fetch_related {
     
     $side = $self->_relation_side( $ordered[-1], $path->[-1] );
     my ($ordtab, $pathtab) = ($self->_map_schema_name( $ordered[-1] ), $self->_map_schema_name( $path->[-1] ));
-    push(@schema, $pathtab => { return => "visual_id", where => { id => \qq<$ordtab.$side> } } );
+    push(@schema, Entities => { return => "visual_id", 
+				where => { id     => \qq<$ordtab.$side>,
+					   entity => $path->[-1] } } );
 
     my $pathtable  = $self->_map_schema_name( $path->[-1] );
 

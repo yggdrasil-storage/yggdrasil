@@ -8,10 +8,19 @@ use base qw(Yggdrasil::Meta);
 sub _define {
     my $self = shift;
 
-    return $self->{storage}->define( "MetaEntity",
-				     fields   => { entity => { type => "VARCHAR(255)", null => 0, index => 1 } },
-				     temporal => 1,
-				     nomap    => 1 );
+    # --- Tell Storage to create SCHEMA, noop if it exists.
+    $self->{storage}->define( "Entities", 
+			      fields   => { 
+				  entity    => { type => "TEXT" },
+				  visual_id => { type => "TEXT" },
+				  id        => { type => "SERIAL" } },
+			      temporal => 0 );
+    
+
+    $self->{storage}->define( "MetaEntity",
+			      fields   => { entity => { type => "VARCHAR(255)", null => 0, index => 1 } },
+			      temporal => 1,
+			      nomap    => 1 );
 }
 
 sub _meta_add {

@@ -35,7 +35,7 @@ my $define = {
     MetaEntity   => sub {},
     MetaProperty => sub {},
     MetaRelation => sub {},
-    Entity   => \&entity_define,
+    Entity   => sub{},
     Property => \&property_define,
     Relation => \&relation_define,
 };
@@ -58,9 +58,6 @@ while( my $line = <>) {
 
     push( @data, $line );
 }
-
-use Data::Dumper;
-print Dumper( \%ID_MAP );
 
 sub meta_entity {
     my $schema = shift;
@@ -89,12 +86,6 @@ sub entity {
 
     my $map = Yggdrasil::Entity->admin_restore( $schema, \@data );
     $ID_MAP{$schema} = $map;
-}
-
-sub entity_define {
-    my $schema = decode_base64( shift );
-
-    Yggdrasil::Entity->admin_define( $schema );
 }
 
 sub property {

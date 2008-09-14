@@ -201,7 +201,7 @@ sub search {
     my ($e) = $self->fetch( $propertytable, { operator => 'LIKE',
 					      where  => { value => $value }},
 			    $entitytable,   { return => [ 'id', 'visual_id' ], 
-					      where  => { "${entitytable}.id" => \qq<$propertytable.id> }});
+					      where  => { id => \qq<$propertytable.id>, entity => $entity }});
     my %hits;
     for my $hitref (@$e) {
 	$hits{$hitref->{visual_id}} = $hitref->{id};

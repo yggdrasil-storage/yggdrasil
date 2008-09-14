@@ -18,7 +18,7 @@ my $plugin = Yggdrasil::Plugin->new(
 				    password  => $ENV{YGG_PASSWORD} || "1109K9R6",
 				    host      => $ENV{YGG_HOST},
 				    port      => $ENV{YGG_PORT},
-				    db        => $ENV{YGG_DB} || "yggdrasil",
+				    db        => $ENV{YGG_DB} || "yggdrasil2",
 				    engine    => $ENV{YGG_ENGINE} || "mysql",
 				    namespace => 'Ygg',
 				   );
@@ -42,8 +42,8 @@ if( defined $user && defined $pass ) {
 }
 
 unless( $session ) {
-    $www->present_login( title => "Login", style => "yggdrasil.css" );
-    exit;
+#    $www->present_login( title => "Login", style => "yggdrasil.css" );
+#    exit;
 } 
 
 
