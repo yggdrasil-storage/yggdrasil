@@ -11,7 +11,6 @@ sub instance {
     my $entity = shift;
     my $ident = shift;
 
-
     my @p = $self->SUPER::instance( $entity, $ident );
     my @v;
     foreach my $prop ( @p ) {
@@ -22,7 +21,6 @@ sub instance {
 	}
 
 	next if $level < $self->{level};
-
 	push( @v, $prop );
     }
 
@@ -38,9 +36,6 @@ sub related {
     my @v;
     foreach my $e ( @p ) {
 	next unless @{ $e->{value} };
-
-
-
 	push( @v, $e );
     }
 
