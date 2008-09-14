@@ -160,12 +160,10 @@ sub _fetch {
 	my $operator = $queryref->{operator} || '=';
 	my $as       = $queryref->{as};
 
-
 	my($rf_tmp, $w_tmp, $p_tmp) = $self->_process_where($schema, $where, $operator);
 	push( @requested_fields, @$rf_tmp );
 	push( @wheres, @$w_tmp );
 	push( @params, @$p_tmp );
-
 
 	push @returns, $self->_process_return( $schema, $queryref->{return} );
 	$fromtables{$schema} = $counter++;
@@ -176,7 +174,6 @@ sub _fetch {
 	    my( $qstart ) = $self->_qualify($schema, 'start');
 	    my( $qstop )  = $self->_qualify($schema, 'stop');
 	    my $isnull = $self->_null_comparison_operator();
-
 
 	    if( defined $start ) {
 		if (! defined $stop ) {

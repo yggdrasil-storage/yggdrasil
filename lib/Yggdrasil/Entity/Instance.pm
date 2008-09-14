@@ -31,7 +31,10 @@ sub new {
   $self->{_id} = $self->_get_id(); 
 
   unless ($self->{_id}) { 
-      $self->{storage}->store( $entity, fields => { visual_id => $visual_id } );
+      $self->{storage}->store( 'Entities', fields => {
+						      visual_id => $visual_id,
+						      entity    => $entity,
+						     } );
       $self->{_id} = $self->_get_id();
   }
   
@@ -41,8 +44,10 @@ sub new {
 sub _get_id {
     my $self = shift;
     my $entity = $self->_extract_entity();
-    my $idfetch = $self->{storage}->fetch( $entity =>
-					   { return => "id", where => { visual_id => $self->id() } } );
+    my $idfetch = $self->{storage}->fetch( 'Entities', { return => "id", where => { 
+										   visual_id => $self->id(),
+										   entity    => $entity,
+										  } } );
     return $idfetch->[0]->{id};
 }
 
@@ -81,7 +86,10 @@ sub _get_in_time {
 
     # Short circuit the joins if we're looking for the current object
     unless (@time) {
-	my $fetchref = $Yggdrasil::STORAGE->fetch( $entity => { return => "id", where => { visual_id => $visual_id } } );
+	my $fetchref = $Yggdrasil::STORAGE->fetch( 'Entities' => { return => "id", where => {
+											     visual_id => $visual_id,
+											     entity    => $entity,
+											    } } );
 	my $id = $fetchref->[0]->{id};
 
 	if ($id) {
@@ -95,8 +103,7 @@ sub _get_in_time {
 					       { start => $time[0], stop => $time[1] } );
 
     my @wheres;
-
-    push( @wheres, $entity => { join => "left", where => { visual_id => $visual_id } } );
+    push( @wheres, 'Entities' => { join => "left", where => { visual_id => $visual_id, entity => $entity } } );
 
     foreach my $prop ( map { $_->{property} } @$fetchref ) {
 	my $table = join("_", $entity, $prop);
@@ -155,15 +162,8 @@ sub _get_in_time {
 	    $e->{stop} = $next->{start} || $time[1];
 	}
 
-	use Data::Dumper;
-	print Dumper( \@sorted), "\n\n\n\n\n";
-
-
-
-
 	return @sorted;
     }
-    
     
     return @$ref;
 }

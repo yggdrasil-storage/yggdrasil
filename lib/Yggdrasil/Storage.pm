@@ -196,7 +196,7 @@ sub search {
     my ($self, $entity, $property, $value) = @_;
 
     my $propertytable = $self->_get_schema_name( $entity . '_' . $property );
-    my $entitytable   = $self->_get_schema_name( $entity );
+    my $entitytable   = 'Entities';
 
     my ($e) = $self->fetch( $propertytable, { operator => 'LIKE',
 					      where  => { value => $value }},
