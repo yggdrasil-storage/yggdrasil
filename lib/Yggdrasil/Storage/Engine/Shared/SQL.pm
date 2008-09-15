@@ -302,13 +302,6 @@ sub _process_where {
     for my $fieldname (keys %$where) {
 	my $localoperator = $operator;
 	my $value = $where->{$fieldname};
-	# If the value we're looking for is undef, we're looking
-	# for NULL.  This might make us require using "is" as the
-	# operator for comparisons even if we were given '=', ask
-	# the engine for the appropriate NULL comparison operator.
-	if (! defined $value && $operator eq '=') {
-	    $localoperator = $self->_null_comparison_operator();
-	} 
 	
 	$value = '%' . $value . '%' if $localoperator eq 'LIKE';
 	my @fqfn = $self->_qualify( $schema, $fieldname );
@@ -320,7 +313,10 @@ sub _process_where {
 	# a placeholder), but rather a reference to another table
 	# and field. It should thus be put verbatim into the
 	# generated SQL.
-	if( ref $value eq "SCALAR" ) {
+	if (! defined $value) {
+	    $localoperator = $self->_null_comparison_operator() if $operator eq '=';
+	    push @wheres, join " $localoperator ", $fqfn[0], 'NULL';	    
+	} elsif ( ref $value eq "SCALAR" ) {
 	    push @wheres, join " $localoperator ", $fqfn[0], $$value;
 	} else {
 	    push @wheres, join " $localoperator ", $fqfn[0], '?';
