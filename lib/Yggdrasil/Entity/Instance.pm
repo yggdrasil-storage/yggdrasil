@@ -107,50 +107,20 @@ sub _get_in_time {
 
     foreach my $prop ( map { $_->{property} } @$fetchref ) {
 	my $table = join("_", $entity, $prop);
-
 	push( @wheres, $table => { join => "left" } );
     }
 
-    my $ref = $Yggdrasil::STORAGE->fetch( @wheres,
-					  { start => $time[0], stop => $time[1] } );
-    
+    my $ref = $Yggdrasil::STORAGE->fetch( @wheres, { start => $time[0], stop => $time[1] } );
 
-    # ... fetch all uniq start-times, filter only starts between $time[0] and $time[1] and return
-    my %times;
+    # If we're within a time slice, filter out the relevant hits, sort
+    # them and return.  Remember to set the start of the first hit to
+    # $time[0] (the first timestamp in the request) and the end time
+    # of the last hit to $time[1] (the last acceptable timestamp in
+    # the request.
     if( defined $time[0] || defined $time[1] ) {
-	if (defined $time[0] && defined $time[1] && $time[0] == $time[1] && @$ref) {
-	    return {
-		    start => $time[0],
-		    stop  => $time[0]
-		   };
-	}
+	my $times = $class->_filter_start_times( $time[0], $time[1], $ref );
 
-	foreach my $e ( @$ref ) {
-	    foreach my $key ( keys %$e ) {
-		next unless $key =~ /_start$/;
-		
-		my $val = $e->{$key};
-
-#		print "VAL = $key $val $time[0] :: $time[1]\n";
-		my $good;
-		if( defined $time[0] ) {
-		    if( defined $time[1] ) {
-			$good = $time[0] <= $val && $val < $time[1];
-		    } else {
-			$good = $val >= $time[0] if $val && $time[0];
-		    }
-		} elsif( defined $time[1] ) {
-		    $good = $val < $time[1];
-		}
-		
-		if( $good ) {
-#		    print "GOOD VAL = $val\n";
-		    $times{$val} = { start => $val };
-		}
-	    }
-	}
-
-	my @sorted = map { $times{$_} } sort { $a <=> $b } keys %times;
+	my @sorted = map { $times->{$_} } sort { $a <=> $b } keys %$times;
 	for( my $i = 0; $i < @sorted; $i++ ) {
 	    my $e = $sorted[$i];
 	    my $next = $sorted[$i+1] || {};
@@ -161,14 +131,52 @@ sub _get_in_time {
 
 	    $e->{stop} = $next->{start} || $time[1];
 	}
-
 	return @sorted;
     }
     
     return @$ref;
 }
 
-
+# Filter out the unique start times between $start and $stop from all
+# the db hits in the $dbref parameter.  
+sub _filter_start_times {
+    my ($class, $start, $stop, $dbref) = @_;
+    
+    my %times;
+    if (defined $start && defined $stop && $start == $stop && @$dbref) {
+	return {
+		start => $start,
+		stop  => $start
+	       };
+    }
+    
+    foreach my $e ( @$dbref ) {
+	foreach my $key ( keys %$e ) {
+	    next unless $key =~ /_start$/;
+	    
+	    my $val = $e->{$key};
+	    
+	    # print "VAL = $key $val $start :: $stop\n";
+	    my $good;
+	    if( defined $start ) {
+		if( defined $stop ) {
+		    $good = $start <= $val && $val < $stop;
+		} else {
+		    $good = $val >= $start if $val && $start;
+		}
+	    } elsif( defined $stop ) {
+		$good = $val < $stop;
+	    }
+	    
+	    if( $good ) {
+		# print "GOOD VAL = $val\n";
+		$times{$val} = { start => $val };
+	    }
+	}
+    }
+    return \%times;
+}
+  
 sub _define {
   my $self     = shift;
   my $entity = $self->_extract_entity();
