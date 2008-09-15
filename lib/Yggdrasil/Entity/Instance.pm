@@ -57,7 +57,7 @@ sub get {
   my @time = @_;
 
   confess "When calling get with a time slice specified, you will recieve a list"
-    if @time > 1 && ! wantarray;
+    if @time > 1 && ! wantarray && ! $time[0] == $time[1];
   
   # If the user only specifies one time argument, then stop should be set equal to start,
   # meaning get is called for a specific moment in time.
