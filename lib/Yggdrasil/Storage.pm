@@ -52,14 +52,9 @@ sub new {
     $storage = $engine_class->new(@_);
     
     $MAPPER = $data{mapper};
+    $ADMIN  = $data{admin};
     
-    if ($data{admin}) {
-	$ADMIN = 1;
-	use Log::Log4perl qw(get_logger :levels :nowarn);
-	$storage->{logger} = get_logger( ref $storage );
-    } else {
-	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
-    }
+    $storage->{logger} = Yggdrasil::get_logger( ref $storage );
 
     $storage->_initialize_config();
     $storage->_initialize_mapper();
@@ -418,7 +413,7 @@ sub set_mapper {
 # Require the "admin" parameter to Storage to be set to a true value to access any admin method.
 sub _admin_verify {
     my $self = shift;
-    Yggdrasil::fatal( "Administrative interface unavailable without explicit request" ) unless $ADMIN;
+    Yggdrasil::fatal( "Administrative interface unavailable without explicit request." ) unless $ADMIN;
 }
 
 # Returns a list of all the structures, guarantees the order as Meta*, Storage*, everything else.

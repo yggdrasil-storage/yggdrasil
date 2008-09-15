@@ -8,7 +8,7 @@ use Getopt::Long;
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
 
-use Yggdrasil::Storage;
+use Yggdrasil;
 
 my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 1, 0, 1);
 
@@ -21,15 +21,18 @@ GetOptions(
     "tables=s"    => \$onlytables,
     );
 
-my $storage = new Yggdrasil::Storage(
-				     engine   => $ENV{YGG_ENGINE},
-				     db       => $ENV{YGG_DB},
-				     host     => $ENV{YGG_HOST},
-				     user     => $ENV{YGG_USER},
-				     password => $ENV{YGG_PASSWORD},
-				     port     => $ENV{YGG_PORT},
-				     admin    => 1,
-				    );
+new Yggdrasil(
+	      engine   => $ENV{YGG_ENGINE},
+	      db       => $ENV{YGG_DB},
+	      host     => $ENV{YGG_HOST},
+	      user     => $ENV{YGG_USER},
+	      password => $ENV{YGG_PASSWORD},
+	      port     => $ENV{YGG_PORT},
+	      admin    => 1,
+	     );
+
+my $storage = $Yggdrasil::STORAGE;
+
 my ($dbh, $sql);
 
 print "$ENV{YGG_USER}\@$ENV{YGG_HOST}:$ENV{YGG_DB}\n";
