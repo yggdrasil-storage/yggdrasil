@@ -133,7 +133,7 @@ sub raw_store {
 
 # fetch ( schema1 { return => [ fieldnames ], where => { s1field => s1value }, operator => operator }
 #         schema2 { return => [ fieldnames ], where => { s2field => s2value }, operator => operator }
-# We remap the schema names (the non-reference parameters here
+# We remap the schema names (the non-reference parameters) here.
 sub fetch {
     my $self = shift;
 
@@ -150,7 +150,7 @@ sub fetch {
     }
 
     # Add "as" parameter that can be used later to prefix returned values from the query
-    # (to esure uniqe return values, eg. Foo_stop, Bar_stop, ... )
+    # (to ensure unique return values, eg. Foo_stop, Bar_stop, ... )
     for( my $i=0; $i < @_; $i += 2 ) {
 	my( $schema, $queryref ) = ($_[$i], $_[$i+1]);
 	next unless $queryref->{join};
