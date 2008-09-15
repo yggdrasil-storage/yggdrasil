@@ -128,20 +128,14 @@ sub _sql {
 sub _fetch {
     my $self = shift;
     my @schemalist = @_;
-#    $self->{logger}->warn( "_fetch( @_ )" );
 
     my($start,$stop);
     if( @schemalist % 2 ) {
 	my $time = pop @schemalist;
 	die "Expected HASH-ref" unless ref $time;
 
-#	use Data::Dumper;
-#	print Dumper( $time ), "\n\n\n\n\\n";
-
 	($start,$stop) = ( $self->_convert_time($time->{start}),
 			   $self->_convert_time($time->{stop}) );
-
-#	print "-" x 20, " < Start=[$start], Stop=[$stop] > \n";
     }
 
     # FIXME: This is not beautiful
@@ -190,6 +184,7 @@ sub _fetch {
     return $self->_sql( $sql, @params ); 
 }
 
+# Fetching a raw structure, with all fields.  Used by ydump and admin interfaces.
 sub _raw_fetch {
     my $self     = shift;
     my $schema   = shift;
@@ -204,6 +199,8 @@ sub _raw_fetch {
     return $self->_sql( $sql, @$params );
 }
 
+# Creates a proper FROM statement, ensuring that joins happen properly
+# if required.
 sub _create_from {
     my $self = shift;
     my $isjoin = shift;
@@ -262,6 +259,10 @@ sub _store {
     return 1;
 }
 
+# Store data "as is" into the structure given.  The structure is
+# assumed to be capable of swallowing the data, and no checks are done
+# (no expire, no time checking).  yrestore / admin interfaces are the
+# only legitimate callers of this method.
 sub _raw_store {
     my $self = shift;
     my $schema = shift;
@@ -275,6 +276,7 @@ sub _raw_store {
     return 1;
 }
 
+# Expire a field with a given value that is current (stop is NULL).
 sub _expire {
     my $self        = shift;
     my $schema      = shift;
@@ -287,6 +289,11 @@ sub _expire {
     $self->_sql( "UPDATE $schema SET stop = NOW() WHERE stop $nullopr NULL and $indexfield = ?", $index );    
 }
 
+# Generates a field / data based where clause, ensuring that the
+# fields it works on are fully qualified and that the proper
+# comparison operators (and value modifiers) are applied.  This only
+# takes data into account, not the possible temporal bits of the where
+# clause.  Look at _process_temporal (below) for that.
 sub _process_where {
     my $self     = shift;
     my $schema   = shift;
