@@ -12,7 +12,7 @@ our %TYPEMAP = (
 		BINARY   => 'BYTEA',
                 PASSWORD => 'VARCHAR(255)',
 	       );
-  
+
 sub new {
   my $class = shift;
   my $self  = {};
@@ -21,6 +21,8 @@ sub new {
   bless $self, $class;
   
   $self->{dbh} = DBI->connect( "DBI:Pg:database=$data{db};host=$data{host};port=$data{port}", $data{user}, $data{password}, { RaiseError => 0 } );
+
+  $self->{dbh}->{Warn} = 0;
 
   return $self;
 }
