@@ -147,7 +147,6 @@ sub _fetch {
     # FIXME: This is not beautiful
     my $join = $schemalist[1]->{join};
 
-
     my (%fromtables, %temporals, @returns, @temporal_returns, 
 	@wheres, @params, @requested_fields, $counter);
     
@@ -160,7 +159,7 @@ sub _fetch {
 	my $operator = $queryref->{operator} || '=';
 	my $as       = $queryref->{as};
 
-	my($rf_tmp, $w_tmp, $p_tmp) = $self->_process_where($schema, $where, $operator);
+	my ($rf_tmp, $w_tmp, $p_tmp) = $self->_process_where($schema, $where, $operator);
 	push( @requested_fields, @$rf_tmp );
 	push( @wheres, @$w_tmp );
 	push( @params, @$p_tmp );
@@ -168,46 +167,18 @@ sub _fetch {
 	push @returns, $self->_process_return( $schema, $queryref->{return} );
 	$fromtables{$schema} = $counter++;
 
+	# $temporals{$schema} is to ensure we only treat every schema once.
 	if (!$temporals{$schema} && $self->_schema_is_temporal( $schema )) {
 	    $temporals{$schema}++;
-	    
-	    my( $qstart ) = $self->_qualify($schema, 'start');
-	    my( $qstop )  = $self->_qualify($schema, 'stop');
-	    my $isnull = $self->_null_comparison_operator();
-
-	    if( defined $start ) {
-		if (! defined $stop ) {
-#		    $stop = $start;
-#		    push @wheres, "$qstart <= $stop and ( $qstop > $start or $qstop $isnull NULL )";
-		    push @wheres, "( not $qstop <= $start or $qstop $isnull NULL )";
-		} else {
-		    if ($stop eq $start) {
-			push @wheres, "$qstart <= $stop and ( $qstop > $start or $qstop $isnull NULL )";		
-		    } else {
-			push @wheres, "$qstart < $stop and ( $qstop > $start or $qstop $isnull NULL )";
-		    }
-		}
-	    } elsif( defined $stop ) {
-		push @wheres, "$qstart <= $stop";
-	    } else {
-		push @wheres, "$qstop $isnull NULL";
-	    }
-
-	    if( defined $start || defined $stop ) {
-		my ($startt, $stopt) = ($self->_time_as_epoch( $qstart ),
-				        $self->_time_as_epoch( $qstop ));
-		if( $join ) {
-		    push( @temporal_returns, qq<$startt as "${as}_start">, qq<$stopt as "${as}_stop"> );
-		} else {
-		    push( @temporal_returns, $startt, $stopt );
-		}
-	    }
+	    my ($w_tmp, $tr_tmp) = $self->_process_temporal( $schema, $start, $stop, $join, $as );
+	    push( @wheres, @$w_tmp );
+	    push( @temporal_returns, @$tr_tmp );
 	}
     }
 
     @returns = @requested_fields unless @returns;
     @returns = ('*') unless @returns;
-
+    
     my $sql = 'SELECT ' . join(", ", @returns, @temporal_returns) . ' FROM ' . $self->_create_from( $join, \%fromtables );
 
     if (@wheres) {
@@ -316,7 +287,6 @@ sub _expire {
     $self->_sql( "UPDATE $schema SET stop = NOW() WHERE stop $nullopr NULL and $indexfield = ?", $index );    
 }
 
-
 sub _process_where {
     my $self     = shift;
     my $schema   = shift;
@@ -354,6 +324,47 @@ sub _process_where {
     }
 
     return (\@requested_fields, \@wheres, \@params);
+}
+
+# Generate a temporally correct where clause the schema in question.
+# The data to extract is built elsewhere, this just ensures we get a
+# where clause that limits the "view" of the schema to the correct
+# time slice.
+sub _process_temporal {
+    my ($self, $schema, $start, $stop, $join, $as) = @_;
+
+    my (@wheres, @temporal_returns);
+
+    my( $qstart ) = $self->_qualify($schema, 'start');
+    my( $qstop )  = $self->_qualify($schema, 'stop');
+    my $isnull = $self->_null_comparison_operator();
+
+    if( defined $start ) {
+	if (! defined $stop ) {
+	    push @wheres, "( not $qstop <= $start or $qstop $isnull NULL )";
+	} else {
+	    if ($stop eq $start) {
+		push @wheres, "$qstart <= $stop and ( $qstop > $start or $qstop $isnull NULL )";		
+	    } else {
+		push @wheres, "$qstart < $stop and ( $qstop > $start or $qstop $isnull NULL )";
+	    }
+	}
+    } elsif( defined $stop ) {
+	push @wheres, "$qstart <= $stop";
+    } else {
+	push @wheres, "$qstop $isnull NULL";
+    }
+    
+    if( defined $start || defined $stop ) {
+	my ($startt, $stopt) = ($self->_time_as_epoch( $qstart ),
+				$self->_time_as_epoch( $qstop ));
+	if( $join ) {
+	    push( @temporal_returns, qq<$startt as "${as}_start">, qq<$stopt as "${as}_stop"> );
+	} else {
+	    push( @temporal_returns, $startt, $stopt );
+	}
+    }
+    return (\@wheres, \@temporal_returns);
 }
 
 # Process return requests, accepting an arrayref or a scalar.
