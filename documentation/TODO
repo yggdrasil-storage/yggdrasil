@@ -22,10 +22,6 @@
    on historic overview as a change today, even if it maybe
    shouldn't.  Tagging updates?
 
-   A side note to this is migration of data.  We can't currently
-   insert "old" or "raw" data.  The admin interface should probably
-   provide something like that.
-
 * Caching of properties, it might be a good idea to facilitate a slurp
    of several properties at once to save selects to the database, and
    cache these values for a short time.  Otherwise, just return them
