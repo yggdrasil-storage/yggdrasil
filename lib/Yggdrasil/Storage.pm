@@ -3,7 +3,6 @@ package Yggdrasil::Storage;
 use strict;
 use warnings;
 
-use Carp;
 use Yggdrasil::Storage::Mapper;
 
 our $storage;
@@ -40,7 +39,7 @@ sub new {
   bless $self, $class;
   
   my $path = join('/', $self->_storage_path(), 'Engine');
-  opendir( my $dh, $path ) || die "Unable to open $path: $!\n";
+  opendir( my $dh, $path ) || Yggdrasil::fatal("Unable to find engines under $path: $!");
   my( $db ) = grep { $_ eq $engine } readdir $dh;
   closedir $dh;
 
@@ -48,7 +47,7 @@ sub new {
     $db =~ s/\.pm//;
     my $engine_class = join("::", __PACKAGE__, 'Engine', $db );
     eval qq( require $engine_class );
-    die $@ if $@;
+    Yggdrasil::fatal $@ if $@;
     #  $class->import();
     $storage = $engine_class->new(@_);
     
@@ -237,8 +236,8 @@ sub _map_schema_name {
     my $self = shift;
     my $schema = shift;
 
-    confess "no schema" unless $schema;
-    confess "early call of mapper" unless $MAPPER;
+    Yggdrasil::fatal( "No schema given to _map_schema_name" ) unless $schema;
+    Yggdrasil::fatal( "Mapper requested for use before one is initialized" ) unless $MAPPER;
     
     return $MAPPER->map( $schema );
 }
@@ -262,7 +261,7 @@ sub _check_valid_type {
     return 'TEXT' unless $type;
     
     $size = $1 if $type =~ s/\(\d+\)$//;
-    confess "Unknown type '$type'" unless $TYPES{$type};
+    Yggdrasil::fatal( "Unknown type '$type'" ) unless $TYPES{$type};
     
     if (defined $size) {
 	if ($size < 1 || $size > $TYPES{$type}) {
@@ -419,7 +418,7 @@ sub set_mapper {
 # Require the "admin" parameter to Storage to be set to a true value to access any admin method.
 sub _admin_verify {
     my $self = shift;
-    confess "Administrative interface unavailable without explicit request" unless $ADMIN;
+    Yggdrasil::fatal( "Administrative interface unavailable without explicit request" ) unless $ADMIN;
 }
 
 # Returns a list of all the structures, guarantees the order as Meta*, Storage*, everything else.

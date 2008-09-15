@@ -3,8 +3,6 @@ package Yggdrasil::Storage::Mapper;
 use warnings;
 use strict;
 
-use Carp;
-
 sub new {
     my $class = shift;
     my $mappername = shift;
@@ -13,11 +11,11 @@ sub new {
     my $self = {};
     bless $self, $class; 
     
-    confess "Bad mapper '$mappername' requested" unless $self->_valid_mapper( $mappername );
+    Yggdrasil::fatal( "Bad mapper '$mappername' requested" ) unless $self->_valid_mapper( $mappername );
     
     my $mapper_class = join("::", __PACKAGE__, $mappername );
     eval qq( require $mapper_class );
-    confess $@ if $@;
+    Yggdrasil::fatal( $@ ) if $@;
 
     return $mapper_class->new();
 }

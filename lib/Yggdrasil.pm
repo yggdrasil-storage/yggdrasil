@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use v5.006;
 
-use Carp;
 use Cwd qw(abs_path);
 use File::Basename;
 use File::Spec;
@@ -29,17 +28,9 @@ our $YGGLOGGER;
 
 sub new {
     my $class = shift;
-
-#    print "CLASS = $class\n";
-#    use Carp qw/cluck/;
-#    print $class, "\n";
-#    cluck() if ref $class;
-
-    
     my $self  = bless {}, $class;
 
     $self->_init(@_);
-    
     return $self;
 }
 
@@ -60,7 +51,7 @@ sub _init {
 
 	$self->{logger} = $YGGLOGGER = get_logger();
 	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
-	die "No storage layer initalized, aborting.\n" unless $STORAGE;
+	Yggdrasil::fatal("No storage layer initalized.") unless $STORAGE;
 	
 	$self->_db_init();
     } else {
@@ -167,6 +158,22 @@ sub exists {
     return undef unless $fetchref->[0];
     return $fetchref->[0]->{id};
 }
+
+# Exit method if something really breaks.  It should be used over
+# "die" or "confess" throughout Yggdrasil to provide a default exit
+# due to critical errors.  It is intended to be terse, user "readable"
+# yet provide some debugging information for developers.
+sub fatal {
+    my @texts = @_;
+    
+    my $text = join("\n", @texts);
+    my ($package, $filename, $line) = caller();
+    my ($subroutine) = (caller(1))[3];
+    print STDERR "Yggdrasil encountered a fatal error, in $subroutine (line $line):\n";
+    print STDERR "$text\n";
+    exit 1;
+}
+
 
 1;
 

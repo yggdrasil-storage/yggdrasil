@@ -5,8 +5,6 @@ use base 'Yggdrasil::Meta';
 use strict;
 use warnings;
 
-use Carp;
-
 sub new {
   my $class = shift;
 
@@ -56,7 +54,7 @@ sub get {
   my $visual_id = shift;
   my @time = @_;
 
-  confess "When calling get with a time slice specified, you will recieve a list"
+  Yggdrasil::fatal("When calling get with a time slice specified, you will recieve a list")
     if @time > 1 && ! wantarray && ! $time[0] == $time[1];
   
   # If the user only specifies one time argument, then stop should be set equal to start,
@@ -193,12 +191,12 @@ sub property {
     my $entity = $self->_extract_entity();
     my $name = join("_", $entity, $key );
 
-    die "Unable to find property '$key' for entity '$entity', exiting.\n" unless $self->property_exists( $entity, $key );
+    Yggdrasil::fatal("Unable to find property '$key' for entity '$entity'.") unless $self->property_exists( $entity, $key );
     
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
 	if( defined $self->{_start} || defined $self->{_stop} ) {
-	    die "Temporal objects are immutable.";
+	    Yggdrasil::fatal("Temporal objects are immutable.");
 	}
 
 	$storage->store( $name, key => "id", fields => { id => $self->{_id}, value => $value } );
@@ -316,7 +314,7 @@ sub link :method {
   my $schema = $self->{storage}->_get_relation( $e1, $e2 );
   
   # Check to see if the relationship between the entities is defined
-  confess "Undefined relation between $e1 / $e2 requested." unless $schema;
+  Yggdrasil::fatal("Undefined relation between $e1 / $e2 requested.") unless $schema;
 
   my $e1_side = $self->_relation_side( $schema, $e1 );
   my $e2_side = $self->_relation_side( $schema, $e2 );

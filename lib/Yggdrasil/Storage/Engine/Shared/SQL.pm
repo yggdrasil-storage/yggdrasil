@@ -5,8 +5,6 @@ use warnings;
 
 use base 'Yggdrasil::Storage';
 
-use Carp;
-
 # Define a structure, it is assumed that the Storage layer has called
 # _structure_exists() with the name of the structure to check its
 # existance before _define is called.  If _define is called, the
@@ -105,12 +103,12 @@ sub _sql {
     
     my $dbh = $self->{dbh};
     my $sth = $dbh->prepare( $sql );
-    confess( "no sth? " . $dbh->errstr ) unless $sth;
+    Yggdrasil::fatal( "The DB layer didn't return a statement handler! " . $dbh->errstr ) unless $sth;
 
     my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);
     $self->{logger}->debug( "$sql -> Args: [$args_str]" );
 
-    $sth->execute(@attr) || confess( "execute??" );
+    $sth->execute(@attr) || Yggdrasil::fatal( "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
 
     # FIX: if we do some DDL stuff, doing a fetch later on will make
     # DBD::mysql warn about calling fetch before execute. So if we do
@@ -132,7 +130,7 @@ sub _fetch {
     my($start,$stop);
     if( @schemalist % 2 ) {
 	my $time = pop @schemalist;
-	die "Expected HASH-ref" unless ref $time;
+	Yggdrasil::fatal "Expected HASH-ref" unless ref $time;
 
 	($start,$stop) = ( $self->_convert_time($time->{start}),
 			   $self->_convert_time($time->{stop}) );
@@ -147,7 +145,7 @@ sub _fetch {
     $counter = 0;
     while (@schemalist) {	
 	my ($schema, $queryref) = (shift @schemalist, shift @schemalist);
-	confess( "$queryref isn't a reference" ) unless ref $queryref;
+	Yggdrasil::fatal( "$queryref as given to _fetch isn't a reference" ) unless ref $queryref;
 
 	my $where    = $queryref->{where};
 	my $operator = $queryref->{operator} || '=';
@@ -385,7 +383,7 @@ sub _process_return {
     if (ref $retrequest eq 'ARRAY') {
 	return $self->_qualify( $schema, @$retrequest );
     } elsif (ref $retrequest) {
-	confess "Unable to parse reference type, expected ARRAY or SCALAR";
+	Yggdrasil::fatal( "Unable to parse reference type, expected ARRAY or SCALAR" );
     } else {
 	return $self->_qualify( $schema, $retrequest );
     }

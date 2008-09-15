@@ -3,8 +3,6 @@ package Yggdrasil::Storage::Engine::mysql;
 use strict;
 use warnings;
 
-use Carp;
-
 use base 'Yggdrasil::Storage::Engine::Shared::SQL';
 
 use DBI;

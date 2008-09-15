@@ -37,11 +37,11 @@ sub admin_define {
     return $self->_admin_define(@_);
 }
 
-sub _define { die "_define not declared for class " . shift() . "\n" }
-sub _get    { die "_get not declared for class " . shift() . "\n" }
-sub _admin_dump { die "_admin_dump not declared for class " . shift() . "\n" }
-sub _admin_restore { die "_admin_restore not declared for class " . shift() . "\n" }
-sub _admin_define { die "_admin_define not declared for class " . shift() . "\n" }
+sub _define { Yggdrasil::fatal( "_define not declared for class " . shift() . "\n" )}
+sub _get    { Yggdrasil::fatal( "_get not declared for class " . shift() . "\n" )}
+sub _admin_dump { Yggdrasil::fatal( "_admin_dump not declared for class " . shift() . "\n" )}
+sub _admin_restore { Yggdrasil::fatal( "_admin_restore not declared for class " . shift() . "\n" )}
+sub _admin_define { Yggdrasil::fatal( "_admin_define not declared for class " . shift() . "\n" )}
 
 
 1;
