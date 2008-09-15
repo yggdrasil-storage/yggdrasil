@@ -11,6 +11,8 @@ sub _define {
   my $property = shift;
   my %data     = @_;
 
+  die "Unable to create properties with zero length names.  Aborting.\n" unless length $property;
+  
   $entity = Yggdrasil::_extract_entity($entity);
   my $name = join("_", $entity, $property);
 
