@@ -10,7 +10,6 @@ use MIME::Base64;
 
 use Yggdrasil;
 
-
 new Yggdrasil(
 	      user      => $ENV{YGG_USER},
 	      password  => $ENV{YGG_PASSWORD},
@@ -19,6 +18,7 @@ new Yggdrasil(
 	      db        => $ENV{YGG_DB},
 	      engine    => $ENV{YGG_ENGINE},
 	      namespace => 'Ygg',
+	      admin     => 1,
 	     );
 
 # --- MetaEntity

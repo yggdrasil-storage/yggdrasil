@@ -20,6 +20,7 @@ new Yggdrasil(
 	      db        => $ENV{YGG_DB},
 	      engine    => $ENV{YGG_ENGINE},
 	      namespace => 'Ygg',
+	      admin     => 1,
 	     );
 
 my $store = {

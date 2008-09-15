@@ -126,6 +126,7 @@ sub store {
 sub raw_store {
     my $self = shift;
     my $schema = shift;
+    $self->_admin_verify();
     
     return $self->_raw_store( $self->_get_schema_name( $schema ), @_ );
 }
@@ -162,7 +163,8 @@ sub fetch {
 
 sub raw_fetch {
     my $self = shift;
-
+    $self->_admin_verify();
+    
     return $self->_raw_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_ );
 }
 
