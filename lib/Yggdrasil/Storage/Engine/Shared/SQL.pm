@@ -192,7 +192,15 @@ sub _raw_fetch {
 
     my( $rf, $where, $params ) = $self->_process_where($schema, $queryref->{where}, $operator);
 
-    my $sql = "SELECT * FROM " . $schema;
+    my @fieldlist;
+    for my $field ($self->_fields_in_structure( $schema )) {
+	if ($field eq 'start' || $field eq 'stop') {
+	    $field = $self->_time_as_epoch( $field ) . " as $field";
+	}
+	push @fieldlist, $field;
+    } 
+    
+    my $sql = "SELECT " . join(",", @fieldlist) .  " FROM " . $schema;
     $sql .= " WHERE " . join(" and ", @$where) if @$where;
     return $self->_sql( $sql, @$params );
 }
@@ -257,19 +265,28 @@ sub _store {
     return 1;
 }
 
-# Store data "as is" into the structure given.  The structure is
-# assumed to be capable of swallowing the data, and no checks are done
-# (no expire, no time checking).  yrestore / admin interfaces are the
-# only legitimate callers of this method.
+# Store data in raw form into the structure given, the only exceptions
+# are start and stop which are translated from epoch to the internal
+# database format.  The structure is assumed to be capable of
+# swallowing the data, and no checks are done (no expire, no time
+# checking).  yrestore / admin interfaces are the only legitimate
+# callers of this method.
 sub _raw_store {
     my $self = shift;
     my $schema = shift;
     my %data = @_;
 
     my $fields = $data{fields};
-    
-    $self->_sql( "INSERT INTO $schema (" . join(", ", keys %$fields) . ") VALUES ( "
-		 . join(", ", ('?') x keys %$fields) . ')', values %$fields);
+
+    if ($fields->{start} || $fields->{stop}) {
+	my ($sstart, $sstop) = ($self->_convert_time( delete $fields->{start} ) || 'NULL', 
+				$self->_convert_time( delete $fields->{stop}  )  || 'NULL');
+	$self->_sql( "INSERT INTO $schema (start,stop," . join(", ", keys %$fields) . ") VALUES ($sstart,$sstop, "
+		     . join(", ", ('?') x keys %$fields) . ')', values %$fields);	
+    } else {
+	$self->_sql( "INSERT INTO $schema (" . join(", ", keys %$fields) . ") VALUES ( "
+		     . join(", ", ('?') x keys %$fields) . ')', values %$fields);	
+    }
 
     return 1;
 }

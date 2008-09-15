@@ -54,6 +54,15 @@ sub _list_structures {
     return @tables;
 }
 
+sub _fields_in_structure {
+    my $self = shift;
+    my $structure = shift;
+
+    my ( $e ) = $self->_sql("SHOW FIELDS FROM $structure");
+
+    return map { $_->{Field} } @$e;
+}
+
 sub _map_type {
     my $self = shift;
     my $type = shift;
