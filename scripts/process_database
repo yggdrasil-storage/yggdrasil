@@ -80,7 +80,7 @@ for my $structure (@structures) {
     }
     my @tabledata;
     if ($dump) {
-	next unless &display( $mapped_struct );
+	next unless &display( $mapped_struct ) || $zap;
 	# Give me a row (an array reference) for every row in the structure in question.
 	my $tableref = $storage->_dump_structure( $structure );
 	for my $rowref (@$tableref) {
