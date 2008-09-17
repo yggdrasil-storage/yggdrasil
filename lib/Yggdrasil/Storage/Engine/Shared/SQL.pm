@@ -50,7 +50,7 @@ sub _define {
 	push @sqlfields, "start $datefield NOT NULL";
 	push @sqlfields, "stop  $datefield NULL";
 	push @indexes, ['stop', $datefield ];
-	push @sqlfields, "check ( start < stop )";
+	push @sqlfields, "check ( start <= stop )";
     }
     
     $sql .= join ",\n", @sqlfields;
