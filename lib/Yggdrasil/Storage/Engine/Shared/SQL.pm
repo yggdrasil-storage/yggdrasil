@@ -282,9 +282,6 @@ sub _raw_store {
 	my ($sstart, $sstop) = ($self->_convert_time( delete $fields->{start} || 'NULL'), 
 				$self->_convert_time( delete $fields->{stop}  || 'NULL'));
 	
-	$sstart = "'$sstart'" unless $sstart eq 'NULL';
-	$sstop  = "'$sstop'"  unless $sstop  eq 'NULL';
-
 	$self->_sql( "INSERT INTO $schema (start,stop," . join(", ", keys %$fields) . ") VALUES ($sstart,$sstop, "
 		     . join(", ", ('?') x keys %$fields) . ')', values %$fields);	
     } else {

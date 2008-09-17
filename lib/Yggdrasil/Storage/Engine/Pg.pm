@@ -92,4 +92,12 @@ sub _time_as_epoch {
     return "(floor(extract(epoch FROM ($time)::timestamp with time zone)))";
 }
 
+sub _convert_time {
+     my $self = shift;
+     my $time = shift;
+
+     return unless $time;
+ 
+     return "${time}::abstime::timestamp with time zone";
+}
 1;
