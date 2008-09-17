@@ -35,8 +35,7 @@ sub _admin_restore {
     my $ids    = shift;
 
     my %map;
-    for( my $i=1; $i<@$ids; $i+=2 ) {
-	my $id = $ids->[$i];
+    foreach my $id ( @$ids ) {
 	$self->{storage}->raw_store( "Entities", fields => { 
 	    entity    => $entity,
 	    visual_id => $id } );
@@ -47,7 +46,6 @@ sub _admin_restore {
 						     visual_id => $id,
 						     entity    => $entity } } );
 	my $idnum = $idfetch->[0]->{id};
-
 	$map{$id} = $idnum;
     }
 

@@ -85,7 +85,12 @@ sub entity {
     my $schema = decode_base64( shift );
     my @data = decode(shift);
 
-    my $map = Yggdrasil::Entity->admin_restore( $schema, \@data );
+    my @visual_ids;
+    for( my $i=3; $i<=@data; $i+=4 ) {
+	push( @visual_ids, $data[$i] );
+    }
+
+    my $map = Yggdrasil::Entity->admin_restore( $schema, \@visual_ids );
     $ID_MAP{$schema} = $map;
 }
 
