@@ -7,21 +7,39 @@ use FindBin qw($Bin);
 use lib qq($Bin/../lib);
 
 use MIME::Base64;
+use Getopt::Long;
 
 use Yggdrasil;
 
+our $VERSION = '0.01';
+our( $USER, $PASS, $HOST, $PORT, $DB, $ENGINE, $NAMESPACE );
+
+GetOptions( "help"        => \&help,
+	    "version"     => \&version,
+	    
+	    "user=s"      => \$USER,
+	    "password=s"  => \$PASS,
+	    "host=s"      => \$HOST,
+	    "port=s"      => \$PORT,
+	    "db=s"        => \$DB,
+	    "engine=s"    => \$ENGINE,
+	    "namespace=s" => \$NAMESPACE,
+    );
+
 our %ID_MAP;
 
+
 new Yggdrasil(
-	      user      => $ENV{YGG_USER},
-	      password  => $ENV{YGG_PASSWORD},
-	      host      => $ENV{YGG_HOST},
-	      port      => $ENV{YGG_PORT},
-	      db        => $ENV{YGG_DB},
-	      engine    => $ENV{YGG_ENGINE},
-	      namespace => 'Ygg',
-	      admin     => 1,
-	     );
+    user      => $USER || $ENV{YGG_USER},
+    password  => $PASS || $ENV{YGG_PASSWORD},
+    host      => $HOST || $ENV{YGG_HOST},
+    port      => $PORT || $ENV{YGG_PORT},
+    db        => $DB || $ENV{YGG_DB},
+    engine    => $ENGINE || $ENV{YGG_ENGINE},
+    namespace => $NAMESPACE || 'Ygg',
+    admin     => 1,
+    );
+
 
 my $store = {
     MetaEntity   => \&meta_entity,
@@ -151,3 +169,34 @@ sub decode {
 
     return @list;
 }
+
+sub help {
+    print <<USAGE;
+Usage: $0 <dump file>
+
+Restores an Yggdrasil database from a dump file. Dump files can be
+generated with ydump.
+
+USAGE
+
+    print <DATA>;
+    exit;
+}
+
+sub version {
+    print "yrestore version $VERSION\n";
+    exit;
+}
+
+__DATA__
+Options:
+--------
+--help               Prints out usage help
+--version            Prints version information
+--user <name>        Specify database login name
+--password <pass>    Specify database password
+--host <host>        Specify database host
+--port <port>        Specify database port
+--db <name>          Specify database name
+--engine <name>      Specify database engine
+--namespace <space>  Specify Yggdrasil namespace
