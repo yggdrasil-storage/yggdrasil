@@ -3,11 +3,11 @@
 use strict;
 use warnings;
 
-use FindBin qw($Bin);
-use lib qq($Bin/../lib);
-
 use MIME::Base64;
 use Getopt::Long;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
 
 use Yggdrasil;
 
@@ -28,18 +28,31 @@ GetOptions( "help"        => \&help,
 
 our %ID_MAP;
 
+my ($user, $password, $host, $port, $db, $engine, $mapper) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef);
+
+GetOptions(
+	   "mapper=s"     => \$mapper,
+	   "user=s"       => \$user,
+	   "engine=s"     => \$engine,
+	   "password=s"   => \$password,
+	   "host=s"       => \$host,
+	   "database=s"   => \$db,
+	   "engine=s"     => \$engine,
+	   "port=s"       => \$port,
+	  );
 
 new Yggdrasil(
-    user      => $USER || $ENV{YGG_USER},
-    password  => $PASS || $ENV{YGG_PASSWORD},
-    host      => $HOST || $ENV{YGG_HOST},
-    port      => $PORT || $ENV{YGG_PORT},
-    db        => $DB || $ENV{YGG_DB},
-    engine    => $ENGINE || $ENV{YGG_ENGINE},
-    namespace => $NAMESPACE || 'Ygg',
-    admin     => 1,
-    );
-
+	      user      => $user,
+	      password  => $password,
+	      host      => $host,
+	      port      => $port,
+	      db        => $db,
+	      engine    => $engine,
+	      mapper    => $mapper,
+	      namespace => 'Ygg',
+	      admin     => 1,
+	     );
 
 my $store = {
     MetaEntity   => \&meta_entity,
@@ -62,6 +75,7 @@ my $define = {
 
 my( @data, $section, $extra );
 while( my $line = <>) {
+    next if $line =~ /^#/;
     if( $line eq "\n" ) {
 	$store->{ $section }->( $extra, \@data ) if @data;
 	@data = ();

@@ -3,39 +3,42 @@
 use strict;
 use warnings;
 
-use FindBin qw($Bin);
-use lib qq($Bin/../lib);
-
 use MIME::Base64;
 use Getopt::Long;
 
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
 use Yggdrasil;
 
-our $VERSION = '0.01';
-our( $USER, $PASS, $HOST, $PORT, $DB, $ENGINE, $NAMESPACE );
+my ($user, $password, $host, $port, $db, $engine, $NAMESPACE, $VERSION) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE});
 
-GetOptions( "help"        => \&help,
-	    "version"     => \&version,
-	    
-	    "user=s"      => \$USER,
-	    "password=s"  => \$PASS,
-	    "host=s"      => \$HOST,
-	    "port=s"      => \$PORT,
-	    "db=s"        => \$DB,
-	    "engine=s"    => \$ENGINE,
-	    "namespace=s" => \$NAMESPACE,
+$VERSION=0.01;
+
+GetOptions(
+	   "user=s"       => \$user,
+	   "engine=s"     => \$engine,
+	   "password=s"   => \$password,
+	   "host=s"       => \$host,
+	   "database=s"   => \$db,
+	   "engine=s"     => \$engine,
+	   "port=s"       => \$port,
+	   "help"         => \&help,
+	   "version"      => \&version,
+	   "namespace=s"  => \$NAMESPACE,
     );
 
 new Yggdrasil(
-    user      => $USER || $ENV{YGG_USER},
-    password  => $PASS || $ENV{YGG_PASSWORD},
-    host      => $HOST || $ENV{YGG_HOST},
-    port      => $PORT || $ENV{YGG_PORT},
-    db        => $DB || $ENV{YGG_DB},
-    engine    => $ENGINE || $ENV{YGG_ENGINE},
-    namespace => $NAMESPACE || 'Ygg',
-    admin     => 1,
-    );
+	      user      => $user,
+	      password  => $password,
+	      host      => $host,
+	      port      => $port,
+	      db        => $db,
+	      engine    => $engine,
+	      namespace => $NAMESPACE || 'Ygg',
+	      admin     => 1,
+	     );
 
 # --- MetaEntity
 print "[MetaEntity]\n";
@@ -81,6 +84,7 @@ my %id_map;
 # --- Instance Entities
 foreach my $entity ( keys %seen_entity ) {
     print "[Entity: ", encode_base64($entity, ""), "]\n";
+    
     my $instances = Yggdrasil::Entity->admin_dump( $entity );
     foreach my $instance ( @$instances ) {
 	$id_map{$entity}->{$instance->{id}} = $instance->{visual_id};
@@ -110,6 +114,7 @@ foreach my $relation ( keys %seen_relation ) {
     my $instance_relation = Yggdrasil::Relation->admin_dump( $relation );
     my( $e1, $e2 ) = split /_R_/, $relation;
     print "[Relation: ", encode_base64($relation, ""), "]\n";
+    
     foreach my $ir ( @$instance_relation ) {
 	dumper($ir, usemap => { lval => $id_map{$e1}, rval => $id_map{$e2} },
 	       map => { rval => "rval", lval => "lval" },

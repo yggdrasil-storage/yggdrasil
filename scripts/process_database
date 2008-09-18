@@ -12,30 +12,43 @@ use Yggdrasil;
 
 my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 1, 0, 1);
 
+my ($user, $password, $host, $port, $db, $engine) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE});
+
+
 GetOptions(
-    "zap"         => \$zap,
-    "dump!"       => \$dump,
-    "help"        => \&help,
-    "bootstrap"   => \$bootstrap,
-    "dereference" => \$dereference,
-    "tables=s"    => \$onlytables,
-    );
+	   "zap"         => \$zap,
+	   "dump!"       => \$dump,
+	   "help"        => \&help,
+	   "bootstrap"   => \$bootstrap,
+	   "dereference" => \$dereference,
+	   "tables=s"    => \$onlytables,
+	   
+	   "user=s"       => \$user,
+	   "engine=s"     => \$engine,
+	   "password=s"   => \$password,
+	   "host=s"       => \$host,
+	   "database=s"   => \$db,
+	   "engine=s"     => \$engine,
+	   "port=s"       => \$port,
+	  );
 
 new Yggdrasil(
-	      engine   => $ENV{YGG_ENGINE},
-	      db       => $ENV{YGG_DB},
-	      host     => $ENV{YGG_HOST},
-	      user     => $ENV{YGG_USER},
-	      password => $ENV{YGG_PASSWORD},
-	      port     => $ENV{YGG_PORT},
-	      admin    => 1,
+	      user      => $user,
+	      password  => $password,
+	      host      => $host,
+	      port      => $port,
+	      db        => $db,
+	      engine    => $engine,
+	      namespace => 'Ygg',
+	      admin     => 1,
 	     );
 
 my $storage = $Yggdrasil::STORAGE;
 
 my ($dbh, $sql);
 
-print "$ENV{YGG_USER}\@$ENV{YGG_HOST}:$ENV{YGG_DB}\n";
+print "$user\@$host ($db / $engine)\n";
 
 my %mapper;
 my %human_to_machine;

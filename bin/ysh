@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Term::ReadLine;
+use Getopt::Long;
 
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
@@ -11,22 +12,35 @@ use lib qq($Bin/../lib);
 use Yggdrasil;
 
 our $NAMESPACE = 'Ygg';
-my $backendname = $ENV{YGG_DB};
+
+my ($user, $password, $host, $port, $db, $engine) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE});
+
+GetOptions(
+	   "user=s"       => \$user,
+	   "engine=s"     => \$engine,
+	   "password=s"   => \$password,
+	   "host=s"       => \$host,
+	   "database=s"   => \$db,
+	   "engine=s"     => \$engine,
+	   "port=s"       => \$port,
+	   "namespace=s"  => \$NAMESPACE,
+	  );
 
 new Yggdrasil(
-	      user      => $ENV{YGG_USER},
-	      password  => $ENV{YGG_PASSWORD},
-	      host      => $ENV{YGG_HOST},
-	      port      => $ENV{YGG_PORT},
-	      db        => $ENV{YGG_DB},
-	      engine    => $ENV{YGG_ENGINE},
+	      user      => $user,
+	      password  => $password,
+	      host      => $host,
+	      port      => $port,
+	      db        => $db,
+	      engine    => $engine,
 	      namespace => $NAMESPACE,
 	      admin     => 1,
 	     );
 
 my $term = new Term::ReadLine 'Yggdrasil Shell';
 my $attribs = $term->Attribs;
-my $prompt = "$NAMESPACE / $backendname: ";
+my $prompt = "$NAMESPACE / $db : $engine @ $host: ";
 my $OUT = $term->OUT || \*STDOUT;
 my $isInstance = qr/^\$\[([^]]+)\]$/;
 

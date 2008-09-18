@@ -3,27 +3,46 @@
 use strict;
 use warnings;
 
+use Getopt::Long;
+
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
 
 use Yggdrasil;
 
+my ($user, $password, $host, $port, $db, $engine, $mapper) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef);
+
+GetOptions(
+	   "user=s"       => \$user,
+	   "engine=s"     => \$engine,
+	   "password=s"   => \$password,
+	   "host=s"       => \$host,
+	   "database=s"   => \$db,
+	   "engine=s"     => \$engine,
+	   "port=s"       => \$port,
+	   "mapper=s"     => \$mapper,
+	  );
+
 new Yggdrasil(
-	      user      => $ENV{YGG_USER},
-	      password  => $ENV{YGG_PASSWORD},
-	      host      => $ENV{YGG_HOST},
-	      port      => $ENV{YGG_PORT},
-	      db        => $ENV{YGG_DB},
-	      engine    => $ENV{YGG_ENGINE},
+	      user      => $user,
+	      password  => $password,
+	      host      => $host,
+	      port      => $port,
+	      db        => $db,
+	      engine    => $engine,
 	      namespace => 'Ygg',
+	      mapper    => $mapper,
+	      admin     => 1,
 	     );
 
+print "$user\@$host ($db / $engine)\n";
 
 # --- Define Hosts
-my $host = define Yggdrasil::Entity 'Host';
-my $ip = define $host 'ip', 'type' => 'text';
-my $blob = define $host 'blobbie', 'type' => 'binary';
-my $serial = define $host 'serial';
+my $hoste = define Yggdrasil::Entity 'Host';
+my $ip = define $hoste 'ip', 'type' => 'text';
+my $blob = define $hoste 'blobbie', 'type' => 'binary';
+my $serial = define $hoste 'serial';
 
 my $nommo  = Ygg::Host->new( 'nommo' );
 my $baal   = Ygg::Host->new( 'baal' );
@@ -78,7 +97,7 @@ $terje->property( password => "foo" );
 
 
 my $bard  = $person->new( "bard" );
-$bard->property( name => "Bård" );
+$bard->property( name => "Barkie" );
 $bard->property( password => "" );
 $bard->property( department => "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" );
 
@@ -98,9 +117,9 @@ my $bravida = $con->new( "Bravida" );
 # host<->room
 # person<->host
 
-define Yggdrasil::Relation $host, 'Room';
+define Yggdrasil::Relation $hoste, 'Room';
 define Yggdrasil::Relation $room, $phone;
-define Yggdrasil::Relation $person, $host;
+define Yggdrasil::Relation $person, $hoste;
 define Yggdrasil::Relation $phone, $con;
 
 define Yggdrasil::Relation $person, $phone;
@@ -148,7 +167,7 @@ define Yggdrasil::Entity 'Student', inherit => 'Person';
 
 
 # --- Test instances representing points in time
-my $dinner = define $host 'dinner';
+my $dinner = define $hoste 'dinner';
 
 $nommo->property( $dinner => "Kylling" );
 $baal->property( $dinner => "Aspargis" );
@@ -168,7 +187,7 @@ $baal->property( $dinner => "Saus" );
 
 my $now = time();
 print "ZOOM ", "-" x 70, "\n";
-for my $historic_nommo (get $host 'nommo', ($now - 20), undef) {
+for my $historic_nommo (get $hoste 'nommo', ($now - 20), undef) {
     print "ZOOM dinner: ", $historic_nommo->property( 'dinner' ), " -> ",  $historic_nommo->{_start} || 'NOSTART',
       " - ", $historic_nommo->{_stop} || 'NOSTOP',  " <--\n";
 }
