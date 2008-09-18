@@ -11,25 +11,10 @@ use lib qq($Bin/../lib);
 
 use Yggdrasil;
 
-our $VERSION = '0.01';
-our( $USER, $PASS, $HOST, $PORT, $DB, $ENGINE, $NAMESPACE );
-
-GetOptions( "help"        => \&help,
-	    "version"     => \&version,
-	    
-	    "user=s"      => \$USER,
-	    "password=s"  => \$PASS,
-	    "host=s"      => \$HOST,
-	    "port=s"      => \$PORT,
-	    "db=s"        => \$DB,
-	    "engine=s"    => \$ENGINE,
-	    "namespace=s" => \$NAMESPACE,
-    );
-
 our %ID_MAP;
 
-my ($user, $password, $host, $port, $db, $engine, $mapper) =
-  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef);
+my ($user, $password, $host, $port, $db, $engine, $mapper, $NAMESPACE, $VERSION) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef, 'Ygg', '0.01');
 
 GetOptions(
 	   "mapper=s"     => \$mapper,
@@ -50,7 +35,7 @@ new Yggdrasil(
 	      db        => $db,
 	      engine    => $engine,
 	      mapper    => $mapper,
-	      namespace => 'Ygg',
+	      namespace => $NAMESPACE,
 	      admin     => 1,
 	     );
 
