@@ -89,7 +89,7 @@ sub _convert_time {
     if( $self->_isepoch($time) ) {
 	return "FROM_UNIXTIME($time)";
     } else {
-	return $time;
+	return "'$time'";
     }
 }
 
