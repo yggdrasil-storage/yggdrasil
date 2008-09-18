@@ -294,14 +294,21 @@ sub type {
 
 
 sub search {
-    my ($class, $key, $value) = @_;
+    my ($class, $key, $value) = (shift, shift, shift);
     my $package = $class;
     $class =~ s/.*:://;
-    
-    my $nodes = $Yggdrasil::STORAGE->search( $class, $key, $value );
 
-    return map { my $new = $package->SUPER::new(); $new->{visual_id} = $_;
-		 $new->{_id} = $nodes->{$_}; $new } keys %$nodes;
+    my ($nodes) = $Yggdrasil::STORAGE->search( $class, $key, $value, @_);
+
+    my @hits;
+    for my $hit (@$nodes) {
+	my $obj = $package->SUPER::new();
+	for my $key (keys %$hit) {
+	    $obj->{$key} = $hit->{$key};
+	}
+	push @hits, $obj;
+    }
+    return @hits;
 }
 
 sub link :method {

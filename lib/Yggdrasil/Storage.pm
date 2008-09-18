@@ -133,12 +133,13 @@ sub raw_store {
 
 # fetch ( schema1 { return => [ fieldnames ], where => { s1field => s1value }, operator => operator }
 #         schema2 { return => [ fieldnames ], where => { s2field => s2value }, operator => operator }
+#         { start => $start, stop => $stop } (optional)
 # We remap the schema names (the non-reference parameters) here.
 sub fetch {
     my $self = shift;
 
     my $time;
-    if( @_ % 2 ) {
+    if( @_ % 2 ) { 
 	$time = pop @_;
     } else {
 	$time = {};
@@ -153,8 +154,7 @@ sub fetch {
     # (to ensure unique return values, eg. Foo_stop, Bar_stop, ... )
     for( my $i=0; $i < @_; $i += 2 ) {
 	my( $schema, $queryref ) = ($_[$i], $_[$i+1]);
-	next unless $queryref->{join};
-
+	next unless $queryref->{join} || $queryref->{as};
 	$queryref->{as} = $schema;
     }
 
@@ -191,18 +191,30 @@ sub exists :method {
 sub search {
     my ($self, $entity, $property, $value) = @_;
 
+    my ($start, $stop);
+    if (@_ == 5) {
+	($start, $stop) = ($_[4], $_[4]);
+    } elsif (@_ == 6) {
+	($start, $stop) = ($_[4], $_[5]);
+    }
+
     my $propertytable = $self->_get_schema_name( $entity . '_' . $property );
     my $entitytable   = 'Entities';
 
     my ($e) = $self->fetch( $propertytable, { operator => 'LIKE',
 					      where  => { value => $value }},
 			    $entitytable,   { return => [ 'id', 'visual_id' ], 
-					      where  => { id => \qq<$propertytable.id>, entity => $entity }});
-    my %hits;
+					      where  => { id => \qq<$propertytable.id>, entity => $entity }},
+			    { start => $start, stop => $stop });
+    my @hits;
     for my $hitref (@$e) {
-	$hits{$hitref->{visual_id}} = $hitref->{id};
+	if ($start) {
+	    push @hits, { _id => $hitref->{id}, visual_id => $hitref->{visual_id}, _start => $hitref->{_start}, "_stop" => $hitref->{_stop} };
+	} else {
+	    push @hits, { _id => $hitref->{id}, visual_id => $hitref->{visual_id} };
+	}
     }
-    return \%hits;
+    return \@hits;
 }
 
 sub _convert_time {

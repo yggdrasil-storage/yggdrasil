@@ -47,9 +47,27 @@ my $serial = define $hoste 'serial';
 my $nommo  = Ygg::Host->new( 'nommo' );
 my $baal   = Ygg::Host->new( 'baal' );
 my $escher = Ygg::Host->new( 'escher' );
-$nommo->property( 'ip' , 'n1' );
-$nommo->property( 'ip' , 'n2' );
-$nommo->property( 'ip' , 'n3' );
+
+for (1..20) {
+    $nommo->property( 'ip', "nip @ $_" );
+    if ($_ % 2) {
+	$baal->property( 'ip', "nip @ $_" ); 
+    } else {
+	$baal->property( 'ip', "bip @ $_" ); 	
+    }
+    sleep 1;
+}
+
+my $now = time();
+print "Current search, ip => 'n'\n";
+for my $current_node (search $hoste 'ip', 'n') {
+    print $current_node->id(), " => ", $current_node->property( 'ip' ), "\n";
+}
+
+print "Historic search, ip => 'n' ($now - 10)\n";
+for my $historic_node (search $hoste 'ip', 'n', ($now-10), undef) {
+    print $historic_node->id(), " => ", $historic_node->property( 'ip' ), " @ ", $historic_node->{_start}, " : ", $historic_node->{_start} || 'CURRENT', "\n";
+}
 
 #sleep 2;
 #$nommo->property( 'ip' , 'n1' );
@@ -185,15 +203,11 @@ sleep $sleep;
 
 $baal->property( $dinner => "Saus" );
 
-my $now = time();
 print "ZOOM ", "-" x 70, "\n";
 for my $historic_nommo (get $hoste 'nommo', ($now - 20), undef) {
     print "ZOOM dinner: ", $historic_nommo->property( 'dinner' ), " -> ",  $historic_nommo->{_start} || 'NOSTART',
       " - ", $historic_nommo->{_stop} || 'NOSTOP',  " <--\n";
 }
-
-
-
 
 sub now {
   my @t = localtime( shift || time() );

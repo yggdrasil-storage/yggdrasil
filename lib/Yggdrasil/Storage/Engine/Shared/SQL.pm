@@ -162,7 +162,7 @@ sub _fetch {
 	# $temporals{$schema} is to ensure we only treat every schema once.
 	if (!$temporals{$schema} && $self->_schema_is_temporal( $schema )) {
 	    $temporals{$schema}++;
-	    my ($w_tmp, $tr_tmp) = $self->_process_temporal( $schema, $start, $stop, $join, $as );
+	    my ($w_tmp, $tr_tmp) = $self->_process_temporal( $schema, $start, $stop, $as );
 	    push( @wheres, @$w_tmp );
 	    push( @temporal_returns, @$tr_tmp );
 	}
@@ -178,6 +178,13 @@ sub _fetch {
 	$sql .= join(" and ", @wheres );
     }
 
+    my ($package, $filename, $line, $subroutine, $hasargs,
+     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
+
+#    if ($subroutine =~ /property/) {
+#	print $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]\n";
+#    }  
+    
     $self->{logger}->debug( $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]" );
     return $self->_sql( $sql, @params ); 
 }
@@ -350,7 +357,7 @@ sub _process_where {
 # where clause that limits the "view" of the schema to the correct
 # time slice.
 sub _process_temporal {
-    my ($self, $schema, $start, $stop, $join, $as) = @_;
+    my ($self, $schema, $start, $stop, $as) = @_;
 
     my (@wheres, @temporal_returns);
 
@@ -377,10 +384,10 @@ sub _process_temporal {
     if( defined $start || defined $stop ) {
 	my ($startt, $stopt) = ($self->_time_as_epoch( $qstart ),
 				$self->_time_as_epoch( $qstop ));
-	if( $join ) {
+	if( $as ) {
 	    push( @temporal_returns, qq<$startt as "${as}_start">, qq<$stopt as "${as}_stop"> );
 	} else {
-	    push( @temporal_returns, $startt, $stopt );
+	    push( @temporal_returns, qq<$startt as "_start">, qq<$stopt as "_stop"> );
 	}
     }
     return (\@wheres, \@temporal_returns);
