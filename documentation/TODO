@@ -43,8 +43,6 @@
    can't send an ID value, while not doing so creates undefined values
    in SQL::_store.
 
-* Make sure sure ydump return unix epoch time for stop and start
-
 * exists / property_exists need to check what time they're being
    checked for, right now they just check current existance.
 
