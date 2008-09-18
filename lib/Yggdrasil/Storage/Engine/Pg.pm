@@ -57,10 +57,9 @@ sub _list_structures {
 
 sub _fields_in_structure {
     my $self = shift;
-    my $structure = shift;
+    my $structure = lc shift;
 
-    my ( $e ) = $self->_sql("
-SELECT a.attnum, a.attname AS field, t.typname AS type,
+    my ( $e ) = $self->_sql("SELECT a.attnum, a.attname AS field, t.typname AS type,
        a.attlen AS length, a.atttypmod AS length_var,
        a.attnotnull AS not_null, a.atthasdef as has_default
   FROM pg_class c, pg_attribute a, pg_type t
@@ -69,7 +68,7 @@ AND a.attnum > 0
    AND a.attrelid = c.oid
    AND a.atttypid = t.oid
  ORDER BY a.attnum");
-
+    
     return map { $_->{field} } @$e;
 }
 
