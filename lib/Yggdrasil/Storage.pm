@@ -209,7 +209,7 @@ sub search {
     my @hits;
     for my $hitref (@$e) {
 	if ($start) {
-	    push @hits, { _id => $hitref->{id}, visual_id => $hitref->{visual_id}, _start => $hitref->{_start}, "_stop" => $hitref->{_stop} };
+	    push @hits, { _id => $hitref->{id}, visual_id => $hitref->{visual_id}, _start => $hitref->{start}, "_stop" => $hitref->{stop} };
 	} else {
 	    push @hits, { _id => $hitref->{id}, visual_id => $hitref->{visual_id} };
 	}

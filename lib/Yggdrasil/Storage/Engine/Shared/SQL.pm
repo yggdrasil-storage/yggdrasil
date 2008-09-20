@@ -387,7 +387,7 @@ sub _process_temporal {
 	if( $as ) {
 	    push( @temporal_returns, qq<$startt as "${as}_start">, qq<$stopt as "${as}_stop"> );
 	} else {
-	    push( @temporal_returns, qq<$startt as "_start">, qq<$stopt as "_stop"> );
+	    push( @temporal_returns, qq<$startt as "start">, qq<$stopt as "stop"> );
 	}
     }
     return (\@wheres, \@temporal_returns);
