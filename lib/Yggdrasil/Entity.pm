@@ -3,19 +3,27 @@ package Yggdrasil::Entity;
 use strict;
 use warnings;
 
-use base qw(Yggdrasil::MetaEntity);
+use base qw(Yggdrasil::MetaEntity Yggdrasil::MetaInheritance);
 
 use Yggdrasil::Entity::Instance;
 
 sub _define {
     my $self  = shift;
     my $name  = shift;
+    my %params = @_;
 
     my $package = join '::', $self->{namespace}, $name;
 
     # --- Add to MetaEntity, noop if it exists.
     $self->_meta_add($name);
     
+    # --- Update MetaInheritance
+    if( defined $params{inherit} ) {
+	$self->_add_inheritance( $name, $params{inherit} );
+    } else {
+	$self->_expire_inheritance( $name );
+    }
+
     # --- Create namespace, redefined if it exists.
     $self->_register_namespace( $package );
     

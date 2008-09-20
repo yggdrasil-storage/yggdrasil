@@ -16,18 +16,25 @@ sub _define {
 				     nomap    => 1 );
 }
 
-sub _meta_add {
+sub _add_inheritance {
     my $self   = shift;
-    my $child  = shift;
+    my $me     = shift;
     my $parent = shift;
 
     $self->{storage}->store('MetaInheritance',
 			    key    => 'id',
 			    fields => {
-				       parent => $parent->{name},
-				       child  => $child->{name},
+				       parent => $parent,
+				       child  => $me,
 				      });
 
+}
+
+sub _expire_inheritance {
+    my $self = shift;
+    my $me   = shift;
+
+    $self->{storage}->expire('MetaInheritance', child => $me);
 }
 
 1;

@@ -191,7 +191,11 @@ sub property {
     my $entity = $self->_extract_entity();
     my $name = join("_", $entity, $key );
 
-    Yggdrasil::fatal("Unable to find property '$key' for entity '$entity'.") unless $self->property_exists( $key );
+    my $schema = $self->property_exists( $key );
+
+    # This should perhaps be a warning instead (when under strict => 1)
+    #Yggdrasil::fatal("Unable to find property '$key' for entity '$entity'.") 
+    return undef unless defined $schema;
     
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
@@ -199,11 +203,11 @@ sub property {
 	    Yggdrasil::fatal("Temporal objects are immutable.");
 	}
 
-	$storage->store( $name, key => "id", fields => { id => $self->{_id}, value => $value } );
+	$storage->store( $schema, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 
-    my $r = $storage->fetch( $name => { return => "value", where => { id => $self->{_id} } },
-			   { start => $self->{_start}, stop => $self->{_stop} } );
+    my $r = $storage->fetch( $schema => { return => "value", where => { id => $self->{_id} } },
+			     { start => $self->{_start}, stop => $self->{_stop} } );
     return $r->[0]->{value};
 }
 
@@ -211,23 +215,28 @@ sub property {
 sub property_exists {
     my ($self_or_class, $property) = (shift, shift);
     my $entity;
-    
+
     if (ref $self_or_class) {
 	$entity = $self_or_class->_extract_entity();
     } else {
 	($entity) = (split "::", $self_or_class)[-1];
     }
-    
+
+    my @ancestors = __PACKAGE__->_ancestors($entity);
     my $storage = $Yggdrasil::STORAGE;
     
     # Check to see if the property exists.
-    my $aref = $storage->fetch( 'MetaProperty', 
-				{ return => 'property', 
-				  where => { entity => $entity, property => $property } 
-				} );
+    foreach my $e ( $entity, @ancestors ) {
+	my $aref = $storage->fetch( 'MetaProperty', 
+				    { return => 'property', 
+				      where => { entity => $e, property => $property } 
+				    } );
 
-    # The property name might be "0".
-    return defined $aref->[0]->{property}?1:0;
+	# The property name might be "0".
+	return join("_", $e, $property) if defined $aref->[0]->{property};
+    }
+    
+    return;
 }
 
 # FIXME, temporal search.
@@ -506,6 +515,27 @@ sub _map_schema_name {
     
     return $self->{storage}->_map_schema_name( @_ );
 #Yggdrasil::Storage::SQL::
+}
+
+sub _ancestors {
+    my $class = shift;
+    my $entity = shift;
+
+    my $storage = $Yggdrasil::STORAGE;
+    my @ancestors;
+    my %seen = ( $entity => 1 );
+
+    my $r = $storage->fetch( 'MetaInheritance', { return => "parent", where => { child => $entity } } );
+    while( @$r ) {
+	my $parent = $r->[0]->{parent};
+	last if $seen{$parent};
+	$seen{$parent} = 1;
+	push( @ancestors, $parent );
+
+	$r = $storage->fetch( 'MetaInheritance', { return => "parent", where => { child => $parent } } );
+    }
+
+    return @ancestors;
 }
 
 1;

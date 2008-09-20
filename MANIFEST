@@ -54,6 +54,7 @@ scripts/load-props
 scripts/process_database
 scripts/props
 scripts/test-populate
+scripts/test-inheritance
 t/00-load.t
 t/10-basics.t
 t/20-instance.t
