@@ -207,6 +207,7 @@ sub property {
     return $r->[0]->{value};
 }
 
+# FIXME, temporal search.
 sub property_exists {
     my ($self, $entity, $property) = @_;
     my $storage = $self->{storage};
@@ -221,6 +222,7 @@ sub property_exists {
     return defined $aref->[0]->{property}?1:0;
 }
 
+# FIXME, temporal search.
 sub properties {
     my $class = shift;
 
@@ -238,6 +240,7 @@ sub properties {
     return map { $_->{property} } @$aref;    
 }
 
+# FIXME, temporal search.
 sub relations {
     my $class = shift;
 
