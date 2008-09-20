@@ -55,18 +55,17 @@ my %human_to_machine;
 my %config;
 my %idents;
 
-my %display_tables;
+my (@structures, @onlytables, %display_tables);
 if ($onlytables) {
-    if ($onlytables =~ m|,|) {
-	for my $t (split m|,|, $onlytables) {
-	    $display_tables{$t}++;
-	}
-    } else {
-	$display_tables{$onlytables}++;
+    for my $struct (split ",", $onlytables) {
+	push @onlytables, $struct unless $display_tables{$struct};
+	$display_tables{$struct}++;
     }
+    @structures = @onlytables;
+} else {
+    @structures = $storage->_admin_list_structures();
+    
 }
-
-my @structures = $storage->_admin_list_structures();
 
 my $configstruct = $storage->_dump_structure( 'Storage_config' );
 for my $rowref (@$configstruct) {
@@ -87,8 +86,12 @@ for my $rowref (@$tableref) {
 }
 
 for my $structure (@structures) {
-    my $mapped_struct = $mapper{$structure} || $structure;
+    my $mapped_struct;
+
+    $structure = $human_to_machine{$structure} if @onlytables && $human_to_machine{$structure};
     
+    $mapped_struct = $mapper{$structure} || $structure;	
+
     if (&display($mapped_struct)) {
 	my $displaytext = $mapped_struct;
 	$displaytext = "$mapped_struct ($structure)" if $mapped_struct ne $structure;

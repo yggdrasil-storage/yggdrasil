@@ -131,8 +131,8 @@ sub raw_store {
     return $self->_raw_store( $self->_get_schema_name( $schema ), @_ );
 }
 
-# fetch ( schema1 { return => [ fieldnames ], where => { s1field => s1value }, operator => operator }
-#         schema2 { return => [ fieldnames ], where => { s2field => s2value }, operator => operator }
+# fetch ( schema1 { return => [ fieldnames ], where => { s1field1 => s1value1, ... }, operator => operator }
+#         schema2 { return => [ fieldnames ], where => { s2field => s2value, ... }, operator => operator }
 #         { start => $start, stop => $stop } (optional)
 # We remap the schema names (the non-reference parameters) here.
 sub fetch {
@@ -430,13 +430,12 @@ sub _admin_verify {
     Yggdrasil::fatal( "Administrative interface unavailable without explicit request." ) unless $ADMIN;
 }
 
-# Returns a list of all the structures, guarantees the order as Meta*, Storage*, everything else.
+# Returns a list of all the structures, guarantees nothing about the order.
 sub _admin_list_structures {
     my $self = shift;
 
     $self->_admin_verify();
-
-    return sort _admin_sort_structures $self->_list_structures();
+    return $self->_list_structures();
 }
 
 sub _admin_dump_structure {
@@ -460,16 +459,6 @@ sub _admin_truncate_structure {
 
     $self->_admin_verify();
     $self->_truncate_structure( @_ );
-}
-
-sub _admin_sort_structures {
-    if ($a =~ /^Meta/) {
-	return -1
-    } elsif ($a =~ /^Storage_config/) {
-	return 1
-    } else {
-	$a cmp $b
-    }
 }
 
 1;
