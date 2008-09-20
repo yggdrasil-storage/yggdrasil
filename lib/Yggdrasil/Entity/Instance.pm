@@ -191,7 +191,7 @@ sub property {
     my $entity = $self->_extract_entity();
     my $name = join("_", $entity, $key );
 
-    Yggdrasil::fatal("Unable to find property '$key' for entity '$entity'.") unless $self->property_exists( $entity, $key );
+    Yggdrasil::fatal("Unable to find property '$key' for entity '$entity'.") unless $self->property_exists( $key );
     
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
@@ -209,8 +209,16 @@ sub property {
 
 # FIXME, temporal search.
 sub property_exists {
-    my ($self, $entity, $property) = @_;
-    my $storage = $self->{storage};
+    my ($self_or_class, $property) = (shift, shift);
+    my $entity;
+    
+    if (ref $self_or_class) {
+	$entity = $self_or_class->_extract_entity();
+    } else {
+	($entity) = (split "::", $self_or_class)[-1];
+    }
+    
+    my $storage = $Yggdrasil::STORAGE;
     
     # Check to see if the property exists.
     my $aref = $storage->fetch( 'MetaProperty', 
