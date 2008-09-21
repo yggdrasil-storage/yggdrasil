@@ -61,6 +61,7 @@ $bob->property( loan => 1_000_000 );
 $student = define Yggdrasil::Entity "Student", inherit => "Person";
 
 print "Student inherits from Person";
+print "Properties: ", join( ", ", $bob->properties() );
 pprop( $bob, "name");
 pprop( $bob, "age");
 pprop( $bob, "loan");
@@ -78,6 +79,7 @@ pprop( $bob, "ssn");
 $student = define Yggdrasil::Entity "Student";
 
 print "Student does not inhert from Person";
+print "Properties: ", join( ", ", $bob->properties() );
 pprop( $bob, "name");
 pprop( $bob, "loan");
 pprop( $bob, "age");

@@ -249,12 +249,21 @@ sub properties {
 	$class =~ s/.*:://;
     }
 
-    my $aref = $Yggdrasil::STORAGE->fetch( 'MetaProperty', 
-					   { return => 'property', 
-					     where => { entity => $class } 
-					   } );
-    
-    return map { $_->{property} } @$aref;    
+    my @ancestors = __PACKAGE__->_ancestors($class);
+    my $storage = $Yggdrasil::STORAGE;
+
+    my %properties;
+
+    foreach my $e ( $class, @ancestors ) {
+	my $aref = $storage->fetch( 'MetaProperty', 
+				    { return => 'property', 
+				      where => { entity => $e } 
+				    } );
+
+	$properties{ $_->{property} } = 1 for @$aref;
+    }
+
+    return keys %properties;
 }
 
 # FIXME, temporal search.
