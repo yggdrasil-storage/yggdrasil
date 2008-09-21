@@ -43,6 +43,7 @@ my $store = {
     MetaEntity   => \&meta_entity,
     MetaProperty => \&meta_property,
     MetaRelation => \&meta_relation,
+    MetaInheritance => \&meta_inheritance,
     Entity   => \&entity,
     Property => \&property,
     Relation => \&relation,
@@ -52,6 +53,7 @@ my $define = {
     MetaEntity   => sub {},
     MetaProperty => sub {},
     MetaRelation => sub {},
+    MetaInheritance => sub {},
     Entity   => sub{},
     Property => \&property_define,
     Relation => \&relation_define,
@@ -98,6 +100,12 @@ sub meta_relation {
     Yggdrasil::MetaRelation->admin_restore( \%data );
 }
 
+sub meta_inheritance {
+    my $schema = shift;
+    my %data = decode(shift);
+
+    Yggdrasil::MetaInheritance->admin_restore( \%data );
+}
 sub entity {
     my $schema = decode_base64( shift );
     my @data = decode(shift);
