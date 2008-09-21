@@ -89,6 +89,64 @@ pprop( $bob, "age");
 pprop( $bob, "ssn");
 print "Type of iq: ", $bob->type("iq");
 
+print "-" x 79;
+
+my $A = define Yggdrasil::Entity "A";
+define $A "a_1";
+define $A "a_2";
+
+my $B = define Yggdrasil::Entity "B", inherit => "A";
+define $B "b_1";
+
+my $D = define Yggdrasil::Entity "D";
+define $D "d_1";
+define $D "d_2";
+
+my $E = define Yggdrasil::Entity "E", inherit => "D";
+define $E "e_1";
+
+
+print "Properties for A: ", join(", ", $A->properties() );
+print "Properties for B: ", join(", ", $B->properties() );
+print "Properties for D: ", join(", ", $D->properties() );
+print "Properties for E: ", join(", ", $E->properties() );
+
+print "Introduce C as inheriting from B and redefine D to inherit from new C";
+
+my $C = define Yggdrasil::Entity "C", inherit => "B";
+define $C "c_1";
+
+define Yggdrasil::Entity "D", inherit => "C";
+
+print "Properties for A: ", join(", ", $A->properties() );
+print "Properties for B: ", join(", ", $B->properties() );
+print "Properties for C: ", join(", ", $C->properties() );
+print "Properties for D: ", join(", ", $D->properties() );
+print "Properties for E: ", join(", ", $E->properties() );
+print "C inherits from: ", join(", ", $C->isa() );
+print "C->isa(A): ", $C->isa($A);
+print "C->isa(B): ", $C->isa($B);
+print "C->isa(C): ", $C->isa($C);
+print "C->isa(D): ", $C->isa($D);
+print "C->isa(E): ", $C->isa($E);
+
+print "redefine C as not inheriting";
+define Yggdrasil::Entity "C";
+
+
+print "Properties for A: ", join(", ", $A->properties() );
+print "Properties for B: ", join(", ", $B->properties() );
+print "Properties for C: ", join(", ", $C->properties() );
+print "Properties for D: ", join(", ", $D->properties() );
+print "Properties for E: ", join(", ", $E->properties() );
+print "C inherits from: ", join(", ", $C->isa() );
+print "C->isa(A): ", $C->isa($A);
+print "C->isa(B): ", $C->isa($B);
+print "C->isa(C): ", $C->isa($C);
+print "C->isa(D): ", $C->isa($D);
+print "C->isa(E): ", $C->isa($E);
+
+
 
 sub pprop {
     my $instance = shift;

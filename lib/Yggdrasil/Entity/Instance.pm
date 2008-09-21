@@ -348,6 +348,31 @@ sub search {
     return @hits;
 }
 
+sub isa {
+    my $self_or_class = shift;
+    my $isa = shift;
+    my($start, $stop) = $self_or_class->_get_times_from( @_ );
+
+    my $entity;
+    if (ref $self_or_class) {
+	$entity = $self_or_class->_extract_entity();
+    } else {
+	($entity) = (split "::", $self_or_class)[-1];
+    }
+
+    $isa =~ s/.*::// if defined $isa;
+
+    my $storage = $Yggdrasil::STORAGE;
+
+    my @ancestors = __PACKAGE__->_ancestors($entity, $start, $stop );
+    if( defined $isa ) {
+	my $r = grep { $isa eq $_ } @ancestors;
+	return $r;
+    } else {
+	return @ancestors;
+    }
+}
+
 sub link :method {
   my $self     = shift;
   my $instance = shift;
