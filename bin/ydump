@@ -105,7 +105,8 @@ foreach my $entity ( keys %seen_property ) {
     my $properties = $seen_property{$entity};
     foreach my $property ( keys %$properties ) {
 	print "[Property: ", encode_base64($entity, ""), " ", encode_base64($property, ""), "]\n";
-
+	print "# $entity _ $property\n";
+	
 	my $instance_property = Yggdrasil::Property->admin_dump( $entity, $property );
 	foreach my $ip ( @$instance_property ) {
 	    dumper($ip, 
@@ -146,6 +147,9 @@ sub dumper {
 	if( exists $map->{$key} ) {
 	    $value = $usemap->{ $map->{$key} }->{$value};
 	}
+
+	my $dvalue = $value || 'NULL';
+	print "# $key => $dvalue\n";
 
 	$value = defined $value ? encode_base64($value, "") : "";
 	print "$key => $value\n";
