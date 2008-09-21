@@ -223,7 +223,7 @@ sub property_exists {
 	($entity) = (split "::", $self_or_class)[-1];
     }
     
-    my @ancestors = __PACKAGE__->_ancestors($entity);
+    my @ancestors = __PACKAGE__->_ancestors($entity, $start, $stop);
     my $storage = $Yggdrasil::STORAGE;
     
     # Check to see if the property exists.
@@ -239,7 +239,6 @@ sub property_exists {
     return;
 }
 
-# FIXME, temporal search.
 sub properties {
     my $class = shift;
     my ($start, $stop) = $class->_get_times_from( @_ );
@@ -250,7 +249,7 @@ sub properties {
 	$class =~ s/.*:://;
     }
 
-    my @ancestors = __PACKAGE__->_ancestors($class);
+    my @ancestors = __PACKAGE__->_ancestors($class, $start, $stop);
     my $storage = $Yggdrasil::STORAGE;
 
     my %properties;
@@ -307,21 +306,23 @@ sub instances {
 # Property type function for non-instanced calls.
 # It is called as "Ygg::Entity->type( 'propertyname' );
 sub type {
-    my ($class, $property) = @_;
-
+    my ($class, $property) = (shift, shift);
+    my ($start, $stop) = $class->_get_times_from( @_ );
+    
     if (ref $class) {
 	$class = $class->_extract_entity();
     } else {
 	$class =~ s/.*:://;
     }
     
-    my @ancestors = __PACKAGE__->_ancestors($class);
+    my @ancestors = __PACKAGE__->_ancestors($class, $start, $stop);
     my $storage = $Yggdrasil::STORAGE;
 
     foreach my $e ( $class, @ancestors ) {
 	my $ret = $storage->fetch( 'MetaProperty',{ return => 'type',
 						    where  => { entity   => $e,
-								property => $property }});
+								property => $property }},
+				   { start => $start, stop => $stop });
 	next unless @$ret;
 	return $ret->[0]->{type};
     }
@@ -333,6 +334,7 @@ sub search {
     my $package = $class;
     $class =~ s/.*:://;
 
+    # Passing the possible time elements onwards as @_ to the Storage layer.
     my ($nodes) = $Yggdrasil::STORAGE->search( $class, $key, $value, @_);
 
     my @hits;
@@ -535,19 +537,22 @@ sub _map_schema_name {
 sub _ancestors {
     my $class = shift;
     my $entity = shift;
+    my ($start, $stop) = @_;
 
     my $storage = $Yggdrasil::STORAGE;
     my @ancestors;
     my %seen = ( $entity => 1 );
 
-    my $r = $storage->fetch( 'MetaInheritance', { return => "parent", where => { child => $entity } } );
+    my $r = $storage->fetch( 'MetaInheritance', { return => "parent", where => { child => $entity } },
+			     { start => $start, stop => $stop });
     while( @$r ) {
 	my $parent = $r->[0]->{parent};
 	last if $seen{$parent};
 	$seen{$parent} = 1;
 	push( @ancestors, $parent );
 
-	$r = $storage->fetch( 'MetaInheritance', { return => "parent", where => { child => $parent } } );
+	$r = $storage->fetch( 'MetaInheritance', { return => "parent", where => { child => $parent } },
+			      { start => $start, stop => $stop } );
     }
 
     return @ancestors;
@@ -557,9 +562,9 @@ sub _get_times_from {
     my $self_or_class = shift;
 
     if (@_ == 1) {
-	return ($_[1], $_[1]);
+	return ($_[0], $_[0]);
     } elsif (@_ == 2) {
-	return ($_[1], $_[2]);
+	return ($_[0], $_[1]);
     } else {
 	return ();
     }
