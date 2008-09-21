@@ -116,13 +116,16 @@ sub entity {
     }
 
     my $map = Yggdrasil::Entity->admin_restore( $schema, \@visual_ids );
-    $ID_MAP{$schema} = $map;
+    
+    for my $id (keys %$map) {
+	$ID_MAP{$id} = $map->{$id};
+    }
 }
 
 sub property {
     my $schema = shift;
     my( $entity, $property ) = map { decode_base64($_) } split ' ', $schema;
-    my %data = decode(shift, map => { id => "id" }, usemap => { id => $entity } ); 
+    my %data = decode(shift);
     
     Yggdrasil::Property->admin_restore( $entity, $property, \%data );
 }
@@ -138,9 +141,7 @@ sub relation {
     my $schema = decode_base64( shift );
 
     my( $e1, $e2 ) = split /_R_/, $schema;
-    my %data = decode(shift, 
-		      map    => { rval => "rval", lval => "lval" },
-		      usemap => { lval => $e1, rval => $e2 } );
+    my %data = decode(shift);
     
     Yggdrasil::Relation->admin_restore( $e1, $e2, \%data );
 }
@@ -155,20 +156,16 @@ sub relation_define {
 
 sub decode {
     my $data = shift;
-    my %param = @_;
-
-    my $map = $param{map} || {};
-    my $usemap = $param{usemap} || {};
 
     my @list;
     foreach my $l (@$data) {
 	my( $key, $val ) = split /\s+=>\s+/, $l;
 	$val = decode_base64($val);
 
-	if( exists $map->{$key} ) {
-	    $val = $ID_MAP{ $usemap->{$key} }->{$val};
+	if( exists $ID_MAP{$val} ) {
+	    $val = $ID_MAP{$val};
 	}
-
+	
 	$val = undef unless length $val;
 
 	push( @list, $key, $val );
