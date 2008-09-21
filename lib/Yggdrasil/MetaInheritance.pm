@@ -37,6 +37,12 @@ sub _expire_inheritance {
     $self->{storage}->expire('MetaInheritance', child => $me);
 }
 
+sub _admin_dump {
+    my $self = shift;
+
+    return $self->{storage}->raw_fetch( "MetaInheritance" );
+}
+
 sub _admin_restore {
     my $self = shift;
     my $data = shift;

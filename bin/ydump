@@ -78,6 +78,15 @@ foreach my $entry ( @$relations ) {
 }
 print "\n";
 
+# --- MetaInheritance
+print "[MetaInheritance]\n";
+my $inheritance = Yggdrasil::MetaInheritance->admin_dump();
+foreach my $entry ( @$inheritance ) {
+    dumper( $entry );
+    print "\n";
+}
+print "\n";
+
 my %id_map;
 # --- Instance Entities
 foreach my $entity ( keys %seen_entity ) {
