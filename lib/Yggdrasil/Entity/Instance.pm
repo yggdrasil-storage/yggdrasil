@@ -214,23 +214,23 @@ sub property {
 # FIXME, temporal search.
 sub property_exists {
     my ($self_or_class, $property) = (shift, shift);
-    my $entity;
-
+    my ($start, $stop) = $self_or_class->_get_times_from( @_ );
+    my ($entity);
+    
     if (ref $self_or_class) {
 	$entity = $self_or_class->_extract_entity();
     } else {
 	($entity) = (split "::", $self_or_class)[-1];
     }
-
+    
     my @ancestors = __PACKAGE__->_ancestors($entity);
     my $storage = $Yggdrasil::STORAGE;
     
     # Check to see if the property exists.
     foreach my $e ( $entity, @ancestors ) {
-	my $aref = $storage->fetch( 'MetaProperty', 
-				    { return => 'property', 
-				      where => { entity => $e, property => $property } 
-				    } );
+	my $aref = $storage->fetch( 'MetaProperty', { return => 'property',
+						      where => { entity => $e, property => $property }},
+				    { start => $start, stop => $stop });
 
 	# The property name might be "0".
 	return join("_", $e, $property) if defined $aref->[0]->{property};
@@ -242,6 +242,7 @@ sub property_exists {
 # FIXME, temporal search.
 sub properties {
     my $class = shift;
+    my ($start, $stop) = $class->_get_times_from( @_ );
 
     if (ref $class) {
 	$class = $class->_extract_entity();
@@ -253,13 +254,12 @@ sub properties {
     my $storage = $Yggdrasil::STORAGE;
 
     my %properties;
-
+    
     foreach my $e ( $class, @ancestors ) {
 	my $aref = $storage->fetch( 'MetaProperty', 
-				    { return => 'property', 
-				      where => { entity => $e } 
-				    } );
-
+				    { return => 'property', where => { entity => $e }},
+				    { start  => $start, stop => $stop });
+	
 	$properties{ $_->{property} } = 1 for @$aref;
     }
 
@@ -546,5 +546,17 @@ sub _ancestors {
 
     return @ancestors;
 }
+
+sub _get_times_from {
+    my $self_or_class = shift;
+
+    if (@_ == 1) {
+	return ($_[1], $_[1]);
+    } elsif (@_ == 2) {
+	return ($_[1], $_[2]);
+    } else {
+	return ();
+    }
+} 
 
 1;
