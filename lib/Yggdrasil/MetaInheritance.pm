@@ -10,7 +10,7 @@ sub _define {
 
     return $self->{storage}->define( "MetaInheritance",
 				     fields   => { parent => { type => "VARCHAR(255)", null => 0 },
-						   child  => { type => "VARCHAR(255)", null => 0 },
+						   child  => { type => "VARCHAR(255)", null => 0 } },
 				     temporal => 1,
 				     nomap    => 1 );
 }
