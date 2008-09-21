@@ -94,7 +94,7 @@ foreach my $entity ( keys %seen_entity ) {
     
     my $instances = Yggdrasil::Entity->admin_dump( $entity );
     foreach my $instance ( @$instances ) {
-	$id_map{$entity}->{$instance->{id}} = $instance->{visual_id};
+	$id_map{$instance->{id}} = $instance->{visual_id};
 	dumper($instance, exclude => { id => 1 } );
     }
     print "\n";
@@ -109,7 +109,7 @@ foreach my $entity ( keys %seen_property ) {
 	my $instance_property = Yggdrasil::Property->admin_dump( $entity, $property );
 	foreach my $ip ( @$instance_property ) {
 	    dumper($ip, 
-		   usemap => { instance => $id_map{$entity} }, 
+		   usemap => { instance => \%id_map }, 
 		   map    => { id => "instance" } );
 	    print "\n";
 	}
@@ -123,7 +123,7 @@ foreach my $relation ( keys %seen_relation ) {
     print "[Relation: ", encode_base64($relation, ""), "]\n";
     
     foreach my $ir ( @$instance_relation ) {
-	dumper($ir, usemap => { lval => $id_map{$e1}, rval => $id_map{$e2} },
+	dumper($ir, usemap => { lval => \%id_map, rval => \%id_map },
 	       map => { rval => "rval", lval => "lval" },
 	       exclude => { id => 1 } );
 	print "\n";
