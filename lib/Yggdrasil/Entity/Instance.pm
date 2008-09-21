@@ -315,10 +315,16 @@ sub type {
 	$class =~ s/.*:://;
     }
     
-    my $ret = $Yggdrasil::STORAGE->fetch( 'MetaProperty',{ return => 'type',
-					    where  => { entity   => $class,
-					               property => $property }});
-    return map { $_->{type} } @$ret;
+    my @ancestors = __PACKAGE__->_ancestors($class);
+    my $storage = $Yggdrasil::STORAGE;
+
+    foreach my $e ( $class, @ancestors ) {
+	my $ret = $storage->fetch( 'MetaProperty',{ return => 'type',
+						    where  => { entity   => $e,
+								property => $property }});
+	next unless @$ret;
+	return $ret->[0]->{type};
+    }
 }
 
 

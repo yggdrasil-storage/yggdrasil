@@ -44,6 +44,8 @@ my $student = define Yggdrasil::Entity "Student";
 my $p_name = define $person 'name';
 my $s_name = define $student 'name';
 
+my $p_iq  = define $person 'iq', type => "INTEGER";
+
 my $p_age = define $person 'age', type => "INTEGER";
 
 my $s_loan = define $student 'loan', type => "FLOAT";
@@ -65,6 +67,7 @@ print "Properties: ", join( ", ", $bob->properties() );
 pprop( $bob, "name");
 pprop( $bob, "age");
 pprop( $bob, "loan");
+print "Type of iq: ", $bob->type("iq");
 
 $bob->property( age => 33 );
 
@@ -84,6 +87,7 @@ pprop( $bob, "name");
 pprop( $bob, "loan");
 pprop( $bob, "age");
 pprop( $bob, "ssn");
+print "Type of iq: ", $bob->type("iq");
 
 
 sub pprop {
