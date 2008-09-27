@@ -18,15 +18,23 @@ sub _define {
 
   # --- Set the default data type.
   $data{type} = uc $data{type} || 'TEXT';
+  $data{null} = 1 if $data{null} || ! defined $data{null};
   
   # --- Create Property table
   $self->{storage}->define( $name,
 			    fields   => { id    => { type => "INTEGER" },
-					  value => { type => $data{type}, null => 1 } },
+					  value => { type => $data{type},
+						     null => $data{null}}},
+			    
 			    temporal => 1 );
   
   # --- Add to MetaProperty
-  $self->{storage}->store( "MetaProperty", key => "id", fields => { entity => $entity, property => $property, type => $data{type} } ) unless $data{raw};
+  $self->{storage}->store( "MetaProperty", key => "id",
+			   fields => { entity   => $entity,
+				       property => $property,
+				       type     => $data{type},
+				       nullp    => $data{null},
+				     } ) unless $data{raw};
 
   return $property;
 }
