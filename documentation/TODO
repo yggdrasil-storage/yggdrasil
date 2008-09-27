@@ -37,14 +37,14 @@
   those names. (Or other reserved keywords ... are there any?)
 
 * _register_namespace, what do we do if the namespace is already
-  registered?  What is the appropriate behaviour?
+  registered?  What is the appropriate behavior?
 
 * Store with SERIAL fields need to handle their IDs automatically, we
    can't send an ID value, while not doing so creates undefined values
    in SQL::_store.
 
 * exists / property_exists need to check what time they're being
-   checked for, right now they just check current existance.
+   checked for, right now they just check current existence.
 
 * Engine introspection.  
    The storage layer has Storage-related meta information stored (ie,
@@ -54,3 +54,24 @@
    do not go down this road, a field to declare if NULL is acceptable
    as a value for a field should probably be stored in MetaProperty.
 
+* Visual_ids are tunique within each hierarchy.
+  If we have Ygg::Person('terjekv'), Ygg::Person::Student( 'terjekv')
+  is the same instance.  
+
+* Relations need to support constraints and labels.
+  define Ygg::Relation $h, $p, as => 'Hostperson';
+  define Ygg::Relation $p, $p,
+                       as    => 'Parent',
+                       where => 'a.birthdate < b.birthdate';
+
+* Fix relations within the same entity.
+  See above, $p to $p, used as:
+  $parent->link( $child, as => 'Parent' );
+  This will also check that $parent.birthdate < $child.birthdate due
+  to the constraint.
+
+* Define a proper syntax for constraints.
+
+* Fix auth / permissions on the web interface.
+
+* Make the web interface support editing.
