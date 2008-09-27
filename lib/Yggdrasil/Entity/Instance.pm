@@ -211,7 +211,6 @@ sub property {
     return $r->[0]->{value};
 }
 
-# FIXME, temporal search.
 sub property_exists {
     my ($self_or_class, $property) = (shift, shift);
     my ($start, $stop) = $self_or_class->_get_times_from( @_ );
