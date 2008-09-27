@@ -80,7 +80,7 @@ sub _get_in_time {
     my $visual_id = shift;
     my @time = @_;
 
-    my $entity = (split '::', $class)[-1];
+    my $entity = Yggdrasil::_extract_entity($class);
 
     # Short circuit the joins if we're looking for the current object
     unless (@time) {
@@ -223,7 +223,7 @@ sub property_exists {
     if (ref $self_or_class) {
 	$entity = $self_or_class->_extract_entity();
     } else {
-	($entity) = (split "::", $self_or_class)[-1];
+	$entity = Yggdrasil::_extract_entity($self_or_class);
     }
     
     my @ancestors = __PACKAGE__->_ancestors($entity, $start, $stop);
@@ -249,7 +249,7 @@ sub properties {
     if (ref $class) {
 	$class = $class->_extract_entity();
     } else {
-	$class =~ s/.*:://;
+	$class = Yggdrasil::_extract_entity($class);
     }
 
     my @ancestors = __PACKAGE__->_ancestors($class, $start, $stop);
@@ -275,7 +275,7 @@ sub relations {
     if (ref $class) {
 	$class = $class->_extract_entity();
     } else {
-	$class =~ s/.*:://;
+	$class = Yggdrasil::_extract_entity($class);
     }
     
     my $lref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
@@ -297,7 +297,7 @@ sub instances {
     if (ref $class) {
 	$class = $class->_extract_entity();
     } else {
-	$class =~ s/.*:://;
+	$class = Yggdrasil::_extract_entity($class);
     }
     
     my $instances = $Yggdrasil::STORAGE->fetch( Entities => { return => 'visual_id', where => { entity => $class } } );
@@ -321,9 +321,9 @@ sub _get_meta {
     if (ref $class) {
 	$class = $class->_extract_entity();
     } else {
-	$class =~ s/.*:://;
+	$class = Yggdrasil::_extract_entity($class);
     }
-    
+
     my @ancestors = __PACKAGE__->_ancestors($class, $start, $stop);
     my $storage = $Yggdrasil::STORAGE;
 
@@ -354,7 +354,7 @@ sub type {
 sub search {
     my ($class, $key, $value) = (shift, shift, shift);
     my $package = $class;
-    $class =~ s/.*:://;
+    $class = Yggdrasil::_extract_entity($class);
 
     # Passing the possible time elements onwards as @_ to the Storage layer.
     my ($nodes) = $Yggdrasil::STORAGE->search( $class, $key, $value, @_);
@@ -379,10 +379,10 @@ sub isa {
     if (ref $self_or_class) {
 	$entity = $self_or_class->_extract_entity();
     } else {
-	($entity) = (split "::", $self_or_class)[-1];
+	$entity = Yggdrasil::_extract_entity($self_or_class);
     }
 
-    $isa =~ s/.*::// if defined $isa;
+    $isa = Yggdrasil::_extract_entity($isa) if defined $isa;
 
     my $storage = $Yggdrasil::STORAGE;
 
@@ -400,7 +400,7 @@ sub link :method {
   my $instance = shift;
 
   my $e1 = $self->_extract_entity();
-  my $e2 = $instance->_extract_entity();
+  my $e2 = Yggdrasil::_extract_entity($instance);
 
   my $schema = $self->{storage}->_get_relation( $e1, $e2 );
   
@@ -449,7 +449,7 @@ sub fetch_related {
   my $self = shift;
   my $relative = shift;
 
-  $relative =~ s/^.*:://;
+  $relative = Yggdrasil::_extract_entity($relative);
   my $source = $self->_extract_entity();
 
   my $paths = $self->_fetch_related( $source, $relative );
@@ -578,7 +578,6 @@ sub _map_schema_name {
     my $self = shift;
     
     return $self->{storage}->_map_schema_name( @_ );
-#Yggdrasil::Storage::SQL::
 }
 
 sub _ancestors {

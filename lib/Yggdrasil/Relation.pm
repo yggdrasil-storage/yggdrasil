@@ -11,8 +11,8 @@ sub _define {
   my $entity2 = shift;
   my %param   = @_;
 
-  $entity1 =~ s/.*:://;
-  $entity2 =~ s/.*:://;
+  $entity1 = Yggdrasil::_extract_entity($entity1);
+  $entity2 = Yggdrasil::_extract_entity($entity2);
 
   unless( $param{raw} ) {
       my $schema = $self->{storage}->_get_relation( $entity1, $entity2 );

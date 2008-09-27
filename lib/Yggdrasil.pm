@@ -107,12 +107,20 @@ sub _register_namespace {
 sub _extract_entity {
   my $self = shift;
 
-  # this is because we are confused!
+  my $to_remove = $NAMESPACE . "::";
+
+  # 'ref' because we are confused!
+  my $class;
   if( ref $self) {
-      return (split '::', ref $self)[-1];
+      $class = ref $self;
   } else {
-      return (split '::', $self)[-1];
+      $class = $self;
   }
+
+  my $cpy = $class;
+  $class =~ s/^$to_remove//;
+  #print "---> Removing $to_remove from [$cpy] => [$class]\n";
+  return $class;
 }
 
 sub bootstrap {
@@ -148,7 +156,7 @@ sub exists {
     my $visual_id = shift;
     my @time = @_;
 
-    my $entity = (split '::', $class)[-1];
+    my $entity = _extract_entity($class);
 
     my $fetchref = $STORAGE->fetch( 'Entities', { return => 'id',
 						  where  => { visual_id => $visual_id,

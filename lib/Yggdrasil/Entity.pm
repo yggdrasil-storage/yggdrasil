@@ -19,7 +19,8 @@ sub _define {
     
     # --- Update MetaInheritance
     if( defined $params{inherit} ) {
-	$self->_add_inheritance( $name, $params{inherit} );
+	my $parent = Yggdrasil::_extract_entity($params{inherit});
+	$self->_add_inheritance( $name, $parent );
     } else {
 	$self->_expire_inheritance( $name );
     }
