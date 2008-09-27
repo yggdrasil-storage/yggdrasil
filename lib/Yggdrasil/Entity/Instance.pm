@@ -383,6 +383,7 @@ sub isa {
     }
 
     $isa = Yggdrasil::_extract_entity($isa) if defined $isa;
+    return 1 if $isa && $isa eq $entity;
 
     my $storage = $Yggdrasil::STORAGE;
 
