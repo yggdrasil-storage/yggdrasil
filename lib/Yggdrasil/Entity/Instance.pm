@@ -203,6 +203,10 @@ sub property {
 	    Yggdrasil::fatal("Temporal objects are immutable.");
 	}
 
+	if (! defined $value && ! $self->null( $key )) {
+	    Yggdrasil::fatal("$entity :: $key cannot be set to NULL.");
+	}
+
 	$storage->store( $schema, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 
