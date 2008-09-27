@@ -302,12 +302,18 @@ sub instances {
 }
 
 
-# Property type function for non-instanced calls.
-# It is called as "Ygg::Entity->type( 'propertyname' );
-sub type {
-    my ($class, $property) = (shift, shift);
+# _get_meta returns meta data for a property, information about nullp
+# and type is currently supported.
+sub _get_meta {
+    my ($class, $property, $meta) = (shift, shift, shift);
     my ($start, $stop) = $class->_get_times_from( @_ );
     
+    Yggdrasil::fatal( "$meta is not a valid metadata request." ) 
+	unless $meta eq 'null' || $meta eq 'type';
+
+    # The internal name for the null field is "nullp".
+    $meta = 'nullp' if $meta eq 'null';
+
     if (ref $class) {
 	$class = $class->_extract_entity();
     } else {
@@ -318,15 +324,28 @@ sub type {
     my $storage = $Yggdrasil::STORAGE;
 
     foreach my $e ( $class, @ancestors ) {
-	my $ret = $storage->fetch( 'MetaProperty',{ return => 'type',
+	my $ret = $storage->fetch( 'MetaProperty',{ return => $meta,
 						    where  => { entity   => $e,
 								property => $property }},
 				   { start => $start, stop => $stop });
 	next unless @$ret;
-	return $ret->[0]->{type};
+	return $ret->[0]->{$meta};
     }
 }
 
+# Property null function for non-instanced calls.
+# It is called as "Ygg::Entity->null( 'propertyname' );
+sub null {
+    my ($class, $property) = (shift, shift);
+    return $class->_get_meta( $property, 'null', @_ );
+}
+
+# Property type function for non-instanced calls.
+# It is called as "Ygg::Entity->type( 'propertyname' );
+sub type {
+    my ($class, $property) = (shift, shift);
+    return $class->_get_meta( $property, 'type', @_ );
+}
 
 sub search {
     my ($class, $key, $value) = (shift, shift, shift);
