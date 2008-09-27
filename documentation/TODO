@@ -75,3 +75,8 @@
 * Fix auth / permissions on the web interface.
 
 * Make the web interface support editing.
+
+* We would want "Student" entity that inherits from "Person" and a
+  "Student" entity that does not inherit from "Person" to be two
+  distinct entities. Today all entities are global, would be nice to
+  have "Person::Student" and "Student" as possible entity names.
