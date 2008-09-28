@@ -1,0 +1,37 @@
+#!/usr/bin/perl -l
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Yggdrasil;
+
+my $parts;
+
+GetOptions(
+	   "parts=s"      => \$parts,
+	  );
+
+my %parts;
+if ($parts) {
+    for my $p (split /,/, $parts) {
+	$parts{$p}++;
+    }
+}
+
+opendir DIR, "$Bin/test-parts" or die "unable to find test directory\n";
+while ($_ = readdir DIR) {
+    chomp;
+    next if /^\./;
+    next if /~$/;
+    if (! keys %parts || $parts{$_}) {
+	print "::: $_\n";
+	system "$Bin/test-parts/$_ @ARGV";
+	print "\n";
+    }
+}
+closedir DIR;

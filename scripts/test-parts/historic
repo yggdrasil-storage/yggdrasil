@@ -1,0 +1,97 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../../lib);
+
+use Yggdrasil;
+
+my ($user, $password, $host, $port, $db, $engine, $mapper) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef);
+
+GetOptions(
+	   "user=s"       => \$user,
+	   "engine=s"     => \$engine,
+	   "password=s"   => \$password,
+	   "host=s"       => \$host,
+	   "database=s"   => \$db,
+	   "engine=s"     => \$engine,
+	   "port=s"       => \$port,
+	   "mapper=s"     => \$mapper,
+	  );
+
+new Yggdrasil(
+	      user      => $user,
+	      password  => $password,
+	      host      => $host,
+	      port      => $port,
+	      db        => $db,
+	      engine    => $engine,
+	      namespace => 'Ygg',
+	      mapper    => $mapper,
+	      admin     => 1,
+	     );
+
+print "$user\@$host ($db / $engine)\n";
+
+my $hoste = define Yggdrasil::Entity 'Host';
+my $nommo  = Ygg::Host->new( 'nommo' );
+my $baal   = Ygg::Host->new( 'baal' );
+my $escher = Ygg::Host->new( 'escher' );
+
+for (1..20) {
+    $nommo->property( 'ip', "nip @ $_" );
+    if ($_ % 2) {
+	$baal->property( 'ip', "nip @ $_" ); 
+    } else {
+	$baal->property( 'ip', "bip @ $_" ); 	
+    }
+    sleep 1;
+}
+
+my $now = time();
+print "Current search, ip => 'n'\n";
+for my $current_node (search $hoste 'ip', 'n') {
+    print $current_node->id(), " => ", $current_node->property( 'ip' ), "\n";
+}
+
+print "Historic search, ip => 'n' ($now - 10)\n";
+for my $historic_node (search $hoste 'ip', 'n', ($now-10), undef) {
+    print $historic_node->id(), " => ", $historic_node->property( 'ip' ), " @ ", $historic_node->{_start}, " : ", $historic_node->{_start} || 'CURRENT', "\n";
+}
+
+# --- Test instances representing points in time
+my $dinner = define $hoste 'dinner';
+
+$nommo->property( $dinner => "Kylling" );
+$baal->property( $dinner => "Aspargis" );
+
+my $sleep = 2;
+sleep $sleep;
+
+$nommo->property( $dinner => "Poterer" );
+
+sleep $sleep;
+
+$nommo->property( $dinner => "Mer Poteter" );
+
+sleep $sleep;
+
+$baal->property( $dinner => "Saus" );
+
+print "ZOOM ", "-" x 70, "\n";
+for my $historic_nommo (get $hoste 'nommo', ($now - 20), undef) {
+    print "ZOOM dinner: ", $historic_nommo->property( 'dinner' ), " -> ",  $historic_nommo->{_start} || 'NOSTART',
+      " - ", $historic_nommo->{_stop} || 'NOSTOP',  " <--\n";
+}
+
+sub now {
+  my @t = localtime( shift || time() );
+
+  return sprintf( "%04d-%02d-%02d %02d:%02d:%02d",
+		  $t[5]+1900, $t[4]+1, $t[3], $t[2], $t[1], $t[0] );
+}
