@@ -76,7 +76,13 @@
 
 * Make the web interface support editing.
 
-* We would want "Student" entity that inherits from "Person" and a
-  "Student" entity that does not inherit from "Person" to be two
-  distinct entities. Today all entities are global, would be nice to
-  have "Person::Student" and "Student" as possible entity names.
+* We could want a "Student" entity that inherits from "Person" and
+  another "Student" entity that does not inherit from "Person" to be
+  two distinct entities. Today all entities are global, would be nice
+  to have "Person::Student" and "Student" as possible entity names.
+
+* Redefine of properties
+  What happens if you decide to change the meta information of a
+  property?  If once, NULL was allowed, but now isn't anymore?  This
+  isn't supported at all at the moment (you can't change meta
+  information in any way).
