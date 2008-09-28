@@ -19,6 +19,7 @@ GetOptions(
 my %parts;
 if ($parts) {
     for my $p (split /,/, $parts) {
+	$p =~ s|.*test-parts/||;
 	$parts{$p}++;
     }
 }
