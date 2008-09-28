@@ -5,8 +5,6 @@ use warnings;
 
 use base qw(Yggdrasil::MetaEntity Yggdrasil::MetaInheritance);
 
-use Yggdrasil::Entity::Instance;
-
 sub _define {
     my $self  = shift;
     my $name  = shift;

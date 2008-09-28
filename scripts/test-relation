@@ -1,0 +1,67 @@
+#!/usr/bin/perl -l
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Yggdrasil;
+
+my ($user, $password, $host, $port, $db, $engine, $mapper) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef);
+
+GetOptions(
+	   "user=s"       => \$user,
+	   "engine=s"     => \$engine,
+	   "password=s"   => \$password,
+	   "host=s"       => \$host,
+	   "database=s"   => \$db,
+	   "engine=s"     => \$engine,
+	   "port=s"       => \$port,
+	   "mapper=s"     => \$mapper,
+	  );
+
+new Yggdrasil(
+	      user      => $user,
+	      password  => $password,
+	      host      => $host,
+	      port      => $port,
+	      db        => $db,
+	      engine    => $engine,
+	      namespace => 'Ygg',
+	      mapper    => $mapper,
+	      admin     => 1,
+	     );
+
+print "$user\@$host ($db / $engine)\n";
+
+my $person  = define Yggdrasil::Entity "Person";
+my $student = define Yggdrasil::Entity "Student";
+
+my $pname = define $person 'name';
+
+my $bob   = Ygg::Person->new( "bob" );
+my $alice = Ygg::Person->new( "alice" );
+
+$bob->property( name => "Bob b." );
+$alice->property( name => "Alice down the Hole" );
+
+define Yggdrasil::Relation "Person", "Person";
+$bob->link($alice);
+
+foreach my $r ( $bob->fetch_related("Person") ) {
+    print "Bob is related to ", pprop($alice, "name"), "\n";
+}
+
+
+
+sub pprop {
+    my $instance = shift;
+    my $property = shift;
+
+    my $value = $instance->property($property);
+    return join("", $instance->id(), ".", $property, ": ", defined $value ? $value : "NULL" );
+}
