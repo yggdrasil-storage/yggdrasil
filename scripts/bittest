@@ -1,0 +1,134 @@
+#!/usr/bin/perl 
+
+use warnings;
+use strict;
+
+my $a = new Example( me => 0b100000, n => 'A' );
+my $b = new Example( me => 0b010000, n => 'B' );
+my $c = new Example( me => 0b001000, n => 'C' );
+
+my $x = new Example( me => 0b000100, n => 'X' );
+my $y = new Example( me => 0b000010, n => 'Y' );
+my $z = new Example( me => 0b000001, n => 'Z' );
+
+my @objects = ($a, $b, $c, $x, $y, $z);
+
+test('A is A', 1, $a->isa( $a ));
+
+test( 'B isnota A', 0, $b->isa( $a ));
+print "\n --- Adding B isa A\n\n";
+$b->inheritfrom( $a );
+test( 'B isa A', 1, $b->isa( $a ));
+
+test( 'C isnota A', 0, $c->isa( $a ));
+print "\n --- Adding C isa B\n\n";
+$c->inheritfrom( $b );
+test( 'C isa A', 1, $c->isa( $a ));
+test( 'C isa B', 1, $c->isa( $b ));
+
+print "\n --- Removing C isa B\n\n";
+$c->uninheritfrom( $b );
+test( 'C isnota A', 0, $c->isa( $a ));
+test( 'C isnota B', 0, $c->isa( $b ));
+
+print "\n --- Adding C isa B\n\n";
+$c->inheritfrom( $b );
+test( 'C isa A', 1, $c->isa( $a ));
+test( 'C isa B', 1, $c->isa( $b ));
+
+print "\n --- Removing B isa A\n\n";
+$b->uninheritfrom( $a );
+test( 'B isnota A', 0, $b->isa( $a ));
+test( 'C isnota A', 0, $c->isa( $a ));
+test( 'C isa B', 1, $c->isa( $b ));
+
+print "\n --- Other tests\n\n";
+
+test( 'A isnota C', 0, $a->isa( $c ));
+test( "A isnota B", 0, $a->isa( $b ));
+
+print "\n --- Our subjects:\n\n";
+
+$a->display();
+$b->display();
+$c->display();
+
+sub test {
+    my ($name, $shouldbe, $returned) = @_;
+
+    my $status = $shouldbe == $returned?'SUCCEDED':'FAILED';
+    printf "%10s : %s\n", $name, $status;
+}
+
+package Example;
+
+sub new {
+    my $class = shift;
+    my $self = { @_ };
+    $self->{isa} = $self->{me};
+    
+    return bless $self, $class;
+}
+
+sub display {
+    my $self = shift;
+
+    my @children = $self->children();
+    printf "%s: %06b (%06b)", $self->{n}, $self->{me}, $self->{isa};
+    print " (Children: ", join(',', map { $_->{n} } @children), ")" if @children;
+    print "\n";
+}
+
+sub inheritfrom {
+    my ($self, $parent) = @_;
+
+    # Fix myself.
+    $self->{isa} = $self->{isa} | $parent->{isa};
+
+    # Fix all my children.
+    my @children = $self->children();
+    for my $c (@children) {
+	$c->inheritfrom( $self )
+    }
+    
+}
+
+sub uninheritfrom {
+    my ($self, $parent, $stop) = @_;
+
+    # This effectively requires single inheritance to work as
+    # expected, we're removing all shared inheritence between the two
+    # objects.
+
+    # First, fix myself:
+    $self->{isa} = $self->{isa} ^ $parent->{isa};
+    
+    return if $stop;
+    # fix all children.  This will call children recursively, but
+    # they'll also call their children, so to prevent this we send a
+    # stop parameter to avoid the recursion.  Fugly.
+    my @children = $self->children();
+    for my $c (@children) {
+	$c->uninheritfrom( $parent, 1 );
+    }    
+}
+
+sub children {
+    my $self = shift;
+
+    return grep { $self->{me} != $_->{me}?$_->isa( $self ):() } @objects;
+}
+
+sub isa {
+    my ($self, $target) = @_;
+
+    my $isa = $self->{isa};
+    my $targetis = $target->{me};
+
+    my $mask = $isa & $targetis;
+    if ($mask) {
+	return 1;
+    } else {
+	return 0;
+    }
+}
