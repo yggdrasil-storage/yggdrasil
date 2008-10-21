@@ -104,41 +104,27 @@ constraints to the data stored for each property.
 Yggdrasil can either be flexible and treat all property values as a
 default type, or you can select between a set of types Yggdrasil
 guarantees no matter the back end it's running on.  The supported
-types are listed in the type table.
+types are listed in the type table on page \pageref{types}.
+ 
+\subsection{Inheritance} 
 
-\begin{table}[h]
-\centering
-\caption{Types in Yggdrasil}
-\label{types}
-
-\begin{tabular}{l l}
-\hline %inserts double horizontal lines
-Name & Definition  \\
-\hline
-TEXT & UTF-8 field of some size \\
-BOOLEAN & A field which only accepts 0 or 1 as its values \\
-VARCHAR(size) & A shorter text field, 1 to 255 units long \\
-SERIAL & An automatically incrementing field \\
-INTEGER & Signed, integers up to $2^16$ can be stored \\
-FLOAT & Signed, floats of some size \\
-DATE & A full date and time field, resolution varies \\
-\end{tabular}
-\end{table}
-
+Yggdrasil supports inheritance between entities.  This inheritance
+allows relations and properties of a parent class to be accessible to
+any of its children, at any depth.
 
 \subsection{Relations}
 
-To prepare Yggdrasil for relations between objects there needs to be a
-relation between the entities the objects represent.  This is to say
-one defines between what entities relations exist, then objects are
-linked together directly.  
+To prepare Yggdrasil for relations between objects, a relation between
+the entities the objects represent needs to be defined.  This is to
+say one defines the relations between entities, then objects are
+linked together on an object level as desired.
 
 This link allows Yggdrasil to trace connections within the system, and
 Yggdrasil will follow any links to any length it needs to find all
 possible relations between objects.  The idea here is that the user is
 freed from providing anything but direct relations, while Yggdrasil
 will do the work of building a network from this information.
- 
+
 \subsection{Temporal dimension}
 
 A principal idea of Yggdrasil is that data is only inserted, never
@@ -161,6 +147,36 @@ permanently delete any data.
 New entities and new relations between entities can be issued on the
 fly while the system is running live.  
 
+\subsection{Moving and renaming structure}
+
+Yggdrasil supports moving and renaming entities and properties.
+Moving an entity changes the entities place in the inheritance
+hierarchy to becoming a descendant of the target entity.  Renaming an
+entity simply changes the entities name.  Moving a property moves the
+property from the one entity to another, whilst renaming does the
+obvious thing.
+
+Moving and renaming structure is a way to dynamically allow for
+entities and properties to exist in two or more places at the same
+time within Yggdrasil.  The objective is to allow an administrator to
+provide backwards compatibility on a running system while at the same
+time performing the desired structural changes.  As long as a move or
+rename is active, Yggdrasil will refuse any structural changes that
+would collide with the namespaces under the effects of the move or
+rename.  In essence, any namespace that is active, moved or renamed is
+considered ``locked'' and unavailable.
+
+Once a move or rename is considered obsolete, that is, the
+compatibility layer provided is no longer required, the move or rename
+can be expired.  This frees up the namespace that was in use.  It
+might be prudent to leave this namespace open for a while if you're
+unsure if every Yggdrasil client is updated to use the new structure.
+
+Neither operation is allowed if a namespace collision would occur, and
+as described above, move and rename will also fail if there is a
+currently active \textbf{move} or \textbf{rename} at the destination.
+
+\newpage
 \section{Using Yggdrasil}
 
 \subsection{The basics}
@@ -215,7 +231,28 @@ typo.
 Objects are created to store values, and to do this Yggdrasil requires
 its user to define properties to its entities.  After we've defined
 the property, it is instantly accessible for objects of the class in
-question.
+question.  A property has a given type:
+
+\begin{table}[h]
+\centering
+\label{types}
+
+\begin{tabular}{l l}
+Name & Definition  \\
+\hline
+TEXT & UTF-8 field of some size \\
+BOOLEAN & A field which only accepts 0 or 1 as its values \\
+VARCHAR(size) & A shorter text field, 1 to 255 units long \\
+SERIAL & An automatically incrementing field \\
+INTEGER & Signed, integers up to $2^16$ can be stored \\
+FLOAT & Signed, floats of some size \\
+DATE & A full date and time field, resolution varies \\
+BINARY & A binary structure, up to 16MiB in size\\
+IP & IPv4 or IPv6 in any form\\
+\end{tabular}
+\caption{Types in Yggdrasil}
+\end{table}
+
 
 \lstset{caption=Defining properties,label=properties}
 \begin{lstlisting}
@@ -312,6 +349,7 @@ all paths leading between entities to give the same answer.
 
 \subsection{Object operations}
 
+\newpage
 \section{Internals}
 
 
