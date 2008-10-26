@@ -551,6 +551,14 @@ sub _fetch_related {
 
   my $storage = $self->{storage};
 
+  # This is less than pretty, but we're checking if we're going within
+  # the same entity.
+  if (! @$path) {
+      if ($start eq $stop) {
+	  return [ [ $start, $stop ] ];
+      }
+  }
+  
   return if grep { $_ eq $start } @$path;
   push( @$path, $start );
 
