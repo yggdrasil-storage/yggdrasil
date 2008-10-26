@@ -278,16 +278,26 @@ sub relations {
 	$class = Yggdrasil::_extract_entity($class);
     }
     
-    my $lref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
-					   { return => 'entity2', 
-					     where => { entity1 => $class } 
-					   } );
-    my $rref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
-					   { return => 'entity1', 
-					     where => { entity2 => $class } 
-					   } );
-    
-    return map { $_->{entity1} || $_->{entity2} } @$lref, @$rref;    
+#    my $lref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
+#					   { return => 'entity2', 
+#					     where => { entity1 => $class } 
+#					   } );
+#    my $rref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
+#					   { return => 'entity1', 
+#					     where => { entity2 => $class } 
+#					   } );
+#
+#    return map { $_->{entity1} || $_->{entity2} } @$lref, @$rref;    
+ 
+    my $other = $Yggdrasil::STORAGE->fetch( 'MetaRelation',
+					    { return => [ qw/entity1 entity2/ ],
+					      where => { entity1 => $class,
+							 entity2 => $class },
+					      bind => "or" 
+					    } );
+
+
+    return map { $_->{entity1} eq $class ? $_->{entity2} : $_->{entity1} } @$other
 }
 
 # fetches all current instance for an Entity
@@ -566,14 +576,23 @@ sub _fetch_related {
 
   # FIX: we need to implement "OR"-operator or "SET"-operator. Doing
   # to fecthes to simulate "OR" sucks.
-  my $rs = $storage->fetch( 'MetaRelation',
-			    { return => "entity2", 
-			      where => { entity1 => $start } } );
-  my $ls = $storage->fetch( 'MetaRelation',
-			    { return => "entity1",
-			      where => { entity2 => $start } } );
+#   my $rs = $storage->fetch( 'MetaRelation',
+# 			    { return => "entity2", 
+# 			      where => { entity1 => $start } } );
+#   my $ls = $storage->fetch( 'MetaRelation',
+# 			    { return => "entity1",
+# 			      where => { entity2 => $start } } );
 
-  my @siblings = map { $_->{entity1} || $_->{entity2} } @$rs, @$ls;
+#   my @siblings = map { $_->{entity1} || $_->{entity2} } @$rs, @$ls;
+
+  my $other = $storage->fetch( 'MetaRelation',
+			       { return => [ qw/entity1 entity2/ ],
+				 where => { entity1 => $start,
+					    entity2 => $start },
+				 bind => "or" 
+			       } );
+
+  my @siblings = map { $_->{entity1} eq $start ? $_->{entity2} : $_->{entity1} } @$other;
   foreach my $child ( @siblings ) {
     my $found_path = $self->_fetch_related( $child, $stop, $path, $all );
 

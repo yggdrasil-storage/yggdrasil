@@ -150,10 +150,16 @@ sub _fetch {
 	my $where    = $queryref->{where};
 	my $operator = $queryref->{operator} || '=';
 	my $as       = $queryref->{as};
+	my $bind     = $queryref->{bind} || 'and';
 
 	my ($rf_tmp, $w_tmp, $p_tmp) = $self->_process_where($schema, $where, $operator);
+	my $where_sql;
+	if( @$w_tmp ) {
+	    $where_sql = "(" . join( " ".$bind." ", @$w_tmp ) . ")";
+	}
+
 	push( @requested_fields, @$rf_tmp );
-	push( @wheres, @$w_tmp );
+	push( @wheres, $where_sql ) if $where_sql;
 	push( @params, @$p_tmp );
 
 	push @returns, $self->_process_return( $schema, $queryref->{return} );
@@ -181,9 +187,9 @@ sub _fetch {
     my ($package, $filename, $line, $subroutine, $hasargs,
      $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
 
-#    if ($subroutine =~ /property/) {
-#	print $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]\n";
-#    }  
+    if ($subroutine =~ /fetch/) {
+	print $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]\n";
+    }  
     
     $self->{logger}->debug( $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]" );
     return $self->_sql( $sql, @params ); 

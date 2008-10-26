@@ -131,8 +131,8 @@ sub raw_store {
     return $self->_raw_store( $self->_get_schema_name( $schema ), @_ );
 }
 
-# fetch ( schema1 { return => [ fieldnames ], where => { s1field1 => s1value1, ... }, operator => operator }
-#         schema2 { return => [ fieldnames ], where => { s2field => s2value, ... }, operator => operator }
+# fetch ( schema1 { return => [ fieldnames ], where => { s1field1 => s1value1, ... }, operator => operator, bind => bind-op }
+#         schema2 { return => [ fieldnames ], where => { s2field => s2value, ... }, operator => operator, bind => bind-op }
 #         { start => $start, stop => $stop } (optional)
 # We remap the schema names (the non-reference parameters) here.
 sub fetch {
