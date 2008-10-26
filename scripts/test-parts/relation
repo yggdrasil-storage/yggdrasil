@@ -6,7 +6,7 @@ use warnings;
 use Getopt::Long;
 
 use FindBin qw($Bin);
-use lib qq($Bin/../lib);
+use lib qq($Bin/../../lib);
 
 use Yggdrasil;
 
