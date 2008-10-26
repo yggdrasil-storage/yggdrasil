@@ -131,8 +131,8 @@ sub raw_store {
     return $self->_raw_store( $self->_get_schema_name( $schema ), @_ );
 }
 
-# fetch ( schema1 { return => [ fieldnames ], where => { s1field1 => s1value1, ... }, operator => operator, bind => bind-op }
-#         schema2 { return => [ fieldnames ], where => { s2field => s2value, ... }, operator => operator, bind => bind-op }
+# fetch ( schema1 { return => [ fieldnames ], where => [ s1field1 => s1value1, ... ], operator => operator, bind => bind-op }
+#         schema2 { return => [ fieldnames ], where => [ s2field => s2value, ... ], operator => operator, bind => bind-op }
 #         { start => $start, stop => $stop } (optional)
 # We remap the schema names (the non-reference parameters) here.
 sub fetch {
@@ -184,7 +184,7 @@ sub exists :method {
     $schema = $self->_get_schema_name( $schema );
     
     return undef unless $self->_structure_exists( $schema );
-    return $self->fetch( $schema, { return => '*', where => { @_ } });
+    return $self->fetch( $schema, { return => '*', where => [ @_ ] });
 }
 
 # search ( entity, property, value )
@@ -202,9 +202,9 @@ sub search {
     my $entitytable   = 'Entities';
 
     my ($e) = $self->fetch( $propertytable, { operator => 'LIKE',
-					      where  => { value => $value }},
+					      where  => [ value => $value ]},
 			    $entitytable,   { return => [ 'id', 'visual_id' ], 
-					      where  => { id => \qq<$propertytable.id>, entity => $entity }},
+					      where  => [ id => \qq<$propertytable.id>, entity => $entity ]},
 			    { start => $start, stop => $stop });
     my @hits;
     for my $hitref (@$e) {
@@ -288,13 +288,13 @@ sub _get_relation {
     my ($self, $e1, $e2) = @_;
 
     my $schemaref = $self->fetch( "MetaRelation" => { return => 'relation',
-							 where => { 'entity1' => $e1, 'entity2' => $e2 } } );
+							 where => [ 'entity1' => $e1, 'entity2' => $e2 ] } );
     my $schema = $schemaref->[0]->{relation};
     
     # Sigh, try it the other way around, we don't have operator support yet in the DB.
     unless ($schema) {
 	$schemaref = $self->fetch( "MetaRelation" => { return => 'relation',
-							  where => { 'entity2' => $e1, 'entity1' => $e2 } } );
+							  where => [ 'entity2' => $e1, 'entity1' => $e2 ] } );
 	$schema = $schemaref->[0]->{relation};
     }
     

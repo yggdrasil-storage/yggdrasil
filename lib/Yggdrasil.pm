@@ -159,8 +159,8 @@ sub exists {
     my $entity = _extract_entity($class);
 
     my $fetchref = $STORAGE->fetch( 'Entities', { return => 'id',
-						  where  => { visual_id => $visual_id,
-							      entity    => $entity } },
+						  where  => [ visual_id => $visual_id,
+							      entity    => $entity ] },
 				    { start => $time[0], stop => $time[1] } );
 
     return undef unless $fetchref->[0];

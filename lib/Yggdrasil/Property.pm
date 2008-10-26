@@ -65,8 +65,8 @@ sub _admin_define {
     my $property = shift;
 
     my $type = $self->{storage}->fetch( "MetaProperty" => { return => "type",
-							    where => { entity => $entity,
-								       property => $property } } );
+							    where => [ entity => $entity,
+								       property => $property ] } );
     
     $type = $type->[0]->{type} || "TEXT";
     $self->_define( $entity, $property, type => $type, raw => 1 );

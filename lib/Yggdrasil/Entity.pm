@@ -33,7 +33,7 @@ sub _admin_dump {
     my $self   = shift;
     my $entity = shift;
 
-    return $self->{storage}->raw_fetch( Entities => { where => { entity => $entity } } );
+    return $self->{storage}->raw_fetch( Entities => { where => [ entity => $entity ] } );
 }
 
 sub _admin_restore {
@@ -49,9 +49,9 @@ sub _admin_restore {
 
 	my $idfetch = $self->{storage}->fetch( Entities =>
 					       { return => "id", 
-						 where => { 
+						 where => [ 
 						     visual_id => $id,
-						     entity    => $entity } } );
+						     entity    => $entity ] } );
 	my $idnum = $idfetch->[0]->{id};
 	$map{$id} = $idnum;
     }

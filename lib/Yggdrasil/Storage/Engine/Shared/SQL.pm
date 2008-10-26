@@ -259,7 +259,7 @@ sub _store {
     my $fields = $data{fields};
 
     # Check if we already have the value
-    my $aref = $self->fetch( $schema, { where => { %$fields } } );
+    my $aref = $self->fetch( $schema, { where => [ %$fields ] } );
     return 1 if @$aref;
     
     # Expire the old value
@@ -326,13 +326,15 @@ sub _expire {
 sub _process_where {
     my $self     = shift;
     my $schema   = shift;
-    my $where    = shift;
+    my $where    = shift || [];
     my $operator = shift;
-    
+
     my( @requested_fields, @wheres, @params );
-    for my $fieldname (keys %$where) {
+    for( my $i=0; $i < @$where; $i += 2 ) {
 	my $localoperator = $operator;
-	my $value = $where->{$fieldname};
+
+	my $fieldname = $where->[$i];
+	my $value = $where->[$i+1];
 	
 	$value = '%' . $value . '%' if $localoperator eq 'LIKE';
 	my @fqfn = $self->_qualify( $schema, $fieldname );

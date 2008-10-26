@@ -42,10 +42,10 @@ sub new {
 sub _get_id {
     my $self = shift;
     my $entity = $self->_extract_entity();
-    my $idfetch = $self->{storage}->fetch( 'Entities', { return => "id", where => { 
+    my $idfetch = $self->{storage}->fetch( 'Entities', { return => "id", where => [ 
 										   visual_id => $self->id(),
 										   entity    => $entity,
-										  } } );
+										  ] } );
     return $idfetch->[0]->{id};
 }
 
@@ -84,10 +84,10 @@ sub _get_in_time {
 
     # Short circuit the joins if we're looking for the current object
     unless (@time) {
-	my $fetchref = $Yggdrasil::STORAGE->fetch( 'Entities' => { return => "id", where => {
+	my $fetchref = $Yggdrasil::STORAGE->fetch( 'Entities' => { return => "id", where => [
 											     visual_id => $visual_id,
 											     entity    => $entity,
-											    } } );
+											    ] } );
 	my $id = $fetchref->[0]->{id};
 
 	if ($id) {
@@ -97,11 +97,11 @@ sub _get_in_time {
 	}
     }
     
-    my $fetchref = $Yggdrasil::STORAGE->fetch( "MetaProperty" => { return => "property", where => { entity => $entity } },
+    my $fetchref = $Yggdrasil::STORAGE->fetch( "MetaProperty" => { return => "property", where => [ entity => $entity ] },
 					       { start => $time[0], stop => $time[1] } );
 
     my @wheres;
-    push( @wheres, 'Entities' => { join => "left", where => { visual_id => $visual_id, entity => $entity } } );
+    push( @wheres, 'Entities' => { join => "left", where => [ visual_id => $visual_id, entity => $entity ] } );
 
     foreach my $prop ( map { $_->{property} } @$fetchref ) {
 	my $table = join("_", $entity, $prop);
@@ -210,7 +210,7 @@ sub property {
 	$storage->store( $schema, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 
-    my $r = $storage->fetch( $schema => { return => "value", where => { id => $self->{_id} } },
+    my $r = $storage->fetch( $schema => { return => "value", where => [ id => $self->{_id} ] },
 			     { start => $self->{_start}, stop => $self->{_stop} } );
     return $r->[0]->{value};
 }
@@ -232,7 +232,7 @@ sub property_exists {
     # Check to see if the property exists.
     foreach my $e ( $entity, @ancestors ) {
 	my $aref = $storage->fetch( 'MetaProperty', { return => 'property',
-						      where => { entity => $e, property => $property }},
+						      where => [ entity => $e, property => $property ] },
 				    { start => $start, stop => $stop });
 
 	# The property name might be "0".
@@ -259,7 +259,7 @@ sub properties {
     
     foreach my $e ( $class, @ancestors ) {
 	my $aref = $storage->fetch( 'MetaProperty', 
-				    { return => 'property', where => { entity => $e }},
+				    { return => 'property', where => [ entity => $e ] },
 				    { start  => $start, stop => $stop });
 	
 	$properties{ $_->{property} } = 1 for @$aref;
@@ -280,19 +280,19 @@ sub relations {
     
 #    my $lref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
 #					   { return => 'entity2', 
-#					     where => { entity1 => $class } 
+#					     where => [ entity1 => $class ] 
 #					   } );
 #    my $rref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
 #					   { return => 'entity1', 
-#					     where => { entity2 => $class } 
+#					     where => [ entity2 => $class ]
 #					   } );
 #
 #    return map { $_->{entity1} || $_->{entity2} } @$lref, @$rref;    
  
     my $other = $Yggdrasil::STORAGE->fetch( 'MetaRelation',
 					    { return => [ qw/entity1 entity2/ ],
-					      where => { entity1 => $class,
-							 entity2 => $class },
+					      where => [ entity1 => $class,
+							 entity2 => $class ],
 					      bind => "or" 
 					    } );
 
@@ -310,7 +310,7 @@ sub instances {
 	$class = Yggdrasil::_extract_entity($class);
     }
     
-    my $instances = $Yggdrasil::STORAGE->fetch( Entities => { return => 'visual_id', where => { entity => $class } } );
+    my $instances = $Yggdrasil::STORAGE->fetch( Entities => { return => 'visual_id', where => [ entity => $class ] } );
     
     return map { $_->{visual_id} } @$instances;
 }
@@ -339,8 +339,8 @@ sub _get_meta {
 
     foreach my $e ( $class, @ancestors ) {
 	my $ret = $storage->fetch( 'MetaProperty',{ return => $meta,
-						    where  => { entity   => $e,
-								property => $property }},
+						    where  => [ entity   => $e,
+								property => $property ]},
 				   { start => $start, stop => $stop });
 	next unless @$ret;
 	return $ret->[0]->{$meta};
@@ -493,7 +493,8 @@ sub fetch_related {
     my $first = $ordered[0];
     my $side = $self->_relation_side( $first, $source );
     my $firsttable = $self->_map_schema_name( $first );
-    push( @schema, $firsttable => { where => { $side => $self->{_id} } } );
+#    push( @schema, $firsttable => { where => [ $side => $self->{_id} ] } );
+    push( @schema, $firsttable => { where => [ lval => $self->{_id}, rval => $self->{_id} ], bind => "or" } );
 
     my $prev = $first;
     for( my $i=1; $i<@ordered; $i++ ) {
@@ -506,15 +507,24 @@ sub fetch_related {
       my $tabname = $self->_map_schema_name( $table );
       my $prevtab = $self->_map_schema_name( $prev );
       
-      push( @schema, $tabname => { where => { $current => \qq<$prevtab.$next> } } );
+#      push( @schema, $tabname => { where => [ $current => \qq<$prevtab.$next> ] } );
+      push( @schema, $tabname => { where => [ lval => \qq<$prevtab.lval>, lval => \qq<$prevtab.rval>, rval => \qq<$prevtab.lval>, rval => \qq<$prevtab.rval> ], bind => "or" } );
+
       $prev = $table;
     }
     
     $side = $self->_relation_side( $ordered[-1], $path->[-1] );
     my ($ordtab, $pathtab) = ($self->_map_schema_name( $ordered[-1] ), $self->_map_schema_name( $path->[-1] ));
-    push(@schema, Entities => { return => "visual_id", 
-				where => { id     => \qq<$ordtab.$side>,
-					   entity => $path->[-1] } } );
+#    push(@schema, Entities => { return => "visual_id", 
+#				where => [ id     => \qq<$ordtab.$side>,
+#					   entity => $path->[-1] ] } );
+
+     push(@schema,
+ 	 Entities => { return => "visual_id", 
+ 		       where => [ id     => \qq<$ordtab.lval>,
+ 				  id     => \qq<$ordtab.rval> ],
+ 		       bind => "or" },
+ 	 Entities => { where => [ entity => $path->[-1] ] } );
 
     my $pathtable  = $self->_map_schema_name( $path->[-1] );
 
@@ -578,17 +588,17 @@ sub _fetch_related {
   # to fecthes to simulate "OR" sucks.
 #   my $rs = $storage->fetch( 'MetaRelation',
 # 			    { return => "entity2", 
-# 			      where => { entity1 => $start } } );
+# 			      where => [ entity1 => $start ] } );
 #   my $ls = $storage->fetch( 'MetaRelation',
 # 			    { return => "entity1",
-# 			      where => { entity2 => $start } } );
+# 			      where => [ entity2 => $start ] } );
 
 #   my @siblings = map { $_->{entity1} || $_->{entity2} } @$rs, @$ls;
 
   my $other = $storage->fetch( 'MetaRelation',
 			       { return => [ qw/entity1 entity2/ ],
-				 where => { entity1 => $start,
-					    entity2 => $start },
+				 where => [ entity1 => $start,
+					    entity2 => $start ],
 				 bind => "or" 
 			       } );
 
@@ -617,7 +627,7 @@ sub _ancestors {
     my @ancestors;
     my %seen = ( $entity => 1 );
 
-    my $r = $storage->fetch( 'MetaInheritance', { return => "parent", where => { child => $entity } },
+    my $r = $storage->fetch( 'MetaInheritance', { return => "parent", where => [ child => $entity ] },
 			     { start => $start, stop => $stop });
     while( @$r ) {
 	my $parent = $r->[0]->{parent};
@@ -625,7 +635,7 @@ sub _ancestors {
 	$seen{$parent} = 1;
 	push( @ancestors, $parent );
 
-	$r = $storage->fetch( 'MetaInheritance', { return => "parent", where => { child => $parent } },
+	$r = $storage->fetch( 'MetaInheritance', { return => "parent", where => [ child => $parent ] },
 			      { start => $start, stop => $stop } );
     }
 
