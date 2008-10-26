@@ -86,3 +86,6 @@
   property?  If once, NULL was allowed, but now isn't anymore?  This
   isn't supported at all at the moment (you can't change meta
   information in any way).
+
+* Inhertited relations, what happens when relations are broken?  Do the
+  active relations expire?  
