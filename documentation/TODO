@@ -89,3 +89,7 @@
 
 * Inhertited relations, what happens when relations are broken?  Do the
   active relations expire?  
+
+* Support hints for the backend, foreign keys, indexing and such
+   things.  These are optional for the backend to support, but will
+   probably optimize performance.
