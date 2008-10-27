@@ -55,8 +55,8 @@ $laptop->property( $ip => '127.0.0.1' );
 is( $laptop->property( $ip ), '127.0.0.1', "($host instance)->property($ip)" );
 
 # --- Define Relation 'Host' <=> 'Room'
-define Yggdrasil::Relation $host, $room;
-$laptop->link( $closet );
+my $h_r = define Yggdrasil::Relation $host, $room;
+$h_r->link( $laptop, $closet );
 my @host = $closet->fetch_related( $host );
 ok( @host == 1, "1 host in the closet" );
 isa_ok( $host[0], $host, "host in the closet" );
@@ -68,7 +68,7 @@ isa_ok( $room[0], $room, "room containing 1 host" );
 is( $room[0]->id(), "Closet", "closet contains laptop" );
 
 # --- unlink
-$closet->unlink( $laptop );
+$h_r->unlink( $laptop, $closet );
 @host = $closet->fetch_related( $host );
 ok( @host == 0, "after unlink; Closet is empty" );
 
@@ -100,32 +100,32 @@ my %hosts;
 $hosts{$_} = $host->new($_) for qw/cod salmon herring hopper lovelace/;
 
 
-define Yggdrasil::Relation $person, $host;
-define Yggdrasil::Relation $host, $room;
-define Yggdrasil::Relation $room, $phone;
-define Yggdrasil::Relation $phone, $provider;
+my $p_h = define Yggdrasil::Relation $person, $host;
+$h_r = define Yggdrasil::Relation $host, $room;
+my $r_p = define Yggdrasil::Relation $room, $phone;
+my $p_p = define Yggdrasil::Relation $phone, $provider;
 
-$girls{Sandy}->link( $hosts{cod} );
-$girls{Mindy}->link( $hosts{salmon} );
-$girls{Cindy}->link( $hosts{herring} );
-$boys{Mark}->link( $hosts{hopper} );
-$boys{Clark}->link( $hosts{lovelace} );
+$p_h->link( $girls{Sandy}, $hosts{cod} );
+$p_h->link( $girls{Mindy}, $hosts{salmon} );
+$p_h->link( $girls{Cindy}, $hosts{herring} );
+$p_h->link( $boys{Mark}, $hosts{hopper} );
+$p_h->link( $boys{Clark}, $hosts{lovelace} );
 
-$hosts{cod}->link( $rooms{Aquarium} );
-$hosts{salmon}->link( $rooms{Aquarium} );
-$hosts{herring}->link( $rooms{Aquarium} );
-$hosts{hopper}->link( $rooms{NerdLab} );
-$hosts{lovelace}->link( $rooms{NerdLab} );
+$h_r->link( $hosts{cod}, $rooms{Aquarium} );
+$h_r->link( $hosts{salmon}, $rooms{Aquarium} );
+$h_r->link( $hosts{herring}, $rooms{Aquarium} );
+$h_r->link( $hosts{hopper}, $rooms{NerdLab} );
+$h_r->link( $hosts{lovelace}, $rooms{NerdLab} );
 
-$rooms{NerdLab}->link( $phones{'555-0001'} );
-$rooms{NerdLab}->link( $phones{'555-1000'} );
-$rooms{Aquarium}->link( $phones{'555-1234'} );
-$rooms{Aquarium}->link( $phones{'555-9999'} );
+$r_p->link( $rooms{NerdLab}, $phones{'555-0001'} );
+$r_p->link( $rooms{NerdLab}, $phones{'555-1000'} );
+$r_p->link( $rooms{Aquarium}, $phones{'555-1234'} );
+$r_p->link( $rooms{Aquarium}, $phones{'555-9999'} );
 
-$phones{'555-0001'}->link( $providers{TelSat} );
-$phones{'555-1000'}->link( $providers{TelSat} );
-$phones{'555-1234'}->link( $providers{SuperPhone} );
-$phones{'555-9999'}->link( $providers{SuperPhone} );
+$p_p->link( $phones{'555-0001'}, $providers{TelSat} );
+$p_p->link( $phones{'555-1000'}, $providers{TelSat} );
+$p_p->link( $phones{'555-1234'}, $providers{SuperPhone} );
+$p_p->link( $phones{'555-9999'}, $providers{SuperPhone} );
 
 # --- On what numbers can the girls be reached?
 for my $name ( keys %girls ) {
@@ -152,9 +152,9 @@ is( $v[0]->id(), "SuperPhone", "SuperPhone provides phone service for phones in 
 
 
 # --- Sandy get a personal phone
-define Yggdrasil::Relation $person, $phone;
+my $p_t = define Yggdrasil::Relation $person, $phone;
 $phones{'555-Sandy'} = $phone->new('555-Sandy');
-$phones{'555-Sandy'}->link( $girls{Sandy} );
+$p_t->link( $girls{Sandy}, $phones{'555-Sandy'} );
     
 # --- On what numbers can we reach Sandy?
 @v = $girls{Sandy}->fetch_related( $phone );
@@ -162,6 +162,6 @@ ok( @v == 3, "Sandy can now be reached with three numbers" );
 ok( (grep { $_->id() eq '555-Sandy' } @v), "and one of the numbers are 555-Sandy" );
 
 # --- Sandy drops new phone into the toilet
-$girls{Sandy}->unlink( $phones{'555-Sandy'} );
+$p_p->unlink( $girls{Sandy}, $phones{'555-Sandy'} );
 @v = $girls{Sandy}->fetch_related( $phone );
 ok( @v == 2, "Sandy can now only be reached with two numbers again" );

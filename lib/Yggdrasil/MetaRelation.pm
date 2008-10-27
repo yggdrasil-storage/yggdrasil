@@ -7,30 +7,63 @@ use base qw(Yggdrasil::Meta);
 
 sub _define {
   my $self = shift;
+
+
+  $self->{storage}->define( "Relations", 
+			    fields   => { 
+					 id   => { type => 'INTEGER' },
+					 lval => { type => "INTEGER" },
+					 rval => { type => "INTEGER" },
+					},
+			    temporal => 1,
+			    nomap    => 1,
+			    hints    => {
+					 id   => { index => 1, foreign => 'MetaRelation' },
+					 lval => { foreign => 'Entities' },
+					 rval => { foreign => 'Entities' },
+					 },
+			  );
+    
   
-  return $self->{storage}->define( "MetaRelation",
-				   fields   => { relation    => { type => "VARCHAR(255)", null => 0 },
-						 entity1     => { type => "VARCHAR(255)", null => 0 },
-						 entity2     => { type => "VARCHAR(255)", null => 0 },
-						 requirement => { type => "VARCHAR(255)", null => 1 },
-					       },
-				   temporal => 1,
-				   nomap    => 1 );
+  $self->{storage}->define( "MetaRelation",
+			    fields   => { id          => { type => "SERIAL" },
+					  requirement => { type => "VARCHAR(255)", null => 1 },
+					  lval        => { type => "INTEGER",      null => 0 },
+					  rval        => { type => "INTEGER",      null => 0 },
+					  label       => { type => 'VARCHAR(255)', null => 0 },
+					  l2r         => { type => 'VARCHAR(255)', null => 1 },
+					  r2l         => { type => 'VARCHAR(255)', null => 1 },
+					},
+			    temporal => 1,
+			    nomap    => 1,
+			    hints    => {
+					 lval => { index => 1, foreign => 'MetaEntity' },
+					 rval => { index => 1, foreign => 'MetaEntity' },
+					 }
+			  );
 }
 
 sub _meta_add {
   my $self     = shift;
-  my $relation = shift;
-  my $entity1  = shift;
-  my $entity2  = shift;
-
+  my $lval  = shift;
+  my $rval  = shift;
+  my $label = shift;
+  my %param = @_;
+  
   $self->{storage}->store( "MetaRelation",
-			   key    => "relation",
+			   key    => "label",
 			   fields => {
-				      relation => $relation, 
-				      entity1 => $entity1,
-				      entity2 => $entity2 
+				      label => $label,
+				      lval  => $lval,
+				      rval  => $rval,
+				      l2r   => $param{l2r},
+				      r2l   => $param{r2l},
+
+				      requirement => $param{requirement},				      
 				     });
+  
+  my $ref = $self->{storage}->fetch( 'MetaRelation', { return => 'id', where => [ label => $label ]});
+  return $ref->[0]->{id};
 }
 
 sub _admin_dump {

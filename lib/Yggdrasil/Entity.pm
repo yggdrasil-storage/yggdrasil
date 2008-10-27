@@ -14,7 +14,7 @@ sub _define {
 
     # --- Add to MetaEntity, noop if it exists.
     $self->_meta_add($name);
-    
+
     # --- Update MetaInheritance
     if( defined $params{inherit} ) {
 	my $parent = Yggdrasil::_extract_entity($params{inherit});
@@ -33,7 +33,8 @@ sub _admin_dump {
     my $self   = shift;
     my $entity = shift;
 
-    return $self->{storage}->raw_fetch( Entities => { where => [ entity => $entity ] } );
+    return $self->{storage}->raw_fetch(MetaEntity => { where => [ entity => $entity ]},
+				       Entities   => { where => [ entity => \qq{MetaEntity.id} ] } );
 }
 
 sub _admin_restore {

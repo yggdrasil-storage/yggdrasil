@@ -5,7 +5,7 @@ use base qw(Yggdrasil);
 sub define {
     my $class = shift;
     my $self  = $class->new(@_);
-    
+
     return $self->_define(@_);
 }
 

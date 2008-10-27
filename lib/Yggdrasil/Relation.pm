@@ -6,58 +6,99 @@ use warnings;
 use base qw(Yggdrasil::MetaRelation);
 
 sub _define {
-  my $self    = shift;
-  my $entity1 = shift;
-  my $entity2 = shift;
+  my $self = shift;
+  my $lval = Yggdrasil::_extract_entity( shift );    
+  my $rval = Yggdrasil::_extract_entity( shift );
   my %param   = @_;
 
-  $entity1 = Yggdrasil::_extract_entity($entity1);
-  $entity2 = Yggdrasil::_extract_entity($entity2);
+  my $label = $param{'label'} || "$lval<->$rval";
+  $self->{label} = $label;
 
+  $lval = $self->{storage}->fetch( 'MetaEntity', { return => 'id', where => [ entity => $lval ] } );
+  $rval = $self->{storage}->fetch( 'MetaEntity', { return => 'id', where => [ entity => $rval ] } );
+
+  $lval = $lval->[0]->{id};
+  $rval = $rval->[0]->{id};
+  
   unless( $param{raw} ) {
-      my $schema = $self->{storage}->_get_relation( $entity1, $entity2 );
-      return $schema if $schema;
+      my $id = $self->{storage}->_get_relation( $label );
+      if (defined $id) {
+	  $self->{_id} = $id;
+	  return $self 
+      }
   }
-  
-  my $name = join("_R_", $entity1, $entity2);
 
-  # --- Create Relation table
-  $self->{storage}->define( $name,
-			    fields   => {
-					 id   => { type => 'SERIAL'  },
-					 lval => { type => "INTEGER" },
-					 rval => { type => "INTEGER" },
-					},
-			    temporal => 1 );
-  
   # --- Add to MetaRelation
-  $self->_meta_add($name, $entity1, $entity2) unless $param{raw};
+  my $id = $self->_meta_add($lval, $rval, $label, %param) unless $param{raw};
+  $self->{_id} = $id;
+  return $self;
 }
+
+sub _get_real_val {
+    my $self  = shift;
+    my $side  = shift;
+    my $label = shift;
+
+    my $retref = $self->{storage}->fetch( 'MetaEntity', { return => 'entity',
+							  where  => [ id => \qq<MetaRelation.$side> ]},
+					  'MetaRelation', { where => [ label => $label ]});
+    return $retref->[0]->{entity};
+}
+
+sub link :method {
+  my $self = shift;
+  my $lval = shift;
+  my $rval = shift;
+
+  my $label = $self->{label};
+
+  my $reallval = $self->_get_real_val( 'lval', $label );
+  my $realrval = $self->_get_real_val( 'rval', $label );
+
+  print "$reallval, $realrval\n";
+  
+  Yggdrasil::fatal( $lval->id() . " cannot use the relation $label, incompatible instance / inheritance.")
+      unless $lval->isa( $reallval );
+
+  Yggdrasil::fatal( $rval->id() . " cannot use the relation $label, incompatible instance / inheritance.")
+      unless $rval->isa( $realrval );
+
+  $self->{storage}->store( 'Relations',
+			   key => 'id',
+			   fields => {
+				      'id'   => $self->{_id},
+				      'lval' => $lval->{_id},
+				      'rval' => $rval->{_id} });
+}
+
+sub unlink :method {
+  my $self = shift;
+  my $lval = shift;
+  my $rval = shift;
+
+  $self->{storage}->expire( 'Relations', lval => $lval->{_id}, rval => $rval->{_id} );
+}
+
 
 sub _admin_dump {
     my $self = shift;
-    my $relation = shift;
 
-    return $self->{storage}->raw_fetch( $relation );
+    return $self->{storage}->raw_fetch( 'Relations' );
 }
 
 sub _admin_restore {
     my $self = shift;
-    my $entity1 = shift;
-    my $entity2 = shift;
     my $data = shift;
 
-    my $schema = join("_R_", $entity1, $entity2);
-
-    $self->{storage}->raw_store( $schema, fields => $data );
+    $self->{storage}->raw_store( 'Relations', fields => $data );
 }
 
 sub _admin_define {
     my $self = shift;
-    my $entity1 = shift;
-    my $entity2 = shift;
+    my $lval = shift;
+    my $rval = shift;
 
-    $self->_define( $entity1, $entity2, raw => 1 );
+    $self->_define( $lval, $rval, raw => 1 );
 }
 
 1;

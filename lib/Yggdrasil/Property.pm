@@ -27,10 +27,15 @@ sub _define {
 						     null => $data{null}}},
 			    
 			    temporal => 1 );
+
+  my $idref = $self->{storage}->fetch( MetaEntity => { return => 'id',
+						       where  => [ entity => $entity ] } );
+
+  Yggdrasil::fatal( "Unknown entity '$entity' requested." ) unless @$idref;
   
   # --- Add to MetaProperty
-  $self->{storage}->store( "MetaProperty", key => "id",
-			   fields => { entity   => $entity,
+  $self->{storage}->store("MetaProperty", key => "id",
+			   fields => { entity   => $idref->[0]->{id},
 				       property => $property,
 				       type     => $data{type},
 				       nullp    => $data{null},

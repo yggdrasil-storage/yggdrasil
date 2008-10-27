@@ -285,20 +285,21 @@ sub _check_valid_type {
 }
 
 sub _get_relation {
-    my ($self, $e1, $e2) = @_;
+    my ($self, $label) = @_;
 
-    my $schemaref = $self->fetch( "MetaRelation" => { return => 'relation',
-							 where => [ 'entity1' => $e1, 'entity2' => $e2 ] } );
-    my $schema = $schemaref->[0]->{relation};
-    
-    # Sigh, try it the other way around, we don't have operator support yet in the DB.
-    unless ($schema) {
-	$schemaref = $self->fetch( "MetaRelation" => { return => 'relation',
-							  where => [ 'entity2' => $e1, 'entity1' => $e2 ] } );
-	$schema = $schemaref->[0]->{relation};
-    }
-    
-    return $schema;
+    my $ref = $self->fetch( "MetaRelation" => { return => 'id',
+						where  => [ 'label' => $label ] } );
+    return $ref->[0]->{id};
+}
+
+sub _get_entity {
+    my $self   = shift;
+    my $entity = shift;
+
+    my $ref = $self->fetch( "MetaEntity" => { return => 'id',
+					      where  => [ 'entity' => $entity ] } );
+
+    return $ref->[0]->{id};
 }
 
 # Ask if a schema is temporal.  Schema presumed to be mapped, or a

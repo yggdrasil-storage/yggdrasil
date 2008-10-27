@@ -9,18 +9,26 @@ sub _define {
     my $self = shift;
 
     # --- Tell Storage to create SCHEMA, noop if it exists.
-    $self->{storage}->define( "Entities", 
+    $self->{storage}->define( "Entities",
 			      fields   => { 
-				  entity    => { type => "TEXT" },
-				  visual_id => { type => "TEXT" },
-				  id        => { type => "SERIAL" } },
-			      temporal => 0 );
+					   entity    => { type => "INTEGER" },
+					   visual_id => { type => "TEXT" },
+					   id        => { type => "SERIAL" } },
+			      temporal => 1,
+			      nomap    => 1,
+			      hints    => {
+					   entity => { foreign => 'MetaEntity' },
+					  }			      
+			    );
     
 
     $self->{storage}->define( "MetaEntity",
-			      fields   => { entity => { type => "VARCHAR(255)", null => 0, index => 1 } },
+			      fields   => {
+					   id     => { type => 'SERIAL' },
+					   entity => { type => "VARCHAR(255)", null => 0 },
+					  },
 			      temporal => 1,
-			      nomap    => 1 );
+			      nomap    => 1, );
 }
 
 sub _meta_add {

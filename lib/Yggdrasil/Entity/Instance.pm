@@ -29,9 +29,12 @@ sub new {
   $self->{_id} = $self->_get_id(); 
 
   unless ($self->{_id}) { 
+      my $idref = $self->{storage}->fetch('MetaEntity', { return => 'id',
+							  where => [ entity => $entity ],
+							});
       $self->{storage}->store( 'Entities', fields => {
 						      visual_id => $visual_id,
-						      entity    => $entity,
+						      entity    => $idref->[0]->{id},
 						     } );
       $self->{_id} = $self->_get_id();
   }
@@ -42,10 +45,16 @@ sub new {
 sub _get_id {
     my $self = shift;
     my $entity = $self->_extract_entity();
-    my $idfetch = $self->{storage}->fetch( 'Entities', { return => "id", where => [ 
-										   visual_id => $self->id(),
-										   entity    => $entity,
-										  ] } );
+
+    my $idfetch = $self->{storage}->fetch('MetaEntity', { 
+							 where => [ entity => $entity, 
+								    id     => \qq{Entities.entity}, ],
+							},
+					  'Entities', {
+						       return => "id",
+						       where => [ 
+								 visual_id => $self->id(),
+								] } );
     return $idfetch->[0]->{id};
 }
 
@@ -75,21 +84,23 @@ sub get {
   }
 }
 
-sub _get_in_time {
+sub _get_in_time {    
     my $class = shift;
     my $visual_id = shift;
     my @time = @_;
-
+    
     my $entity = Yggdrasil::_extract_entity($class);
+    my $idref = $Yggdrasil::STORAGE->fetch('MetaEntity', { 
+							  where => [ entity => $entity, 
+								     id     => \qq{Entities.entity}, ],
+							 },
+					   'Entities', {
+							return => "id",
+							where => [ visual_id => $visual_id ] } );
+    my $id = $idref->[0]->{id};
 
     # Short circuit the joins if we're looking for the current object
     unless (@time) {
-	my $fetchref = $Yggdrasil::STORAGE->fetch( 'Entities' => { return => "id", where => [
-											     visual_id => $visual_id,
-											     entity    => $entity,
-											    ] } );
-	my $id = $fetchref->[0]->{id};
-
 	if ($id) {
 	    return { id => $id };
 	} else {
@@ -97,19 +108,23 @@ sub _get_in_time {
 	}
     }
     
-    my $fetchref = $Yggdrasil::STORAGE->fetch( "MetaProperty" => { return => "property", where => [ entity => $entity ] },
-					       { start => $time[0], stop => $time[1] } );
-
+    my $fetchref = $Yggdrasil::STORAGE->fetch('MetaEntity', { where => [
+									entity => $entity, 
+									id     => \qq<MetaProperty.entity>,
+								       ]},
+					      "MetaProperty" => { return => "property" },
+					      { start => $time[0], stop => $time[1] } );
+    
     my @wheres;
-    push( @wheres, 'Entities' => { join => "left", where => [ visual_id => $visual_id, entity => $entity ] } );
-
+    push( @wheres, 'Entities' => { join => "left", where => [ id => $id ] } );
+    
     foreach my $prop ( map { $_->{property} } @$fetchref ) {
 	my $table = join("_", $entity, $prop);
 	push( @wheres, $table => { join => "left" } );
     }
 
     my $ref = $Yggdrasil::STORAGE->fetch( @wheres, { start => $time[0], stop => $time[1] } );
-
+    
     # If we're within a time slice, filter out the relevant hits, sort
     # them and return.  Remember to set the start of the first hit to
     # $time[0] (the first timestamp in the request) and the end time
@@ -133,6 +148,13 @@ sub _get_in_time {
     }
     
     return @$ref;
+}
+
+sub _define {
+    my $self   = shift;
+    my $entity = $self->_extract_entity();
+    
+    return Yggdrasil::Property->define( $entity, @_ );
 }
 
 # Filter out the unique start times between $start and $stop from all
@@ -173,13 +195,6 @@ sub _filter_start_times {
 	}
     }
     return \%times;
-}
-  
-sub _define {
-  my $self     = shift;
-  my $entity = $self->_extract_entity();
-
-  return Yggdrasil::Property->define( $entity, @_ );
 }
 
 sub property {
@@ -231,9 +246,12 @@ sub property_exists {
     
     # Check to see if the property exists.
     foreach my $e ( $entity, @ancestors ) {
-	my $aref = $storage->fetch( 'MetaProperty', { return => 'property',
-						      where => [ entity => $e, property => $property ] },
-				    { start => $start, stop => $stop });
+	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
+							      entity => $e,
+							    ]},
+				   'MetaProperty', { return => 'property',
+						     where => [ property => $property ] },
+				   { start => $start, stop => $stop });
 
 	# The property name might be "0".
 	return join("_", $e, $property) if defined $aref->[0]->{property};
@@ -258,8 +276,11 @@ sub properties {
     my %properties;
     
     foreach my $e ( $class, @ancestors ) {
-	my $aref = $storage->fetch( 'MetaProperty', 
-				    { return => 'property', where => [ entity => $e ] },
+	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
+							      entity => $e,
+							    ]},
+				   'MetaProperty', 
+				    { return => 'property' },
 				    { start  => $start, stop => $stop });
 	
 	$properties{ $_->{property} } = 1 for @$aref;
@@ -288,19 +309,22 @@ sub relations {
 #					   } );
 #
 #    return map { $_->{entity1} || $_->{entity2} } @$lref, @$rref;    
- 
-    my $other = $Yggdrasil::STORAGE->fetch( 'MetaRelation',
-					    { return => [ qw/entity1 entity2/ ],
-					      where => [ entity1 => $class,
-							 entity2 => $class ],
+
+    # FIXME, needs to check for all parents, not just self.
+    
+    my $other = $Yggdrasil::STORAGE->fetch('MetaEntity', { where => [ entity => $class ] },
+					   'MetaRelation',
+					    { return => [ 'label' ],
+					      where => [ rval => \qq{MetaEntity.id},
+							 lval => \qq{MetaEntity.id} ],
 					      bind => "or" 
 					    } );
 
 
-    return map { $_->{entity1} eq $class ? $_->{entity2} : $_->{entity1} } @$other
+    return map { $_->{label} } @$other
 }
 
-# fetches all current instance for an Entity
+# fetches all current instances for an Entity
 sub instances {
     my $class = shift;
 
@@ -310,8 +334,11 @@ sub instances {
 	$class = Yggdrasil::_extract_entity($class);
     }
     
-    my $instances = $Yggdrasil::STORAGE->fetch( Entities => { return => 'visual_id', where => [ entity => $class ] } );
-    
+    my $instances = $Yggdrasil::STORAGE->fetch( 'MetaEntity' => { where  => [ entity => $class ] },
+					        'Entities'   => { return => 'visual_id',
+								  where => [ entity => \qq{MetaEntity.id} ] } );
+
+    # FIXME, return objects.
     return map { $_->{visual_id} } @$instances;
 }
 
@@ -338,8 +365,9 @@ sub _get_meta {
     my $storage = $Yggdrasil::STORAGE;
 
     foreach my $e ( $class, @ancestors ) {
-	my $ret = $storage->fetch( 'MetaProperty',{ return => $meta,
-						    where  => [ entity   => $e,
+	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e ]},
+				  'MetaProperty',{ return => $meta,
+						    where  => [ entity   => \qq{MetaEntity.id},
 								property => $property ]},
 				   { start => $start, stop => $stop });
 	next unless @$ret;
@@ -365,10 +393,10 @@ sub search {
     my ($class, $key, $value) = (shift, shift, shift);
     my $package = $class;
     $class = Yggdrasil::_extract_entity($class);
-
+    
     # Passing the possible time elements onwards as @_ to the Storage layer.
     my ($nodes) = $Yggdrasil::STORAGE->search( $class, $key, $value, @_);
-
+    
     my @hits;
     for my $hit (@$nodes) {
 	my $obj = $package->SUPER::new();
@@ -406,45 +434,6 @@ sub isa {
     }
 }
 
-sub link :method {
-  my $self     = shift;
-  my $instance = shift;
-
-  my $e1 = $self->_extract_entity();
-  my $e2 = Yggdrasil::_extract_entity($instance);
-
-  my $schema = $self->{storage}->_get_relation( $e1, $e2 );
-  
-  # Check to see if the relationship between the entities is defined
-  Yggdrasil::fatal("Undefined relation between $e1 / $e2 requested.") unless $schema;
-
-  my $e1_side = $self->_relation_side( $schema, $e1 );
-  my $e2_side = $self->_relation_side( $schema, $e2 );
-
-  $self->{storage}->store( $schema,
-			   key => 'id',
-			   fields => { $e1_side => $self->{_id},
-				       $e2_side => $instance->{_id} });
-}
-
-sub unlink :method {
-  my $self     = shift;
-  my $instance = shift;
- 
-  my $e1 = $self->_extract_entity();
-  my $e2 = $instance->_extract_entity();
-  
-  my $storage = $self->{storage};
-
-  my $schema = $storage->_get_relation( $e1, $e2 );
-
-  my $e1_side = $self->_relation_side( $schema, $e1 );
-  my $e2_side = $self->_relation_side( $schema, $e2 );
-  
-
-  $storage->expire( $schema, $e1_side => $self->{_id}, $e2_side => $instance->{_id} );
-}
-
 sub id {
   my $self = shift;
   
@@ -456,6 +445,7 @@ sub pathlength {
     return $self->{_pathlength};
 }
 
+# This might require some updating.
 sub fetch_related {
   my $self = shift;
   my $relative = shift;
@@ -463,10 +453,13 @@ sub fetch_related {
   $relative = Yggdrasil::_extract_entity($relative);
   my $source = $self->_extract_entity();
 
-  my $paths = $self->_fetch_related( $source, $relative );
+  my $source_id = $self->{storage}->_get_entity( $source );
+  my $destin_id = $self->{storage}->_get_entity( $relative );
+  
+  my $paths = $self->_fetch_related( $source_id, $destin_id );
 
   my $relations = $self->{storage}->fetch( 'MetaRelation', {} );
-  my @relations = map { [$_->{entity1}, $_->{entity2}, $_->{relation} ] } @$relations;
+  my @relations = map { [$_->{lval}, $_->{rval}, $_->{label} ] } @$relations;
 
 
   my %table_map;
@@ -543,24 +536,6 @@ sub fetch_related {
   return sort { $a->{_pathlength} <=> $b->{_pathlength} } values %result;
 }
 
-sub _relation_side {
-  my $self = shift;
-  my $table = shift;
-  my $entity = shift;
-
-  my( $e1, $e2 ) = split /_R_/, $table;
-
-#  print "ZOOM --> is $entity first in $table?\n";
-
-  if ($e1 eq $entity) {
-#    print "ZOOM --> Yes\n";
-    return 'lval';
-  } else {
-#    print "ZOOM --> No\n";
-
-    return 'rval';
-  }
-}
 
 sub _fetch_related {
   my $self = shift;
@@ -584,29 +559,18 @@ sub _fetch_related {
 
   return $path if $start eq $stop;
 
-  # FIX: we need to implement "OR"-operator or "SET"-operator. Doing
-  # to fecthes to simulate "OR" sucks.
-#   my $rs = $storage->fetch( 'MetaRelation',
-# 			    { return => "entity2", 
-# 			      where => [ entity1 => $start ] } );
-#   my $ls = $storage->fetch( 'MetaRelation',
-# 			    { return => "entity1",
-# 			      where => [ entity2 => $start ] } );
-
-#   my @siblings = map { $_->{entity1} || $_->{entity2} } @$rs, @$ls;
-
   my $other = $storage->fetch( 'MetaRelation',
-			       { return => [ qw/entity1 entity2/ ],
-				 where => [ entity1 => $start,
-					    entity2 => $start ],
-				 bind => "or" 
+			       { return => [ qw/lval rlval/ ],
+				 where => [ lval => $start,
+					    rval => $start ],
+				 bind => "or"
 			       } );
 
-  my @siblings = map { $_->{entity1} eq $start ? $_->{entity2} : $_->{entity1} } @$other;
+  my @siblings = map { $_->{lval} eq $start ? $_->{rval} : $_->{lval} } @$other;
   foreach my $child ( @siblings ) {
-    my $found_path = $self->_fetch_related( $child, $stop, $path, $all );
-
-    push( @$all, $found_path ) if $found_path;
+      my $found_path = $self->_fetch_related( $child, $stop, $path, $all );
+      
+      push( @$all, $found_path ) if $found_path;
   }
 
   return $all if @$path == 1;

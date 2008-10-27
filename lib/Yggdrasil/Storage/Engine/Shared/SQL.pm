@@ -187,7 +187,7 @@ sub _fetch {
     my ($package, $filename, $line, $subroutine, $hasargs,
      $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
 
-    if ($subroutine =~ /fetch/) {
+    if ($subroutine =~ /get_real_val/) {
 	print $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]\n";
     }  
     
