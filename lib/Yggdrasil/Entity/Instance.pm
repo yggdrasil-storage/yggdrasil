@@ -445,7 +445,7 @@ sub pathlength {
     return $self->{_pathlength};
 }
 
-# This might require some updating.
+
 sub fetch_related {
   my $self = shift;
   my $relative = shift;
@@ -458,81 +458,55 @@ sub fetch_related {
   
   my $paths = $self->_fetch_related( $source_id, $destin_id );
 
-  my $relations = $self->{storage}->fetch( 'MetaRelation', {} );
-  my @relations = map { [$_->{lval}, $_->{rval}, $_->{label} ] } @$relations;
-
-
-  my %table_map;
-  foreach my $r ( @relations ) {
-    my( $e1, $e2, $rel ) = @$r;
-    $table_map{ join("_", $e1, $e2) } = [ $rel, $e1 ];
-    $table_map{ join("_", $e2, $e1) } = [ $rel, $e1 ];
-  }
-
   my %result;
-  for my $path ( @$paths ) {
-#    print "ZOOM ",  join( " -> ", @$path), "\n";
-  
-    my @tmp_path = @$path;
-    my $node = shift @tmp_path;
-    my @ordered;
-    foreach my $step ( @tmp_path ) {
-       push( @ordered, $table_map{ join("_", $node, $step) }->[0] );
-       $node = $step;
-     }
+  foreach my $path ( @$paths ) {
 
+      my @schema;
+      my $alias_prefix = "R";
+      my $alias_num    = 1;
+      my $alias;
+      my $prev_alias;
+      my $alias_generator = sub {
+	  return join('', $alias_prefix, $alias_num++);
+      };
 
-    my @schema;
-    my $first = $ordered[0];
-    my $side = $self->_relation_side( $first, $source );
-    my $firsttable = $self->_map_schema_name( $first );
-#    push( @schema, $firsttable => { where => [ $side => $self->{_id} ] } );
-    push( @schema, $firsttable => { where => [ lval => $self->{_id}, rval => $self->{_id} ], bind => "or" } );
-
-    my $prev = $first;
-    for( my $i=1; $i<@ordered; $i++ ) {
-      my $table = $ordered[$i];
-
-      my $rel = $table_map{ join("_", $table, $prev) };
+      my $first = shift @$path;
+      $alias = $alias_generator->();
+      push( @schema, Relations => {
+	  where => [ lval => $self->{_id},
+		     rval => $self->{_id} ], 
+	  bind => "or",
+	  alias => $alias } );
       
-      my $current = $self->_relation_side( $table, $path->[$i] );
-      my $next    = $self->_relation_side( $prev, $path->[$i] );
-      my $tabname = $self->_map_schema_name( $table );
-      my $prevtab = $self->_map_schema_name( $prev );
+      foreach my $step ( @$path ) {
+	  $prev_alias = $alias;
+	  $alias = $alias_generator->();
+	  push( @schema, Relations => { where => [ lval => \qq<$prev_alias.lval>,
+						   lval => \qq<$prev_alias.rval>,
+						   rval => \qq<$prev_alias.lval>, 
+						   rval => \qq<$prev_alias.rval> ], 
+					bind => "or", alias => $alias } );
+      }
+
+      push(@schema,
+	   Entities => { return => "visual_id", 
+			 where => [ id     => \qq<$alias.lval>,
+				    id     => \qq<$alias.rval> ],
+			 bind => "or" },
+	   Entities => { where => [ entity => $path->[-1] ] } );
+
+      my $res = $self->{storage}->fetch( @schema );
+
+      foreach my $r ( @$res ) {
+	  $self->{logger}->error( $r->{visual_id} );
+	  my $name = "$self->{namespace}::$relative";
+	  my $obj = $name->new( $r->{visual_id} );
+	  $obj->{_pathlength} = scalar @$path - 1;
       
-#      push( @schema, $tabname => { where => [ $current => \qq<$prevtab.$next> ] } );
-      push( @schema, $tabname => { where => [ lval => \qq<$prevtab.lval>, lval => \qq<$prevtab.rval>, rval => \qq<$prevtab.lval>, rval => \qq<$prevtab.rval> ], bind => "or" } );
-
-      $prev = $table;
-    }
-    
-    $side = $self->_relation_side( $ordered[-1], $path->[-1] );
-    my ($ordtab, $pathtab) = ($self->_map_schema_name( $ordered[-1] ), $self->_map_schema_name( $path->[-1] ));
-#    push(@schema, Entities => { return => "visual_id", 
-#				where => [ id     => \qq<$ordtab.$side>,
-#					   entity => $path->[-1] ] } );
-
-     push(@schema,
- 	 Entities => { return => "visual_id", 
- 		       where => [ id     => \qq<$ordtab.lval>,
- 				  id     => \qq<$ordtab.rval> ],
- 		       bind => "or" },
- 	 Entities => { where => [ entity => $path->[-1] ] } );
-
-    my $pathtable  = $self->_map_schema_name( $path->[-1] );
-
-    my $res = $self->{storage}->fetch( @schema );
-    
-    foreach my $r ( @$res ) {
-      $self->{logger}->error( $r->{visual_id} );
-      my $name = "$self->{namespace}::$relative";
-      my $obj = $name->new( $r->{visual_id} );
-      $obj->{_pathlength} = scalar @$path - 1;
-      
-      $result{$r->{visual_id}} = $obj;
-    }
+	  $result{$r->{visual_id}} = $obj;
+      }
   }
-
+  
   return sort { $a->{_pathlength} <=> $b->{_pathlength} } values %result;
 }
 
@@ -560,7 +534,7 @@ sub _fetch_related {
   return $path if $start eq $stop;
 
   my $other = $storage->fetch( 'MetaRelation',
-			       { return => [ qw/lval rlval/ ],
+			       { return => [ qw/lval rval/ ],
 				 where => [ lval => $start,
 					    rval => $start ],
 				 bind => "or"
@@ -576,11 +550,6 @@ sub _fetch_related {
   return $all if @$path == 1;
 }
 
-sub _map_schema_name {
-    my $self = shift;
-    
-    return $self->{storage}->_map_schema_name( @_ );
-}
 
 sub _ancestors {
     my $class = shift;

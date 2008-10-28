@@ -151,7 +151,11 @@ sub _fetch {
 	my $operator = $queryref->{operator} || '=';
 	my $as       = $queryref->{as};
 	my $bind     = $queryref->{bind} || 'and';
+	my $alias    = $queryref->{alias} || $schema;
 
+	my $real_schema = $schema;
+	$schema = $alias;
+	
 	my ($rf_tmp, $w_tmp, $p_tmp) = $self->_process_where($schema, $where, $operator);
 	my $where_sql;
 	if( @$w_tmp ) {
@@ -163,7 +167,7 @@ sub _fetch {
 	push( @params, @$p_tmp );
 
 	push @returns, $self->_process_return( $schema, $queryref->{return} );
-	$fromtables{$schema} = $counter++;
+	$fromtables{$schema} = [ $counter++, $real_schema];
 
 	# $temporals{$schema} is to ensure we only treat every schema once.
 	if (!$temporals{$schema} && $self->_schema_is_temporal( $schema )) {
@@ -228,20 +232,40 @@ sub _create_from {
     if( $isjoin) {
 	my @from;
 	my $first = 1;
-	for my $t (sort { $tables->{$a} <=> $tables->{$b} } keys %$tables ) {
+	for my $t (sort { $tables->{$a}->[0] <=> $tables->{$b}->[0] } keys %$tables ) {
+
+	    my $alias = $t;
+	    my $real_t  = $tables->{$t}->[1];
+	    my $tablename = $real_t;
+	    if( $alias ne $real_t ) {
+		$tablename = join(" ", $real_t, $alias );
+	    }
+
+
 	    if( $first ) {
-		push @from, $t;
+		push @from, $tablename;
 		$first = 0;
 	    } else {
 		unshift @from, "(";
-		push( @from, "left join $t using(id)" );
+		push( @from, "left join $tablename using(id)" );
 		push( @from, ")" );
 	    }
 	}
 
 	return join(" ", @from);
     } else {
-	return join(", ", keys %$tables);
+	my @from;
+	foreach my $t ( keys %$tables ) {
+	    my $alias = $t;
+	    my $real_t = $tables->{$t}->[1];
+	    my $tablename = $real_t;
+	    if( $alias ne $real_t ) {
+		$tablename = join(" ", $real_t, $alias );
+	    }
+	    push( @from, $tablename );
+	}
+
+	return join(", ", @from);
     }
 }
 
