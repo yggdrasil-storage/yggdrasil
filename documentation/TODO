@@ -46,14 +46,6 @@
 * exists / property_exists need to check what time they're being
    checked for, right now they just check current existence.
 
-* Engine introspection.  
-   The storage layer has Storage-related meta information stored (ie,
-   types, temporality, mappings and such), is there any information
-   the engine should provide?  If so we'll have to declare a shared
-   engine level conformance on data structures, for good and bad.  If
-   do not go down this road, a field to declare if NULL is acceptable
-   as a value for a field should probably be stored in MetaProperty.
-
 * Visual_ids are tunique within each hierarchy.
   If we have Ygg::Person('terjekv'), Ygg::Person::Student( 'terjekv')
   is the same instance.  
