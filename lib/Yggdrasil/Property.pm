@@ -26,7 +26,9 @@ sub _define {
 					  value => { type => $data{type},
 						     null => $data{null}}},
 			    
-			    temporal => 1 );
+			    temporal => 1,
+			    hints => { id => { index => 1, foreign => 'MetaProperty' }},
+			  );
 
   my $idref = $self->{storage}->fetch( MetaEntity => { return => 'id',
 						       where  => [ entity => $entity ] } );
