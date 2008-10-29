@@ -118,7 +118,8 @@ for my $structure (@structures) {
 	    my ($lval, $rval) = ();
 	    for my $c (@row) {
 		if ($dereference && $c && $c =~ /^\d+$/ &&
-		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[RP]/)) {
+		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[RP]/ ||
+		     $mapped_struct eq 'Entities' )) {
 		    my $key = $1;
 		    if ($mapped_struct =~ /^[^_]+_[Rr]_[^_]+/) {
 			# id | <id1> | <id2>
@@ -131,6 +132,10 @@ for my $structure (@structures) {
 			}
 		    } elsif ($mapped_struct eq 'MetaProperty') {
 			if ($i == 2) {
+			    $c = "$c (" . $entities{$c} . ")";
+			}
+		    } elsif ($mapped_struct eq 'Entities') {
+			if ($i == 1) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } else {
