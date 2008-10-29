@@ -72,7 +72,9 @@ sub new {
 #                               { null => BOOL(0), type => type(TEXT), 
 #                                 index => BOOL(0), constraint => constraint(undef) }
 #         temporal => BOOL(0),
-#         nomap => BOOL(0) );
+#         nomap => BOOL(0),
+#         hints => { field1 => { foreign => 'Schema', index => [1|0] }}
+# );
 sub define {
     my $self = shift;
     my $schema = shift;

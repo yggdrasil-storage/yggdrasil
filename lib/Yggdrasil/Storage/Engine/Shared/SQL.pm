@@ -17,6 +17,7 @@ sub _define {
     
     my $temporal = $data{temporal};
     my $fields   = $data{fields};
+    my $hints    = $data{hints};
 
     my $sql = "CREATE TABLE $schema (\n";
     
@@ -34,7 +35,7 @@ sub _define {
 	push @keys, "KEY ($fieldname)" if $type eq 'SERIAL' && $self->_engine_requires_serial_as_key();
 
 	$type = $self->_map_type( $type );
-	push @indexes, [$fieldname, $type] if $index;
+	push @indexes, $fieldname if $index;
 
 	# FUGLY hack to ensure that id fields come first in the listings.
 	if ($fieldname eq 'id') {
@@ -42,28 +43,32 @@ sub _define {
 	} else {
 	    push @sqlfields, "$fieldname $type $null";
 	}
-
     }
 
     if ($temporal) {
 	my $datefield = $self->_map_type( 'DATE' );
 	push @sqlfields, "start $datefield NOT NULL";
 	push @sqlfields, "stop  $datefield NULL";
-	push @indexes, ['stop', $datefield ];
+	push @indexes, 'stop';
 	push @sqlfields, "check ( start <= stop )";
     }
     
-    $sql .= join ",\n", @sqlfields;
-    if (@keys) {
-	$sql .= ",\n" . join ",\n", @keys;
+    for my $fieldname (keys %$hints) {
+	my $field = $hints->{$fieldname};
+	
+	push @indexes, $fieldname if $field->{index};
+	push @sqlfields, $self->_create_foreign_key( $field->{foreign}, $fieldname ) if $field->{foreign};
     }
+        
+    $sql .= join ",\n", @sqlfields;
+    $sql .= ",\n" . join ",\n", @keys if @keys;
     $sql .= ");\n";
 
     $self->{logger}->debug( $sql );
     $self->_sql( $sql );
     
-    for my $indexref (@indexes) {
-	my $indexsql = $self->_create_index_sql($schema, $indexref->[0], $indexref->[1]);
+    for my $field (@indexes) {
+	my $indexsql = $self->_create_index_sql($schema, $field );
 	$self->{logger}->fatal( $indexsql );
 	$self->_sql( $indexsql );
     }
@@ -80,9 +85,15 @@ sub _define {
 # for indexes, but, at least this is a fallback.  This generic
 # version does nothing with regards to the type at all.
 sub _create_index_sql {
-    my ($self, $schema, $field, $type) = @_;
+    my ($self, $schema, $field) = @_;
     
     return "CREATE INDEX ${schema}_${field}_index ON $schema ($field)";
+}
+
+sub _create_foreign_key {
+    my ($self, $target, $field) = @_;
+
+    return "FOREIGN KEY ($field) REFERENCES $target(id)";
 }
 
 # Overload this in the engines if you require your serial fields to be
@@ -188,12 +199,12 @@ sub _fetch {
 	$sql .= join(" and ", @wheres );
     }
 
-    my ($package, $filename, $line, $subroutine, $hasargs,
-     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
+#    my ($package, $filename, $line, $subroutine, $hasargs,
+#     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
 
-    if ($subroutine =~ /get_real_val/) {
-	print $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]\n";
-    }  
+#    if ($subroutine =~ /_define/) {
+#	print $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]\n";
+#    }  
     
     $self->{logger}->debug( $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]" );
     return $self->_sql( $sql, @params ); 
