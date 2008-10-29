@@ -53,7 +53,7 @@ print "$user\@$host ($db / $engine)\n";
 my %mapper;
 my %human_to_machine;
 my %config;
-my %idents;
+my (%idents, %entities);
 
 my (@structures, @onlytables, %display_tables);
 if ($onlytables) {
@@ -85,6 +85,13 @@ for my $rowref (@$tableref) {
     $idents{$row[0]} = $row[2];
 }
 
+$realname = $human_to_machine{'MetaEntity'} || 'MetaEntity';
+my $tableref = $storage->_dump_structure( $realname );
+for my $rowref (@$tableref) {
+    my @row = @$rowref;
+    $entities{$row[0]} = $row[1];
+}
+
 for my $structure (@structures) {
     my $mapped_struct;
 
@@ -97,6 +104,7 @@ for my $structure (@structures) {
 	$displaytext = "$mapped_struct ($structure)" if $mapped_struct ne $structure;
 	print "* $displaytext\n";
     }
+    
     my @tabledata;
     if ($dump) {
 	next unless &display( $mapped_struct ) || $zap;
@@ -109,12 +117,21 @@ for my $structure (@structures) {
 	    my $i = 0;
 	    my ($lval, $rval) = ();
 	    for my $c (@row) {
-		if ($dereference && $c && $c =~ /^\d+$/ && $mapped_struct =~ /^([a-z]+)_\w+$/i) {
+		if ($dereference && $c && $c =~ /^\d+$/ &&
+		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[RP]/)) {
 		    my $key = $1;
 		    if ($mapped_struct =~ /^[^_]+_[Rr]_[^_]+/) {
 			# id | <id1> | <id2>
 			if ($i == 1 || $i == 2) {
 			    $c = "$c (" . $idents{$c} . ")";
+			}
+		    } elsif ($mapped_struct eq 'MetaRelation') {
+			if ($i == 1 || $i == 2) {
+			    $c = "$c (" . $entities{$c} . ")";
+			}
+		    } elsif ($mapped_struct eq 'MetaProperty') {
+			if ($i == 2) {
+			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } else {
 			# id | <id>
