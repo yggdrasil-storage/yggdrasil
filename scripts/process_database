@@ -86,7 +86,7 @@ for my $rowref (@$tableref) {
 }
 
 $realname = $human_to_machine{'MetaEntity'} || 'MetaEntity';
-my $tableref = $storage->_dump_structure( $realname );
+$tableref = $storage->_dump_structure( $realname );
 for my $rowref (@$tableref) {
     my @row = @$rowref;
     $entities{$row[0]} = $row[1];
