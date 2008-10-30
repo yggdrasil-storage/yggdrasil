@@ -119,9 +119,9 @@ for my $structure (@structures) {
 	    for my $c (@row) {
 		if ($dereference && $c && $c =~ /^\d+$/ &&
 		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[RP]/ ||
-		     $mapped_struct eq 'Entities' )) {
+		     $mapped_struct eq 'Entities' || $mapped_struct eq 'Relations')) {
 		    my $key = $1;
-		    if ($mapped_struct =~ /^[^_]+_[Rr]_[^_]+/) {
+		    if ($mapped_struct eq 'Relations') {
 			# id | <id1> | <id2>
 			if ($i == 1 || $i == 2) {
 			    $c = "$c (" . $idents{$c} . ")";
