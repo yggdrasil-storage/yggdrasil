@@ -342,15 +342,22 @@ sub _raw_store {
 
 # Expire a field with a given value that is current (stop is NULL).
 sub _expire {
-    my $self        = shift;
-    my $schema      = shift;
-    my $indexfield  = shift;
-    my $index       = shift;
+    my $self   = shift;
+    my $schema = shift;
+    my %params = @_;
 
     return unless $self->_schema_is_temporal( $schema );
 
     my $nullopr = $self->_null_comparison_operator();
-    $self->_sql( "UPDATE $schema SET stop = NOW() WHERE stop $nullopr NULL and $indexfield = ?", $index );    
+
+    my @sets;
+	
+    for my $key (keys %params) {
+	push @sets, "$key = ?";
+    }
+    my $keys = join " and ", @sets;
+	
+    $self->_sql( "UPDATE $schema SET stop = NOW() WHERE stop $nullopr NULL and $keys", values %params );
 }
 
 # Generates a field / data based where clause, ensuring that the
