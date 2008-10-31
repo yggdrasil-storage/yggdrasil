@@ -35,7 +35,7 @@ sub _add_inheritance {
 
 sub _expire_inheritance {
     my $self = shift;
-    my $me   = shift;
+    my $me   = $self->{storage}->get_entity_id( shift );
 
     $self->{storage}->expire('MetaInheritance', child => $me);
 }
