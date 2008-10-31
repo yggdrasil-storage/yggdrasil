@@ -449,14 +449,15 @@ sub pathlength {
 sub fetch_related {
   my $self = shift;
   my $relative = shift;
-
+  my($start, $stop) = $self->_get_times_from( @_ );
+  
   $relative = Yggdrasil::_extract_entity($relative);
   my $source = $self->_extract_entity();
 
   my $source_id = $self->{storage}->_get_entity( $source );
   my $destin_id = $self->{storage}->_get_entity( $relative );
   
-  my $paths = $self->_fetch_related( $source_id, $destin_id );
+  my $paths = $self->_fetch_related( $source_id, $destin_id, undef, undef, $start, $stop );
 
   my %result;
   foreach my $path ( @$paths ) {
@@ -495,7 +496,7 @@ sub fetch_related {
 			 bind => "or" },
 	   Entities => { where => [ entity => $path->[-1] ] } );
 
-      my $res = $self->{storage}->fetch( @schema );
+      my $res = $self->{storage}->fetch( @schema, { start => $start, stop => $stop } );
 
       foreach my $r ( @$res ) {
 	  $self->{logger}->error( $r->{visual_id} );
@@ -517,6 +518,7 @@ sub _fetch_related {
   my $stop = shift;
   my $path = [ @{ shift || [] } ];
   my $all = shift || [];
+  my($tstart, $tstop) = $self->_get_times_from( @_ );
 
   my $storage = $self->{storage};
 
@@ -538,11 +540,11 @@ sub _fetch_related {
 				 where => [ lval => $start,
 					    rval => $start ],
 				 bind => "or"
-			       } );
+			       }, { start => $tstart, stop => $tstop } );
 
   my @siblings = map { $_->{lval} eq $start ? $_->{rval} : $_->{lval} } @$other;
   foreach my $child ( @siblings ) {
-      my $found_path = $self->_fetch_related( $child, $stop, $path, $all );
+      my $found_path = $self->_fetch_related( $child, $stop, $path, $all, $tstart, $tstop );
       
       push( @$all, $found_path ) if $found_path;
   }
