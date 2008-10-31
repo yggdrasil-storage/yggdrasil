@@ -125,7 +125,7 @@ for my $structure (@structures) {
 	    my ($lval, $rval) = ();
 	    for my $c (@row) {
 		if ($dereference && $c && $c =~ /^\d+$/ &&
-		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[RP]/ ||
+		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[RIP]/ ||
 		     $mapped_struct eq 'Entities' || $mapped_struct eq 'Relations')) {
 		    my $key = $1;
 		    if ($mapped_struct eq 'Relations') {
@@ -137,6 +137,10 @@ for my $structure (@structures) {
 			}
 		    } elsif ($mapped_struct eq 'MetaRelation') {
 			if ($i == 1 || $i == 2) {
+			    $c = "$c (" . $entities{$c} . ")";
+			}
+		    } elsif ($mapped_struct eq 'MetaInheritance') {
+			if ($i < 3) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'MetaProperty') {
