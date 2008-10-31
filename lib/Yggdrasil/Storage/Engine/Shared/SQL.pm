@@ -181,7 +181,7 @@ sub _fetch {
 	$fromtables{$schema} = [ $counter++, $real_schema];
 
 	# $temporals{$schema} is to ensure we only treat every schema once.
-	if (!$temporals{$schema} && $self->_schema_is_temporal( $schema )) {
+	if (!$temporals{$schema} && $self->_schema_is_temporal( $real_schema )) {
 	    $temporals{$schema}++;
 	    my ($w_tmp, $tr_tmp) = $self->_process_temporal( $schema, $start, $stop, $as );
 	    push( @wheres, @$w_tmp );
