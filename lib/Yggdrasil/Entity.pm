@@ -33,8 +33,7 @@ sub _admin_dump {
     my $self   = shift;
     my $entity = shift;
 
-    return $self->{storage}->raw_fetch(MetaEntity => { where => [ entity => $entity ]},
-				       Entities   => { where => [ entity => \qq{MetaEntity.id} ] } );
+    return $self->{storage}->raw_fetch( Entities => { where => [ entity => $entity ] } );
 }
 
 sub _admin_restore {

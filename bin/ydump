@@ -43,11 +43,12 @@ print "[MetaEntity]\n";
 my %seen_entity;
 my $entities = Yggdrasil::MetaEntity->admin_dump();
 foreach my $entry ( @$entities ) {
-    dumper( $entry );
+    dumper( $entry, exclude => { id => 1 } );
     print "\n";
 
     my $entity = $entry->{entity};
-    $seen_entity{$entity} = 1;
+    my $id     = $entry->{id};
+    $seen_entity{$id} = $entity;
 }
 print "\n";
 
@@ -56,12 +57,16 @@ print "[MetaProperty]\n";
 my %seen_property;
 my $properties = Yggdrasil::MetaProperty->admin_dump();
 foreach my $entry ( @$properties ) {
-    dumper( $entry, exclude => { id => 1 } );
-    print "\n";
-
     my $entity   = $entry->{entity};
     my $property = $entry->{property};
     $seen_property{$entity}->{$property} = 1;
+
+    dumper( $entry, 
+	    exclude => { id => 1 },
+	    usemap  => { entity => \%seen_entity },
+	    map => { entity => "entity" } );
+	
+    print "\n";
 }
 print "\n";
 
@@ -70,11 +75,16 @@ print "[MetaRelation]\n";
 my %seen_relation;
 my $relations = Yggdrasil::MetaRelation->admin_dump();
 foreach my $entry ( @$relations ) {
-    dumper( $entry );
-    print "\n";
+    my $label = $entry->{label};
+    my $id    = $entry->{id};
+    $seen_relation{$id} = $label;
 
-    my $relation = $entry->{relation};
-    $seen_relation{$relation} = 1;
+    dumper( $entry, 
+	    exclude => { id => 1 },
+	    usemap  => { entity => \%seen_entity },
+	    map     => { lval => "entity",
+			 rval => "entity" } );
+    print "\n";
 }
 print "\n";
 
@@ -82,27 +92,35 @@ print "\n";
 print "[MetaInheritance]\n";
 my $inheritance = Yggdrasil::MetaInheritance->admin_dump();
 foreach my $entry ( @$inheritance ) {
-    dumper( $entry );
+    dumper( $entry,
+	    usemap => { entity => \%seen_entity },
+	    map    => { parent => "entity",
+			child  => "entity" } );
     print "\n";
 }
 print "\n";
 
 my %id_map;
 # --- Instance Entities
-foreach my $entity ( keys %seen_entity ) {
+foreach my $eid ( keys %seen_entity ) {
+    my $entity = $seen_entity{$eid};
     print "[Entity: ", encode_base64($entity, ""), "]\n";
-    
-    my $instances = Yggdrasil::Entity->admin_dump( $entity );
+
+    my $instances = Yggdrasil::Entity->admin_dump( $eid );
     foreach my $instance ( @$instances ) {
 	$id_map{$instance->{id}} = $instance->{visual_id};
-	dumper($instance, exclude => { id => 1 } );
+	dumper($instance, 
+	       exclude => { id => 1, entity => 1 },
+	       usemap  => { entity => \%seen_entity },
+	       map     => { entity => "entity" } );
     }
     print "\n";
 }
 
 # --- Instance Properties
-foreach my $entity ( keys %seen_property ) {
-    my $properties = $seen_property{$entity};
+foreach my $eid ( keys %seen_property ) {
+    my $entity = $seen_entity{$eid};
+    my $properties = $seen_property{$eid};
     foreach my $property ( keys %$properties ) {
 	print "[Property: ", encode_base64($entity, ""), " ", encode_base64($property, ""), "]\n";
 	print "# $entity _ $property\n";
@@ -115,17 +133,18 @@ foreach my $entity ( keys %seen_property ) {
 	    print "\n";
 	}
     }
+    print "\n";
 }
 
 # --- Instance Relations
-foreach my $relation ( keys %seen_relation ) {
-    my $instance_relation = Yggdrasil::Relation->admin_dump( $relation );
-    my( $e1, $e2 ) = split /_R_/, $relation;
-    print "[Relation: ", encode_base64($relation, ""), "]\n";
+foreach my $rid ( keys %seen_relation ) {
+    my $label = $seen_relation{$rid};
+    my $instance_relation = Yggdrasil::Relation->admin_dump( $rid );
+    print "[Relation: ", encode_base64($label, ""), "]\n";
     
     foreach my $ir ( @$instance_relation ) {
-	dumper($ir, usemap => { lval => \%id_map, rval => \%id_map },
-	       map => { rval => "rval", lval => "lval" },
+	dumper($ir, usemap => { val => \%id_map },
+	       map => { rval => "val", lval => "val" },
 	       exclude => { id => 1 } );
 	print "\n";
     }

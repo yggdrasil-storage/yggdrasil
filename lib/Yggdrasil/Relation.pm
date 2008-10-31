@@ -80,8 +80,9 @@ sub unlink :method {
 
 sub _admin_dump {
     my $self = shift;
+    my $id   = shift;
 
-    return $self->{storage}->raw_fetch( 'Relations' );
+    return $self->{storage}->raw_fetch( Relations => { where => [ id => $id ] } );
 }
 
 sub _admin_restore {
