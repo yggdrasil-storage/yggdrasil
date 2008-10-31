@@ -53,7 +53,7 @@ print "$user\@$host ($db / $engine)\n";
 my %mapper;
 my %human_to_machine;
 my %config;
-my (%idents, %entities);
+my (%idents, %entities, %relations);
 
 my (@structures, @onlytables, %display_tables);
 if ($onlytables) {
@@ -92,6 +92,13 @@ for my $rowref (@$tableref) {
     $entities{$row[0]} = $row[1];
 }
 
+$realname = $human_to_machine{'MetaRelation'} || 'MetaRelation';
+$tableref = $storage->_dump_structure( $realname );
+for my $rowref (@$tableref) {
+    my @row = @$rowref;
+    $relations{$row[0]} = $row[3];
+}
+
 for my $structure (@structures) {
     my $mapped_struct;
 
@@ -125,6 +132,8 @@ for my $structure (@structures) {
 			# id | <id1> | <id2>
 			if ($i == 1 || $i == 2) {
 			    $c = "$c (" . $idents{$c} . ")";
+			} elsif ($i == 0) {
+			    $c = "$c (" . $relations{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'MetaRelation') {
 			if ($i == 1 || $i == 2) {
