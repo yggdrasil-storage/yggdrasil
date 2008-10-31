@@ -116,7 +116,6 @@ sub define {
     return $retval;
 }
 
-
 # store ( schema, key => id|[f1,f2...], fields => { fieldname => value, fieldname2 => value2 })
 sub store {
     my $self = shift;
@@ -219,7 +218,22 @@ sub search {
     return \@hits;
 }
 
-sub _convert_time {
+sub get_entity_id {
+    my ($self, $entity) = @_;
+    
+    my $eref = $self->fetch('MetaEntity', { return => 'id', where => [ entity => $entity ]});
+    return $eref->[0]->{id};
+}
+
+sub get_entity_name {
+    my ($self, $id) = @_;
+    
+    my $eref = $self->fetch('MetaEntity', { return => 'entity', where => [ id => $id ]});
+    return $eref->[0]->{entity};
+}
+
+
+sub _convert_time {    
     my $self = shift;
     my $time = shift;
 

@@ -9,19 +9,23 @@ sub _define {
     my $self = shift;
 
     return $self->{storage}->define( "MetaInheritance",
-				     fields   => { parent => { type => "VARCHAR(255)", null => 0 },
-						   child  => { type => "VARCHAR(255)", null => 0 } },
+				     fields   => { parent => { type => "INTEGER", null => 0 },
+						   child  => { type => "INTEGER", null => 0 } },
 				     temporal => 1,
-				     nomap    => 1 );
+				     nomap    => 1,
+				     hints    => {
+						  parent => { foreign => 'MetaEntity' },
+						  child  => { foreign => 'MetaEntity' }
+						 });
 }
 
 sub _add_inheritance {
     my $self   = shift;
-    my $me     = shift;
-    my $parent = shift;
+    my $me     = $self->{storage}->get_entity_id( shift );
+    my $parent = $self->{storage}->get_entity_id( shift );
 
     $self->{storage}->store('MetaInheritance',
-			    key    => 'id',
+			    key    => [ 'parent', 'child' ],
 			    fields => {
 				       parent => $parent,
 				       child  => $me,

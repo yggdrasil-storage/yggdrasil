@@ -559,16 +559,19 @@ sub _ancestors {
     my ($start, $stop) = @_;
 
     my $storage = $Yggdrasil::STORAGE;
+    $entity = $storage->get_entity_id( $entity );
+    
     my @ancestors;
     my %seen = ( $entity => 1 );
 
     my $r = $storage->fetch( 'MetaInheritance', { return => "parent", where => [ child => $entity ] },
 			     { start => $start, stop => $stop });
+
     while( @$r ) {
 	my $parent = $r->[0]->{parent};
 	last if $seen{$parent};
 	$seen{$parent} = 1;
-	push( @ancestors, $parent );
+	push( @ancestors, $storage->get_entity_name( $parent ) );
 
 	$r = $storage->fetch( 'MetaInheritance', { return => "parent", where => [ child => $parent ] },
 			      { start => $start, stop => $stop } );
