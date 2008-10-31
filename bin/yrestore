@@ -11,21 +11,25 @@ use lib qq($Bin/../lib);
 
 use Yggdrasil;
 
-our %ID_MAP;
+our %INSTANCE_MAP;
+our %ENTITY_MAP;
+our %RELATION_MAP;
 
 my ($user, $password, $host, $port, $db, $engine, $mapper, $NAMESPACE, $VERSION) =
   ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef, 'Ygg', '0.01');
 
 GetOptions(
-	   "mapper=s"     => \$mapper,
-	   "user=s"       => \$user,
-	   "engine=s"     => \$engine,
-	   "password=s"   => \$password,
-	   "host=s"       => \$host,
-	   "database=s"   => \$db,
-	   "engine=s"     => \$engine,
-	   "port=s"       => \$port,
-	  );
+    "mapper=s"     => \$mapper,
+    "user=s"       => \$user,
+    "engine=s"     => \$engine,
+    "password=s"   => \$password,
+    "host=s"       => \$host,
+    "database=s"   => \$db,
+    "engine=s"     => \$engine,
+    "port=s"       => \$port,
+    "help"         => \&help,
+    "version"      => \&version,
+    );
 
 new Yggdrasil(
 	      user      => $user,
@@ -56,7 +60,7 @@ my $define = {
     MetaInheritance => sub {},
     Entity   => sub{},
     Property => \&property_define,
-    Relation => \&relation_define,
+    Relation => sub{},
 };
 
 
@@ -83,13 +87,15 @@ sub meta_entity {
     my $schema = shift;
     my %data = decode(shift);
 
-    Yggdrasil::MetaEntity->admin_restore( \%data );
+    my $id = Yggdrasil::MetaEntity->admin_restore( \%data );
+    $ENTITY_MAP{ $data{entity} } = $id;
 }
 
 sub meta_property {
     my $schema = shift;
     my %data = decode(shift);
 
+    $data{entity} = $ENTITY_MAP{ $data{entity} };
     Yggdrasil::MetaProperty->admin_restore( \%data );
 }
 
@@ -97,29 +103,28 @@ sub meta_relation {
     my $schema = shift;
     my %data = decode(shift);
 
-    Yggdrasil::MetaRelation->admin_restore( \%data );
+    $data{lval} = $ENTITY_MAP{ $data{lval} };
+    $data{rval} = $ENTITY_MAP{ $data{rval} };
+    my $id = Yggdrasil::MetaRelation->admin_restore( \%data );
+    $RELATION_MAP{ $data{label} } = $id;
 }
 
 sub meta_inheritance {
     my $schema = shift;
     my %data = decode(shift);
 
+    $data{parent} = $ENTITY_MAP{ $data{parent} };
+    $data{child}  = $ENTITY_MAP{ $data{child} };
     Yggdrasil::MetaInheritance->admin_restore( \%data );
 }
+
 sub entity {
-    my $schema = decode_base64( shift );
-    my @data = decode(shift);
+    my $entity = decode_base64( shift );
+    my %data   = decode(shift);
 
-    my @visual_ids;
-    for( my $i=3; $i<=@data; $i+=4 ) {
-	push( @visual_ids, $data[$i] );
-    }
-
-    my $map = Yggdrasil::Entity->admin_restore( $schema, \@visual_ids );
-    
-    for my $id (keys %$map) {
-	$ID_MAP{$id} = $map->{$id};
-    }
+    $data{entity} = $ENTITY_MAP{ $entity };
+    my $id = Yggdrasil::Entity->admin_restore( \%data );
+    $INSTANCE_MAP{ $data{visual_id} } = $id;
 }
 
 sub property {
@@ -127,6 +132,7 @@ sub property {
     my( $entity, $property ) = map { decode_base64($_) } split ' ', $schema;
     my %data = decode(shift);
     
+    $data{id} = $INSTANCE_MAP{ $data{id} };
     Yggdrasil::Property->admin_restore( $entity, $property, \%data );
 }
 
@@ -138,19 +144,13 @@ sub property_define {
 }
 
 sub relation {
-    my $schema = decode_base64( shift );
-
-    my( $e1, $e2 ) = split /_R_/, $schema;
+    my $label = decode_base64( shift );
     my %data = decode(shift);
     
-    Yggdrasil::Relation->admin_restore( $e1, $e2, \%data );
-}
-
-sub relation_define {
-    my $schema = decode_base64( shift );
-
-    my( $e1, $e2 ) = split /_R_/, $schema;
-    Yggdrasil::Relation->admin_define( $e1, $e2 );    
+    $data{lval} = $INSTANCE_MAP{ $data{lval} };
+    $data{rval} = $INSTANCE_MAP{ $data{rval} };
+    $data{id}   = $RELATION_MAP{ $label };
+    Yggdrasil::Relation->admin_restore( \%data );
 }
 
 
@@ -161,11 +161,6 @@ sub decode {
     foreach my $l (@$data) {
 	my( $key, $val ) = split /\s+=>\s+/, $l;
 	$val = decode_base64($val);
-
-	if( exists $ID_MAP{$val} ) {
-	    $val = $ID_MAP{$val};
-	}
-	
 	$val = undef unless length $val;
 
 	push( @list, $key, $val );

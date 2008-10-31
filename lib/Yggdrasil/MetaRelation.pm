@@ -76,7 +76,13 @@ sub _admin_restore {
     my $self = shift;
     my $data = shift;
 
-    return $self->{storage}->raw_store( "MetaRelation", fields => $data );
+    $self->{storage}->raw_store( "MetaRelation", fields => $data );
+
+    my $id = $self->{storage}->raw_fetch( MetaRelation =>
+					  { return => "id",
+					    where  => [ %$data ] } );
+
+    return $id->[0]->{id};
 }
 
 

@@ -27,7 +27,7 @@ sub _define {
 						     null => $data{null}}},
 			    
 			    temporal => 1,
-			    hints => { id => { index => 1, foreign => 'MetaProperty' }},
+			    hints => { id => { index => 1, foreign => 'Entities' }},
 			  );
 
   my $idref = $self->{storage}->fetch( MetaEntity => { return => 'id',
@@ -71,9 +71,16 @@ sub _admin_define {
     my $entity = shift;
     my $property = shift;
 
-    my $type = $self->{storage}->fetch( "MetaProperty" => { return => "type",
-							    where => [ entity => $entity,
-								       property => $property ] } );
+    my $eid = $self->{storage}->fetch( MetaEntity => 
+				       { return => "id",
+					 where  => [ entity => $entity ] } );
+
+
+    $eid = $eid->[0]->{id};
+    my $type = $self->{storage}->fetch( "MetaProperty" => 
+					{ return => "type",
+					  where => [ entity   => $eid,
+						     property => $property ] } );
     
     $type = $type->[0]->{type} || "TEXT";
     $self->_define( $entity, $property, type => $type, raw => 1 );

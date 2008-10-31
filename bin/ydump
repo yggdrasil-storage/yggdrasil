@@ -114,8 +114,8 @@ foreach my $eid ( keys %seen_entity ) {
 	       exclude => { id => 1, entity => 1 },
 	       usemap  => { entity => \%seen_entity },
 	       map     => { entity => "entity" } );
+	print "\n";
     }
-    print "\n";
 }
 
 # --- Instance Properties
@@ -133,8 +133,8 @@ foreach my $eid ( keys %seen_property ) {
 		   map    => { id => "instance" } );
 	    print "\n";
 	}
+	print "\n";
     }
-    print "\n";
 }
 
 # --- Instance Relations

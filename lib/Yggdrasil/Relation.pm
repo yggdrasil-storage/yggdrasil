@@ -86,18 +86,10 @@ sub _admin_dump {
 }
 
 sub _admin_restore {
-    my $self = shift;
-    my $data = shift;
+    my $self  = shift;
+    my $data  = shift;
 
     $self->{storage}->raw_store( 'Relations', fields => $data );
-}
-
-sub _admin_define {
-    my $self = shift;
-    my $lval = shift;
-    my $rval = shift;
-
-    $self->_define( $lval, $rval, raw => 1 );
 }
 
 1;

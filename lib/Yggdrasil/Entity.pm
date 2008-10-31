@@ -38,25 +38,14 @@ sub _admin_dump {
 
 sub _admin_restore {
     my $self   = shift;
-    my $entity = shift;
-    my $ids    = shift;
+    my $data   = shift;
 
-    my %map;
-    foreach my $id ( @$ids ) {
-	$self->{storage}->raw_store( "Entities", fields => { 
-	    entity    => $entity,
-	    visual_id => $id } );
+    $self->{storage}->raw_store( "Entities", fields => $data );
 
-	my $idfetch = $self->{storage}->fetch( Entities =>
-					       { return => "id", 
-						 where => [ 
-						     visual_id => $id,
-						     entity    => $entity ] } );
-	my $idnum = $idfetch->[0]->{id};
-	$map{$id} = $idnum;
-    }
-
-    return \%map;
+    my $id = $self->{storage}->raw_fetch( Entities =>
+					  { return => "id", 
+					    where => [ %$data ] } );
+    return $id->[0]->{id};
 }
 
 1;
