@@ -54,8 +54,6 @@ sub link :method {
 
   my $reallval = $self->_get_real_val( 'lval', $label );
   my $realrval = $self->_get_real_val( 'rval', $label );
-
-  print "$reallval, $realrval\n";
   
   Yggdrasil::fatal( $lval->id() . " cannot use the relation $label, incompatible instance / inheritance.")
       unless $lval->isa( $reallval );
@@ -64,7 +62,7 @@ sub link :method {
       unless $rval->isa( $realrval );
 
   $self->{storage}->store( 'Relations',
-			   key => 'id',
+			   key => ['id', 'lval', 'rval' ],
 			   fields => {
 				      'id'   => $self->{_id},
 				      'lval' => $lval->{_id},

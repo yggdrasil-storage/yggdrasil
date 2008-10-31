@@ -117,7 +117,7 @@ sub define {
 }
 
 
-# store ( schema, key => id, fields => { fieldname => value, fieldname2 => value2 })
+# store ( schema, key => id|[f1,f2...], fields => { fieldname => value, fieldname2 => value2 })
 sub store {
     my $self = shift;
     my $schema = shift;
@@ -172,10 +172,10 @@ sub raw_fetch {
 
 # expire ( $schema, $indexfield, $key )
 sub expire {
-    my $self = shift;
-    my ($schema, $indexfield, $key) = @_;
+    my $self   = shift;
+    my $schema = shift;
     
-    $self->_expire( $self->_get_schema_name( $schema ), $indexfield, $key );
+    $self->_expire( $self->_get_schema_name( $schema ), @_ );
 }
 
 # exists ( schema, field, value ) 

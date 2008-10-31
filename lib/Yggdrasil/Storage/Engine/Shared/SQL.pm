@@ -298,8 +298,17 @@ sub _store {
     return 1 if @$aref;
     
     # Expire the old value
-    if( defined $key && exists $fields->{$key} ) {
-	$self->_expire( $schema, $key, $fields->{$key}); 
+    my %keys;
+    if ($key) {
+	if (ref $key eq 'ARRAY') {
+	    for my $k (@$key) {
+		$keys{$k} = $fields->{$k};
+	    } 
+	} else {
+	    $keys{$key} = $fields->{$key};
+	}
+    
+	$self->_expire( $schema, %keys ); 
     }
 
     # Insert new value
@@ -356,7 +365,7 @@ sub _expire {
 	push @sets, "$key = ?";
     }
     my $keys = join " and ", @sets;
-	
+
     $self->_sql( "UPDATE $schema SET stop = NOW() WHERE stop $nullopr NULL and $keys", values %params );
 }
 
