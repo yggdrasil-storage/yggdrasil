@@ -11,7 +11,7 @@ use lib qq($Bin/../lib);
 
 use Yggdrasil;
 
-my ($user, $password, $host, $port, $db, $engine, $NAMESPACE, $VERSION) =
+my ($user, $password, $host, $port, $db, $engine, $NAMESPACE, $VERSION, $comments) =
   ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, 'Ygg', '0.01');
 
 GetOptions(
@@ -25,6 +25,7 @@ GetOptions(
 	   "help"         => \&help,
 	   "version"      => \&version,
 	   "namespace=s"  => \$NAMESPACE,
+	   "comments"     => \$comments,
     );
 
 new Yggdrasil(
@@ -123,7 +124,7 @@ foreach my $eid ( keys %seen_property ) {
     my $properties = $seen_property{$eid};
     foreach my $property ( keys %$properties ) {
 	print "[Property: ", encode_base64($entity, ""), " ", encode_base64($property, ""), "]\n";
-	print "# $entity _ $property\n";
+	print "# $entity _ $property\n" if $comments;
 	
 	my $instance_property = Yggdrasil::Property->admin_dump( $entity, $property );
 	foreach my $ip ( @$instance_property ) {
@@ -168,7 +169,7 @@ sub dumper {
 	}
 
 	my $dvalue = $value || 'NULL';
-	print "# $key => $dvalue\n";
+	print "# $key => $dvalue\n" if $comments;
 
 	$value = defined $value ? encode_base64($value, "") : "";
 	print "$key => $value\n";
@@ -205,3 +206,4 @@ Options:
 --db <name>          Specify database name
 --engine <name>      Specify database engine
 --namespace <space>  Specify Yggdrasil namespace
+--comments           Print comments in the dump
