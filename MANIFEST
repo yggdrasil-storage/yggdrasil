@@ -63,6 +63,7 @@ t/00-load.t
 t/10-basics.t
 t/20-instance.t
 t/30-relation.t
+t/40-inheritance.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
