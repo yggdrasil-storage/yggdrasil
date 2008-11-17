@@ -1,0 +1,48 @@
+* The outside world sees:
+ - Users
+ - Groups
+   + Can a user be in several groups at once?
+
+ - Entities
+   + If you cannot *read* an entity *and* all parent entities,
+     you cannot access the properties for the given entity.
+ - Properties
+   + Yggdrasil needs to verify access for the property, and read
+     access for the entity as per above (with inheritance).
+
+* All access is given to roles.
+
+* Everything is a role.  A single user might be a role of one,
+  but the user is mapped to a role.
+
+
+----------- 
+Role structure:
+ID Name
+1  Global
+2  Admins
+3  Employee managers
+4  Users
+
+User structure (abbreviated):
+1  terjekv
+2  bark
+3  davidra
+4  reichelt
+5  anitasm
+
+Role membership structure:
+Role User Start Stop
+2    1 
+2    2
+3    4
+3    5
+4    3
+
+Entity permission structure:
+Entityid  Role Read Write
+         
+
+Property permission structure:
+Propertyid  Role Read Write
+     
