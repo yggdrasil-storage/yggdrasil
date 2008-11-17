@@ -45,4 +45,14 @@ Entityid  Role Read Write
 
 Property permission structure:
 Propertyid  Role Read Write
-     
+
+
+----- 
+
+Can terjekv read Host_ip?
+
+Join terjekv from "User" with terjekv from "Role membership" and the
+role membership with "Proprety permission", then and with read access
+to Host and every parent of Host.
+
+Hm.
