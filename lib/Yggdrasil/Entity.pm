@@ -3,6 +3,8 @@ package Yggdrasil::Entity;
 use strict;
 use warnings;
 
+# We inherit _add_meta from MetaEntity and _add_inheritance from
+# MetaInheritance.
 use base qw(Yggdrasil::MetaEntity Yggdrasil::MetaInheritance);
 
 sub _define {
