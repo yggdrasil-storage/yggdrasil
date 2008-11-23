@@ -26,6 +26,7 @@ sub authenticate {
 
 	my $sid = md5_hex(time() * $$ * rand(time() + $$));
 	$self->{session} = $sid;
+	$self->{user} = $instance;
 
 	$instance->property( session => $sid );
 
@@ -40,6 +41,7 @@ sub authenticate {
 	return if @hits != 1;
 
 	$self->{session} = $session;
+	$self->{user} = $package->get( $hits[0]->id() );
 
 	return $self->{session};
     }

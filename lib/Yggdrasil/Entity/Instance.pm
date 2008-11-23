@@ -11,8 +11,6 @@ sub new {
   my( $pkg ) = caller();
   my $self = $class->SUPER::new(@_);
 
-  return $self if $pkg ne __PACKAGE__ && $pkg =~ /^Yggdrasil::/;
-
   # --- do stuff
   my $visual_id = shift;
 

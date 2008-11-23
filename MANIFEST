@@ -5,6 +5,7 @@ Changes
 documentation/notes/db-schema
 documentation/notes/inheritance
 documentation/notes/interface
+documentation/notes/permissions
 documentation/notes/storage
 documentation/overview/Overview.pdf
 documentation/overview/Overview.tex
@@ -22,12 +23,15 @@ inc/Module/Install/Metadata.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
 lib/Yggdrasil.pm
+lib/Yggdrasil/Auth.pm
+lib/Yggdrasil/Auth/Role.pm
 lib/Yggdrasil/Entity.pm
 lib/Yggdrasil/Entity/Instance.pm
 lib/Yggdrasil/Interface.pm
 lib/Yggdrasil/Interface/WWW.pm
 lib/Yggdrasil/Interface/WWW/Container.pm
 lib/Yggdrasil/Meta.pm
+lib/Yggdrasil/MetaAuth.pm
 lib/Yggdrasil/MetaEntity.pm
 lib/Yggdrasil/MetaInheritance.pm
 lib/Yggdrasil/MetaProperty.pm
@@ -39,6 +43,7 @@ lib/Yggdrasil/Plugin/Shared.pm
 lib/Yggdrasil/Property.pm
 lib/Yggdrasil/Relation.pm
 lib/Yggdrasil/Storage.pm
+lib/Yggdrasil/Storage/Auth.pm
 lib/Yggdrasil/Storage/Engine/mysql.pm
 lib/Yggdrasil/Storage/Engine/Pg.pm
 lib/Yggdrasil/Storage/Engine/Shared/SQL.pm
@@ -59,6 +64,7 @@ scripts/test-parts/historic
 scripts/test-parts/inheritance
 scripts/test-parts/populate
 scripts/test-parts/relation
+scripts/test-parts/users
 t/00-load.t
 t/10-basics.t
 t/20-instance.t

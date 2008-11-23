@@ -4,35 +4,35 @@ use base qw(Yggdrasil);
 
 sub define {
     my $class = shift;
-    my $self  = $class->new(@_);
+    my $self  = $class->SUPER::new(@_);
 
     return $self->_define(@_);
 }
 
 sub get {
     my $class = shift;
-    my $self  = $class->new(@_);
+    my $self  = $class->SUPER::new(@_);
 
     return $self->_get(@_);
 }
 
 sub admin_dump {
     my $class = shift;
-    my $self  = $class->new(@_);
+    my $self  = $class->SUPER::new(@_);
 
     return $self->_admin_dump(@_);
 }
 
 sub admin_restore {
     my $class = shift;
-    my $self  = $class->new(@_);
+    my $self  = $class->SUPER::new(@_);
 
     return $self->_admin_restore(@_);
 }
 
 sub admin_define {
     my $class = shift;
-    my $self  = $class->new(@_);
+    my $self  = $class->SUPER::new(@_);
 
     return $self->_admin_define(@_);
 }

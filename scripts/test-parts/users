@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../../lib);
+
+use Yggdrasil;
+
+my ($user, $password, $host, $port, $db, $engine, $mapper) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef);
+
+GetOptions(
+	   "user=s"       => \$user,
+	   "engine=s"     => \$engine,
+	   "password=s"   => \$password,
+	   "host=s"       => \$host,
+	   "database=s"   => \$db,
+	   "engine=s"     => \$engine,
+	   "port=s"       => \$port,
+	   "mapper=s"     => \$mapper,
+	  );
+
+new Yggdrasil(
+	      user      => $user,
+	      password  => $password,
+	      host      => $host,
+	      port      => $port,
+	      db        => $db,
+	      engine    => $engine,
+	      namespace => 'Ygg',
+	      mapper    => $mapper,
+	      admin     => 1,
+	     );
+
+print "$user\@$host ($db / $engine)\n";
+
+my $bark = define Yggdrasil::Auth user => "bark", password => "secret";
+my $boss = define Yggdrasil::Auth role => "Boss";
+
+
+my $host = define Yggdrasil::Entity 'Host';
+my $ip = define $host 'ip', 'type' => 'text';
+$boss->grant( $host, "w" );
+$boss->revoke( $host, "w" );
+
+$boss->grant( $ip, "r" );
+
+$boss->add( $bark );
+$boss->remove( $bark );
+

@@ -13,7 +13,9 @@ use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
 use Yggdrasil::MetaInheritance;
+use Yggdrasil::MetaAuth;
 
+use Yggdrasil::Auth;
 use Yggdrasil::Storage;
 use Yggdrasil::Entity;
 use Yggdrasil::Relation;
@@ -128,6 +130,9 @@ sub bootstrap {
     define Yggdrasil::MetaRelation;
     define Yggdrasil::MetaProperty;
     define Yggdrasil::MetaInheritance;
+    define Yggdrasil::MetaAuth;
+
+    Yggdrasil::Auth->_setup_default_users_and_roles();
 }
 
 # entities, returns all the entities known to Yggdrasil.
