@@ -31,6 +31,14 @@ sub _define {
     return $package;
 }
 
+sub _get {
+    my $self  = shift;
+    my $name  = shift;
+
+    # FIX: check if exists
+    return join '::', $self->{namespace}, $name;
+}
+
 sub _admin_dump {
     my $self   = shift;
     my $entity = shift;
