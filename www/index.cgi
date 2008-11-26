@@ -4,33 +4,33 @@ use strict;
 use warnings;
 
 use FindBin qw($Bin);
+use lib qq(/site/lib/perl);
 use lib qq($Bin/../lib);
 
+use Yggdrasil::Auth;
 use Yggdrasil::Plugin;
-use Yggdrasil::Plugin::Auth;
 use Yggdrasil::Plugin::Property::Prioritize;
 use Yggdrasil::Interface::WWW;
 
 use CGI::Pretty;
 
 my $plugin = Yggdrasil::Plugin->new( 
-				    user      => $ENV{YGG_USER} || "agent",
-				    password  => $ENV{YGG_PASSWORD} || "1109K9R6",
+				    user      => $ENV{YGG_USER},
+				    password  => $ENV{YGG_PASSWORD},
 				    host      => $ENV{YGG_HOST},
-				    port      => $ENV{YGG_PORT},
-				    db        => $ENV{YGG_DB} || "yggdrasil2",
+				    port      => $ENV{YGG_PORT}|| 3306, 
+				    db        => $ENV{YGG_DB} || "yggdrasil",
 				    engine    => $ENV{YGG_ENGINE} || "mysql",
 				    namespace => 'Ygg',
 				   );
 
-my $auth = Yggdrasil::Plugin::Auth->new( entity => "Person" );
-my $pp   = Yggdrasil::Plugin::Property::Prioritize->new( level => 5 );
+my $pp   = Yggdrasil::Plugin::Property::Prioritize->new( level => 500 );
+my $auth = new Yggdrasil::Auth;
 
-$plugin->add( $auth, $pp );
+$plugin->add( $pp );
 
 my $www = new Yggdrasil::Interface::WWW;
 my $cgi = CGI::Pretty->new();
-
 
 my $user = $cgi->param('user');
 my $pass = $cgi->param('pass');
@@ -42,8 +42,8 @@ if( defined $user && defined $pass ) {
 }
 
 unless( $session ) {
-#    $www->present_login( title => "Login", style => "yggdrasil.css" );
-#    exit;
+    $www->present_login( title => "Login", style => "yggdrasil.css" );
+    exit;
 } 
 
 
@@ -96,7 +96,7 @@ unless( $mode ) {
     $container->parent( "Relations" );
 
 
-    $www->display( title => $title, style => "yggdrasil.css" );
+    $www->display( title => $title, style => "yggdrasil.css", script => 'yggdrasil.js' );
 } 
 
 
