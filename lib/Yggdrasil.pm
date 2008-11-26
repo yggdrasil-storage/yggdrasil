@@ -147,9 +147,9 @@ sub entities {
 # relations, returns all the relations known to Yggdrasil.
 sub relations {
     my $class = shift;
-    my $aref = $STORAGE->fetch( 'MetaRelation', { return => 'relation' });
+    my $aref = $STORAGE->fetch( 'MetaRelation', { return => [ 'rval', 'lval', 'label' ] });
 
-    return map { $_->{relation} } @$aref;
+    return map { $_->{label} } @$aref;
 }
 
 # Generic exist method for non-instanced calls across Yggdrasil to see
