@@ -3,6 +3,8 @@ package Yggdrasil::Auth;
 use strict;
 use warnings;
 
+use Digest::MD5 qw(md5_hex);
+
 use base qw(Yggdrasil::MetaAuth);
 
 use Yggdrasil::Auth::Role;
@@ -18,6 +20,46 @@ sub define {
     } else {
 	# be angry
     }
+}
+
+sub authenticate {
+    my $self = shift;
+    my %params = @_;
+    
+    my ($user, $pass, $session) = ($params{'user'}, $params{'pass'}, $params{'session'});
+    my $package = join '::', $self->{namespace}, 'MetaAuthUser';
+    
+    # First, let see if we're connected to a tty without getting a
+    # username / password, at which point we're already authenticated
+    # and we don't want to touch the session.
+    return 1 if -t && ! defined $user && ! defined $pass;
+
+    # Otherwise, we got both a username and a password.
+    if (defined $user && defined $pass) {
+	my $userobject = $package->get( $params{'user'} );
+
+	return unless $userobject;
+	
+	my $realpass = $userobject->property( 'password' ) || '';
+
+	return unless defined $pass;
+	return unless $pass eq $realpass;
+	
+	my $sid = md5_hex(time() * $$ * rand(time() + $$));
+	$self->{session} = $sid;
+	$userobject->property( 'session', $sid );
+	return $sid;
+    } elsif ($session) {
+	my @hits = $package->search( session => $session );
+	return if @hits != 1;
+
+	$self->{session} = $session;
+	$self->{user} = $package->get( $hits[0]->id() );
+
+	return $self->{session};
+    }
+
+    return;
 }
 
 sub _define_role {
