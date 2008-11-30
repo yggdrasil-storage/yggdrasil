@@ -14,7 +14,7 @@ sub _define {
   Yggdrasil::fatal("Unable to create properties with zero length names.") unless length $property;
   
   $entity = Yggdrasil::_extract_entity($entity);
-  my $name = join("_", $entity, $property);
+  my $name = join(":", $entity, $property);
 
   # --- Set the default data type.
   $data{type} = uc $data{type} || 'TEXT';
@@ -51,7 +51,7 @@ sub _admin_dump {
     my $entity = shift;
     my $property = shift;
 
-    my $schema = join("_", $entity, $property);
+    my $schema = join(":", $entity, $property);
     return $self->{storage}->raw_fetch( $schema );
 }
 
@@ -61,7 +61,7 @@ sub _admin_restore {
     my $property = shift;
     my $data = shift;
 
-    my $schema = join("_", $entity, $property);
+    my $schema = join(":", $entity, $property);
 
     $self->{storage}->raw_store( $schema, fields => $data );
 }

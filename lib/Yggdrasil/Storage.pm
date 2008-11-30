@@ -199,7 +199,7 @@ sub search {
 	($start, $stop) = ($_[4], $_[5]);
     }
 
-    my $propertytable = $self->_get_schema_name( $entity . '_' . $property );
+    my $propertytable = $self->_get_schema_name( $entity . ':' . $property );
     my $entitytable   = 'Entities';
 
     my ($e) = $self->fetch( $propertytable, { operator => 'LIKE',

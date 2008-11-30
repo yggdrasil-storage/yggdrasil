@@ -117,7 +117,7 @@ sub _get_in_time {
     push( @wheres, 'Entities' => { join => "left", where => [ id => $id ] } );
     
     foreach my $prop ( map { $_->{property} } @$fetchref ) {
-	my $table = join("_", $entity, $prop);
+	my $table = join(":", $entity, $prop);
 	push( @wheres, $table => { join => "left" } );
     }
 
@@ -202,7 +202,7 @@ sub property {
     my $storage = $self->{storage};
 
     my $entity = $self->_extract_entity();
-    my $name = join("_", $entity, $key );
+    my $name = join(":", $entity, $key );
 
     my $schema = $self->property_exists( $key );
 
@@ -252,7 +252,7 @@ sub property_exists {
 				   { start => $start, stop => $stop });
 
 	# The property name might be "0".
-	return join("_", $e, $property) if defined $aref->[0]->{property};
+	return join(":", $e, $property) if defined $aref->[0]->{property};
     }
     
     return;
