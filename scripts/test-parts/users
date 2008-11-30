@@ -42,10 +42,10 @@ my $bark = define Yggdrasil::Auth user => "bark", password => "secret";
 my $boss = define Yggdrasil::Auth role => "Boss";
 
 
-my $host = define Yggdrasil::Entity 'Host';
-my $ip = define $host 'ip', 'type' => 'text';
-$boss->grant( $host, "w" );
-$boss->revoke( $host, "w" );
+my $hoste = define Yggdrasil::Entity 'Host';
+my $ip = define $hoste 'ip', 'type' => 'text';
+$boss->grant( $hoste, "w" );
+$boss->revoke( $hoste, "w" );
 
 $boss->grant( $ip, "r" );
 
