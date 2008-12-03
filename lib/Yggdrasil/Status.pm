@@ -37,7 +37,6 @@ my %map = (
 	   501 => 'Not implemented',
 	   503 => 'Service unavailable', # temporary.
 	   599 => 'Malformed status code',
-	   
 	  );
   
 sub new {
@@ -48,7 +47,8 @@ sub new {
 	      };
 
   return $status if $status;
-  return bless $self, $class;  
+  $status = bless $self, $class;
+  return $status;
 }
 
 sub set {
@@ -67,17 +67,17 @@ sub set {
 
 sub status {
     my $self = shift;
-    return $self->{stack}->[0];
+    return $self->{stack}->[0]->[0];
 }
 
 sub english {
     my $self = shift;
-    return $map{$self->{stack}->[0]};
+    return $map{$self->{stack}->[0]->[0]};
 }
 
 sub message {
     my $self = shift;
-    return $self->{stack}->[1];
+    return $self->{stack}->[0]->[1];
 }
 
 sub OK {
@@ -87,7 +87,7 @@ sub OK {
     # Remember, Yggdrasil deals with moved structures, so moved is OK.
     # If the user wishes to deal with it, that can be checked
     # specifically.
-    if ($status >= 200 && $status < 400) {
+    if ($current >= 200 && $current < 400) {
 	return 1;
     } else {
 	return 0;
@@ -120,7 +120,7 @@ sub _update {
     # Update the stack.
     unshift @{$self->{stack}}, [ $code, $msg ];
     
-    if (@{$self->{stack}} > $self->{stacksize}) {
+    if (scalar @{$self->{stack}} > $self->{stacksize}) {
  	pop @{$self->{stack}};
     }
 }
