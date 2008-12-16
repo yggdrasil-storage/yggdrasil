@@ -9,6 +9,9 @@ use FindBin qw($Bin);
 use lib qq($Bin/../../lib);
 
 use Yggdrasil;
+use Yggdrasil::Status;
+
+my $status = new Yggdrasil::Status;
 
 my ($user, $password, $host, $port, $db, $engine, $mapper) =
   ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef);
@@ -40,24 +43,34 @@ print "$user\@$host ($db / $engine)\n";
 
 # --- Define Hosts
 my $hoste = define Yggdrasil::Entity 'Host';
+status( 'Defining Host' );
 my $ip = define $hoste 'ip', 'type' => 'text';
 my $blob = define $hoste 'blobbie', 'type' => 'binary', null => 0;
 my $serial = define $hoste 'serial';
+status( 'Defining Host:serial' );
 
 print $hoste->null( 'serial' ), " : ", $hoste->null( 'blobbie' ), "\n";
 print $hoste->type( 'serial' ), " : ", $hoste->type( 'blobbie' ), "\n";
 
 my $nommo  = Ygg::Host->new( 'nommo' );
+status( 'Creating the instance nommo (Ygg::Host)' );
 my $baal   = Ygg::Host->new( 'baal' );
 my $escher = Ygg::Host->new( 'escher' );
 
 $nommo->property( 'serial', 1 );
-$nommo->property( 'serial', undef );
+status( 'Setting nommo->serial to 1' );
+
+$nommo->property( 'serialasda', undef );
+status( 'Setting nommo->serialasda to undef' );
 
 $nommo->property( 'serial', '1');
+status( 'Setting nommo->serial to 1' );
 $nommo->property( 'serial', undef);
+status( 'Setting nommo->serial to undef' );
 $nommo->property( 'serial', '1');
+status( 'Setting nommo->serial to 1' );
 $nommo->property( 'serial', undef);
+status( 'Setting nommo->serial to undef' );
   
 $baal->property( 'ip' , 'b1' );
 $baal->property( 'ip' , 'b2' );
@@ -117,14 +130,19 @@ my $bravida = $con->new( "Bravida" );
 # host<->room
 # person<->host
 
-define Yggdrasil::Relation $hoste, 'Room';
+my $hr = define Yggdrasil::Relation $hoste, 'Room';
 define Yggdrasil::Relation $room, $phone;
 define Yggdrasil::Relation $person, $hoste;
 define Yggdrasil::Relation $phone, $con;
 
 define Yggdrasil::Relation $person, $phone;
 
-$b810->link( $nommo );
+print "Host<->Room:", $hr->{label}, ":\n";
+
+$hr->link($nommo, $b810);
+$hr->unlink( $nommo, $b810 );
+exit;
+
 $nommo->unlink( $b810 );
 
 $terje->link( $nommo );
@@ -165,4 +183,8 @@ define Yggdrasil::Entity 'Person';
 define Yggdrasil::Entity 'Student', inherit => 'Person';
 define Yggdrasil::Entity 'Student', inherit => 'Person';
 
-
+sub status {
+    my $msg = shift;
+    print "$msg: ", 
+      join ", ", $status->OK()?"OK":"NOT OK", $status->status(), $status->english(), $status->message() . "\n";
+}
