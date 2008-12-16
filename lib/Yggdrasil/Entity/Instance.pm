@@ -2,6 +2,8 @@ package Yggdrasil::Entity::Instance;
 
 use base 'Yggdrasil::Meta';
 
+use Yggdrasil::Status;
+
 use strict;
 use warnings;
 
@@ -207,24 +209,33 @@ sub property {
     my $schema = $self->property_exists( $key );
 
     # This should perhaps be a warning instead (when under strict => 1)
-    #Yggdrasil::fatal("Unable to find property '$key' for entity '$entity'.") 
-    return undef unless defined $schema;
+    # Yggdrasil::fatal("Unable to find property '$key' for entity '$entity'.")
+    my $status = new Yggdrasil::Status();
+    
+    unless (defined $schema) {
+	$status->set( 404, "Unable to find property '$key' for entity '$entity'" );
+	return undef;
+    }
     
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
 	if( defined $self->{_start} || defined $self->{_stop} ) {
-	    Yggdrasil::fatal("Temporal objects are immutable.");
+	    $status->set( 406, "Temporal objects are immutable.");
+	    return undef;
 	}
 
 	if (! defined $value && ! $self->null( $key )) {
-	    Yggdrasil::fatal("$entity :: $key cannot be set to NULL.");
+	    $status->set( 406, "Temporal objects are immutable.");
+	    return undef;
 	}
-
+       
 	$storage->store( $schema, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 
     my $r = $storage->fetch( $schema => { return => "value", where => [ id => $self->{_id} ] },
 			     { start => $self->{_start}, stop => $self->{_stop} } );
+
+    $r->[0]->{value} ? $status->set( 200 ) : $status->set( 204 );
     return $r->[0]->{value};
 }
 

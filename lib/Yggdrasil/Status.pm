@@ -55,7 +55,7 @@ sub set {
     my $self = shift;
     my $code = shift;
     my $msg  = shift || '';
-    
+
     if ($map{$code}) {
 	$self->_update( $code, $msg );
 	return $code;
@@ -67,17 +67,28 @@ sub set {
 
 sub status {
     my $self = shift;
-    return $self->{stack}->[0]->[0];
+    return $self->_current()->[0];
 }
 
 sub english {
     my $self = shift;
-    return $map{$self->{stack}->[0]->[0]};
+    return $map{$self->status()};
 }
 
 sub message {
     my $self = shift;
-    return $self->{stack}->[0]->[1];
+    return $self->_current()->[1];
+}
+
+sub context {
+    my $self = shift;
+    my $current = $self->_current();
+
+    my $line = $current->[2];
+    my $file = $current->[3];
+    my $sub  = $current->[4];
+    
+    return "$file:$line ($sub)";
 }
 
 sub OK {
@@ -112,13 +123,22 @@ sub get {
     }
 }
 
+sub _current {
+    my $self = shift;
+    return $self->{stack}->[0];    
+}
+
 sub _update {
     my $self = shift;
     my $code = shift; # Verified as existing;
     my $msg  = shift; # Value is set.
+
+    # Skip the call to set, find the real caller.  This really isn't
+    # working well...
+    my ($file, $line, $sub) = (caller(2))[1 .. 3];
     
     # Update the stack.
-    unshift @{$self->{stack}}, [ $code, $msg ];
+    unshift @{$self->{stack}}, [ $code, $msg, $file, $line, $sub ];
     
     if (scalar @{$self->{stack}} > $self->{stacksize}) {
  	pop @{$self->{stack}};

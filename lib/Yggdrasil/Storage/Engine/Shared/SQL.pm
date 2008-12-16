@@ -5,6 +5,8 @@ use warnings;
 
 use base 'Yggdrasil::Storage';
 
+use Yggdrasil::Status;
+
 # Define a structure, it is assumed that the Storage layer has called
 # _structure_exists() with the name of the structure to check its
 # existance before _define is called.  If _define is called, the
@@ -114,12 +116,21 @@ sub _sql {
     
     my $dbh = $self->{dbh};
     my $sth = $dbh->prepare( $sql );
-    Yggdrasil::fatal( "The DB layer didn't return a statement handler! " . $dbh->errstr ) unless $sth;
+
+    my $status = new Yggdrasil::Status;
+    
+    unless ($sth) {
+	$status->set( 500, 'The DB layer didn\'t return a statement handler' );
+	return;
+    }
 
     my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);
     $self->{logger}->debug( "$sql -> Args: [$args_str]" );
 
-    $sth->execute(@attr) || Yggdrasil::fatal( "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
+    unless ($sth->execute(@attr)) {
+	$status->set( 500, "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
+	return;
+    }
 
     # FIX: if we do some DDL stuff, doing a fetch later on will make
     # DBD::mysql warn about calling fetch before execute. So if we do
@@ -127,7 +138,10 @@ sub _sql {
     # This should probably either be implemented as its own _ddlsql
     # or at least there should be some better way of figuring out
     # if we are doing DDL stuff.
-    return if $sql =~ /^(CREATE|INSERT|UPDATE|DROP|TRUNCATE)/i;
+    if ($sql =~ /^(CREATE|INSERT|UPDATE|DROP|TRUNCATE)/i) {
+	$status->set( 201 );
+	return 1;
+    }
 
     return $sth->fetchall_arrayref( {} );
 }
@@ -293,9 +307,14 @@ sub _store {
     my $key    = $data{key};
     my $fields = $data{fields};
 
+    my $status = new Yggdrasil::Status;
+
     # Check if we already have the value
     my $aref = $self->fetch( $schema, { where => [ %$fields ] } );
-    return 1 if @$aref;
+    if (@$aref) {
+	$status->set( 200, 'Value(s) already set' );
+	return 1;
+    }
     
     # Expire the old value
     my %keys;
@@ -311,7 +330,7 @@ sub _store {
 	$self->_expire( $schema, %keys ); 
     }
 
-    # Insert new value
+    # Insert new value, _sql sets the status of its own work.
     if ($self->_schema_is_temporal( $schema )) {
 	$self->_sql( "INSERT INTO $schema (start, " . join(", ", keys %$fields) . ") VALUES (NOW(), "
 		     . join(", ", ('?') x keys %$fields) . ')', values %$fields)
