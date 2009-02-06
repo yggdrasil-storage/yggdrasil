@@ -23,7 +23,7 @@ sub _define {
 
     my $sql = "CREATE TABLE $schema (\n";
     
-    my (@sqlfields, @keys, @indexes);
+    my (@sqlfields, @indexes, %keys);
     for my $fieldname (keys %$fields) {
 	my $field = $fields->{$fieldname};
 	my ($type, $null, $index) = ($field->{type}, $field->{null}, $field->{index});
@@ -33,8 +33,8 @@ sub _define {
 	} else {
 	    $null = 'NOT NULL';
 	}
-
-	push @keys, "KEY ($fieldname)" if $type eq 'SERIAL' && $self->_engine_requires_serial_as_key();
+	
+	$keys{$fieldname}++ if $type eq 'SERIAL' && $self->_engine_requires_serial_as_key();
 
 	$type = $self->_map_type( $type );
 	push @indexes, $fieldname if $index;
@@ -57,17 +57,21 @@ sub _define {
     
     for my $fieldname (keys %$hints) {
 	my $field = $hints->{$fieldname};
+	$keys{$fieldname}++ if $field->{key};
 	
-	push @indexes, $fieldname if $field->{index};
+	push @indexes, $fieldname if $field->{index} && ! $keys{$fieldname};
 	push @sqlfields, $self->_create_foreign_key( $field->{foreign}, $fieldname ) if $field->{foreign};
+
     }
         
     $sql .= join ",\n", @sqlfields;
-    $sql .= ",\n" . join ",\n", @keys if @keys;
+    $sql .= ",\nPRIMARY KEY (" . join( ", ", keys %keys ) . ")" if %keys;
     $sql .= ");\n";
 
     $self->{logger}->debug( $sql );
     $self->_sql( $sql );
+
+    print "$sql\n";
     
     for my $field (@indexes) {
 	my $indexsql = $self->_create_index_sql($schema, $field );
