@@ -33,18 +33,20 @@ GetOptions(
 	   "port=s"       => \$port,
 	  );
 
-new Yggdrasil(
-	      user      => $user,
-	      password  => $password,
-	      host      => $host,
-	      port      => $port,
-	      db        => $db,
-	      engine    => $engine,
-	      namespace => 'Ygg',
-	      admin     => 1,
-	     );
+my $y = new Yggdrasil(
+		      user      => $user,
+		      password  => $password,
+		      host      => $host,
+		      port      => $port,
+		      db        => $db,
+		      engine    => $engine,
+		      namespace => 'Ygg',
+		      admin     => 1,
+		     );
 
 my $storage = $Yggdrasil::STORAGE;
+
+$zap = 1 if $bootstrap;
 
 my ($dbh, $sql);
 
@@ -113,7 +115,7 @@ for my $structure (@structures) {
     }
     
     my @tabledata;
-    if ($dump) {
+    if ($dump) {	
 	next unless &display( $mapped_struct ) || $zap;
 	# Give me a row (an array reference) for every row in the structure in question.
 	my $tableref = $storage->_dump_structure( $structure );
@@ -193,18 +195,12 @@ for my $structure (@structures) {
     } 
     
     if ($zap) {
-	# Drop a named structure
 	$storage->_admin_delete_structure( $structure );
-    } elsif ($bootstrap) {
-	if ($structure =~ /Meta/i) {
-	    # Truncate a named structure
-	    $storage->_admin_truncate_structure( $structure );
-	} else {
-	    # Drop a named structure
-	    $storage->_admin_delete_structure( $structure );
-	}
     }
 }
+
+exec './bootstrap' if $bootstrap;
+
 
 sub display {
     my $table = shift;
