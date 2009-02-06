@@ -13,7 +13,7 @@ sub grant {
 #    w => r+w
 #    r => r
 #    c => r+w+c
-#    d => r+w+d
+#    d => r+w+c+d
 
     my $read   = 0;
     my $write  = 0;
@@ -29,6 +29,7 @@ sub grant {
     if( $grant =~ /d/ ) {
 	$read   = 1;
 	$write  = 1;
+	$create = 1;
 	$delete = 1;
     }
 
@@ -54,7 +55,7 @@ sub revoke {
 #    w => r+w
 #    r => r
 #    c => r+w+c
-#    d => r+w+d
+#    d => r+w+c+d
 
     my $read   = 0;
     my $write  = 0;
@@ -70,6 +71,7 @@ sub revoke {
     if( $revoke =~ /d/ ) {
 	$read   = 1;
 	$write  = 1;
+	$create = 1;
 	$delete = 0;
     }
 
@@ -92,7 +94,7 @@ sub _set_permissions {
     my %param = @_;
 
     my $schema = Yggdrasil::_extract_entity( $param{schema} );
-    my($e, $p) = split '_', $schema, 2;
+    my($e, $p) = split ':', $schema, 2;
 
 
     # FIX: gah we don't get Host_ip on property ip, but only "ip"
