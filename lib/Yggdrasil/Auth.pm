@@ -87,12 +87,9 @@ sub _setup_default_users_and_roles {
     my( $adminrole, $userrole ) = Yggdrasil::Auth->_generate_default_roles();
     my @users = Yggdrasil::Auth->_generate_default_users();
 
+    # both users 'root' and '$>' are admins.
     for my $user (@users) {
-	if( $user->id() eq "root" ) {
-	    $adminrole->add($user);
-	} else {
-	    $userrole->add($user);
-	}
+	$adminrole->add($user);	    
     }
 }
 
@@ -100,6 +97,13 @@ sub _generate_default_roles {
     my @roles;
     for my $r ( "admin", "user" ) {
 	my $role = __PACKAGE__->define( role => $r );
+
+	if ($r eq 'admin') {
+	    $role->grant( 'UNIVERSAL', 'd' );
+	} else {
+	    $role->grant( 'UNIVERSAL', 'r' );
+	}
+	 
 	push( @roles, $role );
     }
 
