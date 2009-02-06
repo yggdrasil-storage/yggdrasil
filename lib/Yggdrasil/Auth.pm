@@ -31,8 +31,11 @@ sub authenticate {
     
     # First, let see if we're connected to a tty without getting a
     # username / password, at which point we're already authenticated
-    # and we don't want to touch the session.
-    return 1 if -t && ! defined $user && ! defined $pass;
+    # and we don't want to touch the session.  $> is effective UID.
+    if (-t && ! defined $user && ! defined $pass) {
+	$self->{user} = (getpwuid($>))[0];
+	return 1;
+    } 
 
     # Otherwise, we got both a username and a password.
     if (defined $user && defined $pass) {
