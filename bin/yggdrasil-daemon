@@ -1,0 +1,72 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Yggdrasil::Common::Config;
+use Yggdrasil::Common::CommandLine;
+
+use IO::Socket;
+# use IO::Socket::SSL;
+
+# 1. cmdline arg
+# 2. config
+# 3. program defaults
+my $label = shift || 'default';
+
+my $c = Yggdrasil::Common::Config->new();
+my $config = $c->get($label);
+die "No such label as $label\n" unless $config;
+
+our $HOST = $config->get('host') || 'localhost';
+our $PORT = $config->get('port') || 33221;
+
+my $server = IO::Socket::INET->new( LocalAddr => $HOST,
+				    LocalPort => $PORT,
+				    Listen    => 5,
+				    Proto     => 'tcp',
+				    ReuseAddr => 1 );
+
+unless( $server ) {
+    die( "$0 failed to bind to $HOST:$PORT." .
+	 "$@\n" );
+}
+
+print "Waiting for connections on $HOST:$PORT ...\n";
+
+while( my $client = $server->accept() ) {
+    my $pid = fork;
+
+    if( $pid ) {
+	# --- Parent
+	print "* Got client - forking $pid\n";
+	$client->close();
+	next;
+    }
+
+    handle_client($client);
+}
+
+sub handle_client {
+    my $client = shift;
+
+    print $client "HELO\n";
+
+    while( my $line = <$client> ) {
+	chomp $line;
+
+	if( $line =~ m<quit|end|exit>i ) {
+	    print " $$ closing connection\n";
+	    $client->close();
+	    exit;
+	}
+
+	print $client scalar reverse($line), "\n";
+    }
+
+    print " $$ closing anyway!\n";
+    exit;
+}
