@@ -33,30 +33,59 @@ new Yggdrasil(
 	      engine    => $engine,
 	      namespace => 'Ygg',
 	      mapper    => $mapper,
-	      admin     => 1,
+	      admin     => 1
 	     );
 
 print "$user\@$host ($db / $engine)\n";
 
-my $person  = define Yggdrasil::Entity "Person";
-my $student = define Yggdrasil::Entity "Student";
+my $person = define Yggdrasil::Entity "Person";
+my $node   = define Yggdrasil::Entity "Node";
+my $room   = define Yggdrasil::Entity "Room";
 
 my $pname = define $person 'name';
+my $nname = define $node 'ip';
+my $ruse  = define $room 'use';
 
 my $bob   = Ygg::Person->new( "bob" );
 my $alice = Ygg::Person->new( "alice" );
+my $nommo = Ygg::Node->new( 'nommo' );
+my $b701  = Ygg::Room->new( 'B701' );
 
 $bob->property( name => "Bob b." );
 $alice->property( name => "Alice down the Hole" );
+$nommo->property( ip => '129.240.222.179');
+$b701->property( use => 'Hacklab' );
 
-define Yggdrasil::Relation "Person", "Person";
-$bob->link($alice);
+my $p2p = define Yggdrasil::Relation "Person", "Person";
+my $n2p = define Yggdrasil::Relation "Node", "Person";
+my $n2r = define Yggdrasil::Relation "Node", "Room";
+
+$p2p->link($bob, $alice);
+$n2p->link($nommo, $bob);
+$n2r->link($nommo, $b701);
 
 foreach my $r ( $bob->fetch_related("Person") ) {
-    print "Bob is related to ", pprop($alice, "name"), "\n";
+    print "Bob is related to ", pprop($r, "name"), "\n";
 }
 
+foreach my $r ( $bob->fetch_related("Node") ) {
+    print "Bob is related to ", pprop($r, "ip"), "\n";
+}
 
+foreach my $r ( $bob->fetch_related("Room") ) {
+    print "Bob is related to ", pprop($r, "use"), "\n";
+}
+
+print "Unlinking...\n";
+$n2p->unlink( $nommo, $bob );
+
+foreach my $r ( $bob->fetch_related("Node") ) {
+    print "Bob is related to ", pprop($r, "ip"), "\n";
+}
+
+foreach my $r ( $bob->fetch_related("Room") ) {
+    print "Bob is related to ", pprop($r, "use"), "\n";
+}
 
 sub pprop {
     my $instance = shift;

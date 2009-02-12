@@ -10,12 +10,16 @@ use Yggdrasil::Property;
 
 sub _define {
     my $self = shift;
+    my %params = @_;
+    $self->{yggdrasil} = $params{yggdrasil};
+    $self->{storage}   = $params{yggdrasil}->{storage};
+    
+    # Temporality for free is nice.
+    my $user = $self->define_entity( "MetaAuthUser" );
+    $self->define_property( "MetaAuthUser:password", type => "PASSWORD" );
+    $self->define_property( "MetaAuthUser:session", type => "TEXT" );
 
-    my $user = define Yggdrasil::Entity "MetaAuthUser";
-    define Yggdrasil::Property $user, "password", type => "PASSWORD";
-    define Yggdrasil::Property $user, "session", type => "TEXT";
-
-    my $role = define Yggdrasil::Entity "MetaAuthRole";
+    my $role = $self->define_entity( "MetaAuthRole" );
 
     # --- Tell Storage to create SCHEMA, noop if it exists
     $self->{storage}->define( "MetaAuthProperty",
@@ -64,6 +68,7 @@ sub _define {
 				  user => { foreign => "MetaAuthUser" },
 			      }
 	);
+    return $self;
 }
 
 1;

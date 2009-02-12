@@ -5,15 +5,19 @@ use base qw(Yggdrasil);
 sub define {
     my $class = shift;
     my $self  = $class->SUPER::new(@_);
-
+    
     return $self->_define(@_);
 }
 
-sub get {
-    my $class = shift;
-    my $self  = $class->SUPER::new(@_);
+sub fetch {
+    my $self = shift;
+    return $self->_fetch(@_);
+}
 
-    return $self->_get(@_);
+sub get {
+    warn "Meta::get() is deprecated, fixme!";
+    my $self = shift;
+    return $self->fetch(@_);
 }
 
 sub admin_dump {
@@ -38,7 +42,7 @@ sub admin_define {
 }
 
 sub _define { Yggdrasil::fatal( "_define not declared for class " . shift() . "\n" )}
-sub _get    { Yggdrasil::fatal( "_get not declared for class " . shift() . "\n" )}
+sub _fetch    { Yggdrasil::fatal( "_fetch not declared for class " . shift() . "\n" )}
 sub _admin_dump { Yggdrasil::fatal( "_admin_dump not declared for class " . shift() . "\n" )}
 sub _admin_restore { Yggdrasil::fatal( "_admin_restore not declared for class " . shift() . "\n" )}
 sub _admin_define { Yggdrasil::fatal( "_admin_define not declared for class " . shift() . "\n" )}

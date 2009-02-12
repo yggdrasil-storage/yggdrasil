@@ -3,43 +3,63 @@
 use strict;
 use warnings;
 
-use Getopt::Long;
+use Preamble qw|getopts status status_die|;
 
-use FindBin qw($Bin);
-use lib qq($Bin/../../lib);
+my $opts = getopts();
 
-use Yggdrasil;
-use Yggdrasil::Status;
+my $ygg = new Yggdrasil();
+status_die( "Yggdrasil", $ygg );
 
-my $status = new Yggdrasil::Status;
+my $connect = $ygg->connect(
+			    user     => $opts->{user},
+			    engine   => $opts->{engine},
+			    password => $opts->{password},
+			    host     => $opts->{host},
+			    db       => $opts->{db},
+			    engine   => $opts->{engine},
+			    port     => $opts->{port},
+			   );
+status_die( "Connect", $connect, 1 );
 
-my ($user, $password, $host, $port, $db, $engine, $mapper) =
-  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef);
+my $login = $ygg->login( user => $opts->{yuser}, password => $opts->{ypass} );
+status_die( "Login", $login, 1 );
 
-GetOptions(
-	   "user=s"       => \$user,
-	   "engine=s"     => \$engine,
-	   "password=s"   => \$password,
-	   "host=s"       => \$host,
-	   "database=s"   => \$db,
-	   "engine=s"     => \$engine,
-	   "port=s"       => \$port,
-	   "mapper=s"     => \$mapper,
-	  );
+# Define entities
+my $host_entity   = $ygg->define_entity( 'Host' );
+my $room_entity   = $ygg->define_entity( 'Room' );
+my $person_entity = $ygg->define_entity( 'Person' );
+my $p_s_entity    = $ygg->define_entity( 'Person::Student' );
 
-new Yggdrasil(
-	      user      => $user,
-	      password  => $password,
-	      host      => $host,
-	      port      => $port,
-	      db        => $db,
-	      engine    => $engine,
-	      namespace => 'Ygg',
-	      mapper    => $mapper,
-	      admin     => 1,
-	     );
+status( 'Host', $host_entity );
+status( 'Room', $room_entity );
+status( 'Person', $person_entity );
+status( 'Person::Student', $p_s_entity );
 
-print "$user\@$host ($db / $engine)\n";
+$host_entity   = $ygg->get_entity( 'Host' );
+
+status( 'Host', $host_entity );
+
+# Define instance
+my $nommo = $host_entity->create( 'nommo2' );
+status( 'Create', $nommo );
+$nommo    = $host_entity->fetch( 'nommo2' );
+status( 'Fetch', $nommo );
+exit;
+
+$nommo->get( 'ip' );
+$nommo->set( 'ip', '129.240.222.179' );
+  
+# Define properties, cannot be "gotten".
+my $host_property_ip      = $host_entity->define_property( 'ip' );
+my $room_property_comment = $room_entity->define_property( 'comment' );
+my $person_propert_name   = $person_entity->define_property( 'name' );
+my $p_s_property_grade    = $ygg->define_property( 'Person::Student:grade', type => 'text', null => 0);
+
+# Define relations
+my $host_room_relation   = $ygg->define_relation( $host_entity, $room_entity, 'hr' );
+my $person_room_relation = $ygg->define_relation( $person_entity, $room_entity, 'pr' );
+
+$host_room_relation = $ygg->get_relation( 'hr' );
 
 # --- Define Hosts
 my $hoste = define Yggdrasil::Entity 'Host';
@@ -52,7 +72,7 @@ status( 'Defining Host:serial' );
 print $hoste->null( 'serial' ), " : ", $hoste->null( 'blobbie' ), "\n";
 print $hoste->type( 'serial' ), " : ", $hoste->type( 'blobbie' ), "\n";
 
-my $nommo  = Ygg::Host->new( 'nommo' );
+# my $nommo  = Ygg::Host->new( 'nommo' );
 status( 'Creating the instance nommo (Ygg::Host)' );
 my $baal   = Ygg::Host->new( 'baal' );
 my $escher = Ygg::Host->new( 'escher' );
@@ -182,9 +202,3 @@ for my $e (qw /Telephone Contractor Room/ ) {
 define Yggdrasil::Entity 'Person';
 define Yggdrasil::Entity 'Student', inherit => 'Person';
 define Yggdrasil::Entity 'Student', inherit => 'Person';
-
-sub status {
-    my $msg = shift;
-    print "$msg: ", 
-      join ", ", $status->OK()?"OK":"NOT OK", $status->status(), $status->english(), $status->message() . "\n";
-}

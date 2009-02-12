@@ -7,6 +7,8 @@ use base 'Yggdrasil::Storage::Engine::Shared::SQL';
 
 use DBI;
 
+use Yggdrasil::Status;
+
 our %TYPEMAP = (
 		DATE     => 'DATETIME',
 		BINARY   => 'MEDIUMBLOB', # 2^24, 16MiB.
@@ -20,7 +22,21 @@ sub new {
 
   bless $self, $class;
 
-  $self->{dbh} = DBI->connect( "DBI:mysql:database=$data{db};host=$data{host};port=$data{port}", $data{user}, $data{password}, { RaiseError => 0 } );
+  my $status = new Yggdrasil::Status;
+
+  my @missing;
+  for my $param (qw|host user password db|) {
+      push @missing, $param unless $data{$param};
+  }
+
+  if (@missing) {
+      $status->set( 404, 'Missing database parameter(s): ' . join ", ", @missing );
+      return undef;
+  }
+
+  $data{port} ||= 3306;
+  
+  $self->{dbh} = DBI->connect( "DBI:mysql:database=$data{db};host=$data{host};port=$data{port}", $data{user}, $data{password}, { RaiseError => 1 } );
 
   return $self;
 }

@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Yggdrasil::Storage::Mapper;
+use Yggdrasil::Status;
 
 our $storage;
 our $STORAGEMAPPER   = 'Storage_mapname';
@@ -33,6 +34,14 @@ sub new {
 
   return $storage if $storage;
 
+  $self->{yggdrasil} = $data{yggdrasil};
+
+  unless ($data{engine}) {
+      my $status = new Yggdrasil::Status;
+      $status->set( 404, "No engine specified?" );
+      return undef;
+  }
+
   my $engine = join(".", $data{engine}, "pm" );
 
   # Throw-away object, used to get access to class methods.
@@ -50,6 +59,8 @@ sub new {
     Yggdrasil::fatal $@ if $@;
     #  $class->import();
     $storage = $engine_class->new(@_);
+
+    return undef unless defined $storage;
     
     $MAPPER = $data{mapper};
     $ADMIN  = $data{admin};

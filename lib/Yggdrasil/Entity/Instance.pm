@@ -10,22 +10,24 @@ use warnings;
 sub new {
   my $class = shift;
 
-  my( $pkg ) = caller();
-  my $self = $class->SUPER::new(@_);
+#  my( $pkg ) = caller();
+  my $self = bless {}, $class;
+  my $visual_id;
 
   # --- do stuff
-  my $visual_id = shift;
+  my %params = @_;
+  
+  $self->{visual_id} = $visual_id = $params{visual_id};
+  
+  $self->{yggdrasil} = $params{yggdrasil};
+  $self->{storage}   = $params{yggdrasil}->{storage};
+  $self->{entity}    = $params{entity};
 
-  if( $pkg eq __PACKAGE__ ) {
-    my @time = @_;
+  $self->{_start} = $params{start};
+  $self->{_stop}  = $params{stop};
 
-    $self->{_start} = $time[0];
-    $self->{_stop}  = $time[1];
-  }
+  my $entity = $self->{entity};
 
-  $self->{visual_id} = $visual_id;
-
-  my $entity = $self->_extract_entity();
   $self->{_id} = $self->_get_id(); 
 
   unless ($self->{_id}) { 
@@ -44,7 +46,7 @@ sub new {
 
 sub _get_id {
     my $self = shift;
-    my $entity = $self->_extract_entity();
+    my $entity = $self->{entity};
 
     my $idfetch = $self->{storage}->fetch('MetaEntity', { 
 							 where => [ entity => $entity, 
@@ -59,7 +61,7 @@ sub _get_id {
 }
 
 sub get {
-  my $class = shift;
+  my $self = shift;
   my $visual_id = shift;
   my @time = @_;
 
@@ -73,8 +75,8 @@ sub get {
   }
   
   my @objects;
-  for my $dataref ($class->_get_in_time( $visual_id, @time )) {
-      push @objects, $class->new( $visual_id, $dataref->{start}, $dataref->{stop} );
+  for my $dataref ($self->_get_in_time( $visual_id, @time )) {
+      push @objects, $self->new( $visual_id, $dataref->{start}, $dataref->{stop} );
   }
 
   if (@time && $time[0] && $time[1] && $time[0] ne $time[1]) {
@@ -85,20 +87,20 @@ sub get {
 }
 
 sub _get_in_time {    
-    my $class = shift;
+    my $self = shift;
     my $visual_id = shift;
     my @time = @_;
     
-    my $entity = Yggdrasil::_extract_entity($class);
-    my $idref = $Yggdrasil::STORAGE->fetch('MetaEntity', { 
-							  where => [ entity => $entity, 
-								     id     => \qq{Entities.entity}, ],
-							 },
-					   'Entities', {
-							return => "id",
-							where => [ visual_id => $visual_id ] } );
+    my $entity = $self->{entity};
+    my $idref  = $self->{storage}->fetch('MetaEntity', { 
+							where => [ entity => $entity, 
+								   id     => \qq{Entities.entity}, ],
+						       },
+					 'Entities', {
+						      return => "id",
+						      where => [ visual_id => $visual_id ] } );
     my $id = $idref->[0]->{id};
-
+    
     # Short circuit the joins if we're looking for the current object
     unless (@time) {
 	if ($id) {
@@ -108,12 +110,12 @@ sub _get_in_time {
 	}
     }
     
-    my $fetchref = $Yggdrasil::STORAGE->fetch('MetaEntity', { where => [
-									entity => $entity, 
-									id     => \qq<MetaProperty.entity>,
-								       ]},
-					      "MetaProperty" => { return => "property" },
-					      { start => $time[0], stop => $time[1] } );
+    my $fetchref = $self->{storage}->fetch('MetaEntity', { where => [
+								     entity => $entity, 
+								     id     => \qq<MetaProperty.entity>,
+								    ]},
+					   "MetaProperty" => { return => "property" },
+					   { start => $time[0], stop => $time[1] } );
     
     my @wheres;
     push( @wheres, 'Entities' => { join => "left", where => [ id => $id ] } );
@@ -123,7 +125,7 @@ sub _get_in_time {
 	push( @wheres, $table => { join => "left" } );
     }
 
-    my $ref = $Yggdrasil::STORAGE->fetch( @wheres, { start => $time[0], stop => $time[1] } );
+    my $ref = $self->{storage}->fetch( @wheres, { start => $time[0], stop => $time[1] } );
     
     # If we're within a time slice, filter out the relevant hits, sort
     # them and return.  Remember to set the start of the first hit to
@@ -131,7 +133,7 @@ sub _get_in_time {
     # of the last hit to $time[1] (the last acceptable timestamp in
     # the request.
     if( defined $time[0] || defined $time[1] ) {
-	my $times = $class->_filter_start_times( $time[0], $time[1], $ref );
+	my $times = $self->_filter_start_times( $time[0], $time[1], $ref );
 
 	my @sorted = map { $times->{$_} } sort { $a <=> $b } keys %$times;
 	for( my $i = 0; $i < @sorted; $i++ ) {
@@ -152,7 +154,7 @@ sub _get_in_time {
 
 sub _define {
     my $self   = shift;
-    my $entity = $self->_extract_entity();
+    my $entity = $self->{entity};
     
     return Yggdrasil::Property->define( $entity, @_ );
 }
@@ -160,7 +162,7 @@ sub _define {
 # Filter out the unique start times between $start and $stop from all
 # the db hits in the $dbref parameter.  
 sub _filter_start_times {
-    my ($class, $start, $stop, $dbref) = @_;
+    my ($self, $start, $stop, $dbref) = @_;
     
     my %times;
     if (defined $start && defined $stop && $start == $stop && @$dbref) {
@@ -203,7 +205,7 @@ sub property {
 
     my $storage = $self->{storage};
 
-    my $entity = $self->_extract_entity();
+    my $entity = $self->{entity};
     my $name = join(":", $entity, $key );
 
     my $schema = $self->property_exists( $key );
@@ -240,18 +242,12 @@ sub property {
 }
 
 sub property_exists {
-    my ($self_or_class, $property) = (shift, shift);
-    my ($start, $stop) = $self_or_class->_get_times_from( @_ );
-    my ($entity);
+    my ($self, $property) = (shift, shift);
+    my ($start, $stop) = $self->_get_times_from( @_ );
     
-    if (ref $self_or_class) {
-	$entity = $self_or_class->_extract_entity();
-    } else {
-	$entity = Yggdrasil::_extract_entity($self_or_class);
-    }
-    
-    my @ancestors = __PACKAGE__->_ancestors($entity, $start, $stop);
-    my $storage = $Yggdrasil::STORAGE;
+    my $entity = $self->{entity};
+    my @ancestors = $self->_ancestors($entity, $start, $stop);
+    my $storage = $self->{storage};
     
     # Check to see if the property exists.
     foreach my $e ( $entity, @ancestors ) {
@@ -270,21 +266,16 @@ sub property_exists {
 }
 
 sub properties {
-    my $class = shift;
-    my ($start, $stop) = $class->_get_times_from( @_ );
+    my $self = shift;
+    my ($start, $stop) = $self->_get_times_from( @_ );
 
-    if (ref $class) {
-	$class = $class->_extract_entity();
-    } else {
-	$class = Yggdrasil::_extract_entity($class);
-    }
-
-    my @ancestors = __PACKAGE__->_ancestors($class, $start, $stop);
-    my $storage = $Yggdrasil::STORAGE;
+    my $entity = $self->{entity};
+    my @ancestors = $self->_ancestors($entity, $start, $stop);
+    my $storage = $self->{storage};
 
     my %properties;
     
-    foreach my $e ( $class, @ancestors ) {
+    foreach my $e ( $self->{entity}, @ancestors ) {
 	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
 							      entity => $e,
 							    ]},
@@ -298,30 +289,30 @@ sub properties {
     return keys %properties;
 }
 
-# FIXME, temporal search.
+# FIXME, temporal search.  FIXME, JUST FIX ME!
 sub relations {
-    my $class = shift;
+    my $self = shift;
 
-    if (ref $class) {
-	$class = $class->_extract_entity();
+    if (ref $self) {
+	$self = $self->{entity};
     } else {
-	$class = Yggdrasil::_extract_entity($class);
+	$self = Yggdrasil::_extract_entity($self);
     }
     
 #    my $lref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
 #					   { return => 'entity2', 
-#					     where => [ entity1 => $class ] 
+#					     where => [ entity1 => $self ] 
 #					   } );
 #    my $rref = $Yggdrasil::STORAGE->fetch( 'MetaRelation', 
 #					   { return => 'entity1', 
-#					     where => [ entity2 => $class ]
+#					     where => [ entity2 => $self ]
 #					   } );
 #
 #    return map { $_->{entity1} || $_->{entity2} } @$lref, @$rref;    
 
     # FIXME, needs to check for all parents, not just self.
     
-    my $other = $Yggdrasil::STORAGE->fetch('MetaEntity', { where => [ entity => $class ] },
+    my $other = $Yggdrasil::STORAGE->fetch('MetaEntity', { where => [ entity => $self ] },
 					   'MetaRelation',
 					    { return => [ 'label' ],
 					      where => [ rval => \qq{MetaEntity.id},
@@ -335,15 +326,15 @@ sub relations {
 
 # fetches all current instances for an Entity
 sub instances {
-    my $class = shift;
+    my $self = shift;
 
-    if (ref $class) {
-	$class = $class->_extract_entity();
+    if (ref $self) {
+	$self = $self->{entity};
     } else {
-	$class = Yggdrasil::_extract_entity($class);
+	$self = Yggdrasil::_extract_entity($self);
     }
     
-    my $instances = $Yggdrasil::STORAGE->fetch( 'MetaEntity' => { where  => [ entity => $class ] },
+    my $instances = $Yggdrasil::STORAGE->fetch( 'MetaEntity' => { where  => [ entity => $self ] },
 					        'Entities'   => { return => 'visual_id',
 								  where => [ entity => \qq{MetaEntity.id} ] } );
 
@@ -355,8 +346,8 @@ sub instances {
 # _get_meta returns meta data for a property, information about nullp
 # and type is currently supported.
 sub _get_meta {
-    my ($class, $property, $meta) = (shift, shift, shift);
-    my ($start, $stop) = $class->_get_times_from( @_ );
+    my ($self, $property, $meta) = (shift, shift, shift);
+    my ($start, $stop) = $self->_get_times_from( @_ );
     
     Yggdrasil::fatal( "$meta is not a valid metadata request." ) 
 	unless $meta eq 'null' || $meta eq 'type';
@@ -364,16 +355,11 @@ sub _get_meta {
     # The internal name for the null field is "nullp".
     $meta = 'nullp' if $meta eq 'null';
 
-    if (ref $class) {
-	$class = $class->_extract_entity();
-    } else {
-	$class = Yggdrasil::_extract_entity($class);
-    }
+    my $entity = $self->{entity};
+    my @ancestors = $self->_ancestors($entity, $start, $stop);
+    my $storage = $self->{storage};
 
-    my @ancestors = __PACKAGE__->_ancestors($class, $start, $stop);
-    my $storage = $Yggdrasil::STORAGE;
-
-    foreach my $e ( $class, @ancestors ) {
+    foreach my $e ( $self, @ancestors ) {
 	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e ]},
 				  'MetaProperty',{ return => $meta,
 						    where  => [ entity   => \qq{MetaEntity.id},
@@ -387,54 +373,29 @@ sub _get_meta {
 # Property null function for non-instanced calls.
 # It is called as "Ygg::Entity->null( 'propertyname' );
 sub null {
-    my ($class, $property) = (shift, shift);
-    return $class->_get_meta( $property, 'null', @_ );
+    my ($self, $property) = (shift, shift);
+    return $self->_get_meta( $property, 'null', @_ );
 }
 
 # Property type function for non-instanced calls.
 # It is called as "Ygg::Entity->type( 'propertyname' );
 sub type {
-    my ($class, $property) = (shift, shift);
-    return $class->_get_meta( $property, 'type', @_ );
-}
-
-sub search {
-    my ($class, $key, $value) = (shift, shift, shift);
-    my $package = $class;
-    $class = Yggdrasil::_extract_entity($class);
-    
-    # Passing the possible time elements onwards as @_ to the Storage layer.
-    my ($nodes) = $Yggdrasil::STORAGE->search( $class, $key, $value, @_);
-    
-    my @hits;
-    for my $hit (@$nodes) {
-	my $obj = $package->SUPER::new();
-	for my $key (keys %$hit) {
-	    $obj->{$key} = $hit->{$key};
-	}
-	push @hits, $obj;
-    }
-    return @hits;
+    my ($self, $property) = (shift, shift);
+    return $self->_get_meta( $property, 'type', @_ );
 }
 
 sub isa {
-    my $self_or_class = shift;
+    my $self = shift;
     my $isa = shift;
-    my($start, $stop) = $self_or_class->_get_times_from( @_ );
+    my($start, $stop) = $self->_get_times_from( @_ );
 
-    my $entity;
-    if (ref $self_or_class) {
-	$entity = $self_or_class->_extract_entity();
-    } else {
-	$entity = Yggdrasil::_extract_entity($self_or_class);
-    }
+    my $entity = $self->{entity};
+    my $storage = $self->{storage};
 
-    $isa = Yggdrasil::_extract_entity($isa) if defined $isa;
-    return 1 if defined $isa && $isa eq $entity;
+    return 1 if $isa eq $entity;
 
-    my $storage = $Yggdrasil::STORAGE;
+    my @ancestors = $self->_ancestors($entity, $start, $stop);
 
-    my @ancestors = __PACKAGE__->_ancestors($entity, $start, $stop );
     if( defined $isa ) {
 	my $r = grep { $isa eq $_ } @ancestors;
 	return $r;
@@ -461,7 +422,7 @@ sub fetch_related {
   my($start, $stop) = $self->_get_times_from( @_ );
   
   $relative = Yggdrasil::_extract_entity($relative);
-  my $source = $self->_extract_entity();
+  my $source = $self->{entity};
 
   my $source_id = $self->{storage}->_get_entity( $source );
   my $destin_id = $self->{storage}->_get_entity( $relative );
@@ -563,11 +524,12 @@ sub _fetch_related {
 
 
 sub _ancestors {
-    my $class = shift;
+    my $self = shift;
     my $entity = shift;
     my ($start, $stop) = @_;
 
-    my $storage = $Yggdrasil::STORAGE;
+    $entity = $self->{entity};
+    my $storage = $self->{storage};
     $entity = $storage->get_entity_id( $entity );
     
     my @ancestors;
@@ -590,7 +552,7 @@ sub _ancestors {
 }
 
 sub _get_times_from {
-    my $self_or_class = shift;
+    my $self = shift;
 
     if (@_ == 1) {
 	return ($_[0], $_[0]);

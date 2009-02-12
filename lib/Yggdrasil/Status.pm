@@ -40,13 +40,14 @@ my %map = (
 	  );
   
 sub new {
+  return $status if $status;
+
   my $class = shift;
   my $self  = {
 	       stack     => [],
 	       stacksize => 10,
 	      };
 
-  return $status if $status;
   $status = bless $self, $class;
   return $status;
 }
@@ -57,7 +58,7 @@ sub set {
     my $msg  = shift || '';
 
     if ($map{$code}) {
-	$self->_update( $code, $msg );
+	$self->_update( $code, $msg );	
 	return $code;
     } else {
 	$self->_update( '599', $msg );

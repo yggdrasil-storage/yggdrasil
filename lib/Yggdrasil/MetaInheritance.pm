@@ -8,7 +8,7 @@ use base qw(Yggdrasil::Meta);
 sub _define {
     my $self = shift;
 
-    return $self->{storage}->define( "MetaInheritance",
+    return $self->{yggdrasil}->{storage}->define( "MetaInheritance",
 				     fields   => { parent => { type => "INTEGER", null => 0 },
 						   child  => { type => "INTEGER", null => 0 } },
 				     temporal => 1,
@@ -21,10 +21,10 @@ sub _define {
 
 sub _add_inheritance {
     my $self   = shift;
-    my $me     = $self->{storage}->get_entity_id( shift );
-    my $parent = $self->{storage}->get_entity_id( shift );
+    my $me     = $self->{yggdrasil}->{storage}->get_entity_id( shift );
+    my $parent = $self->{yggdrasil}->{storage}->get_entity_id( shift );
 
-    $self->{storage}->store('MetaInheritance',
+    $self->{yggdrasil}->{storage}->store('MetaInheritance',
 			    key    => [ 'parent', 'child' ],
 			    fields => {
 				       parent => $parent,
@@ -35,22 +35,22 @@ sub _add_inheritance {
 
 sub _expire_inheritance {
     my $self = shift;
-    my $me   = $self->{storage}->get_entity_id( shift );
+    my $me   = $self->{yggdrasil}->{storage}->get_entity_id( shift );
 
-    $self->{storage}->expire('MetaInheritance', child => $me);
+    $self->{yggdrasil}->{storage}->expire('MetaInheritance', child => $me);
 }
 
 sub _admin_dump {
     my $self = shift;
 
-    return $self->{storage}->raw_fetch( "MetaInheritance" );
+    return $self->{yggdrasil}->{storage}->raw_fetch( "MetaInheritance" );
 }
 
 sub _admin_restore {
     my $self = shift;
     my $data = shift;
 
-    return $self->{storage}->raw_store( "MetaInheritance", fields => $data );
+    return $self->{yggdrasil}->{storage}->raw_store( "MetaInheritance", fields => $data );
 }
 
 1;

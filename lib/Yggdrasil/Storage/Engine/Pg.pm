@@ -20,7 +20,7 @@ sub new {
 
   bless $self, $class;
   
-  $self->{dbh} = DBI->connect( "DBI:Pg:database=$data{db};host=$data{host};port=$data{port}", $data{user}, $data{password}, { RaiseError => 0 } );
+  $self->{dbh} = DBI->connect( "DBI:Pg:database=$data{db};host=$data{host};port=$data{port}", $data{user}, $data{password}, { RaiseError => 1 } );
 
   $self->{dbh}->{Warn} = 0;
 

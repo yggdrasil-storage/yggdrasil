@@ -8,9 +8,10 @@ use Digest::MD5 qw(md5_hex);
 use base qw(Yggdrasil::MetaAuth);
 
 use Yggdrasil::Auth::Role;
+use Yggdrasil::Status;
 
-sub define {
-    my $class = shift;
+sub _define {
+    my $self = shift;
     my %params = @_;
 
     if( exists $params{role} ) {
@@ -20,6 +21,7 @@ sub define {
     } else {
 	# be angry
     }
+    return $self;
 }
 
 sub authenticate {
@@ -27,38 +29,52 @@ sub authenticate {
     my %params = @_;
     
     my ($user, $pass, $session) = ($params{'user'}, $params{'pass'}, $params{'session'});
-    my $package = join '::', $self->{namespace}, 'MetaAuthUser';
+
+    my $status = new Yggdrasil::Status;
+    my $authentity = $self->get_entity( 'MetaAuthUser' );
     
     # First, let see if we're connected to a tty without getting a
     # username / password, at which point we're already authenticated
     # and we don't want to touch the session.  $> is effective UID.
     if (-t && ! defined $user && ! defined $pass) {
 	$self->{user} = (getpwuid($>))[0];
+	$status->set( 200 );
 	return 1;
     } 
 
     # Otherwise, we got both a username and a password.
     if (defined $user && defined $pass) {
-	my $userobject = $package->get( $params{'user'} );
+	my $userobject = $authentity->fetch( $params{user} );
 
-	return unless $userobject;
+	unless ($userobject) {
+	    $status->set( 403 );
+	    return;
+	}
 	
 	my $realpass = $userobject->property( 'password' ) || '';
 
-	return unless defined $pass;
-	return unless $pass eq $realpass;
+	if (! defined $pass || $pass ne $realpass) {
+	    $status->set( 403 );
+	    return;
+	}
 	
 	my $sid = md5_hex(time() * $$ * rand(time() + $$));
 	$self->{session} = $sid;
 	$userobject->property( 'session', $sid );
+	$status->set( 200 );
 	return $sid;
     } elsif ($session) {
-	my @hits = $package->search( session => $session );
-	return if @hits != 1;
+	my @hits = $authentity->search( session => $session );
+
+	if (@hits != 1) {
+	    $status->set( 403 );
+	    return;
+	}
 
 	$self->{session} = $session;
-	$self->{user} = $package->get( $hits[0]->id() );
+	$self->{user} = $authentity->get( $hits[0]->id() );
 
+	$status->set( 200 );
 	return $self->{session};
     }
 

@@ -42,7 +42,6 @@ my $person  = define Yggdrasil::Entity "Person";
 my $student = define Yggdrasil::Entity "Student";
 
 my $p_name = define $person 'name';
-my $s_name = define $student 'name';
 
 my $p_iq  = define $person 'iq', type => "INTEGER";
 

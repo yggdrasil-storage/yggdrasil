@@ -21,48 +21,103 @@ use Yggdrasil::Entity;
 use Yggdrasil::Relation;
 use Yggdrasil::Property;
 
-our $VERSION = '0.02';
+use Yggdrasil::Status;
 
-our $STORAGE;
-our $NAMESPACE;
-
-our $YGGLOGGER; 
+our $VERSION = '0.10';
 
 sub new {
     my $class = shift;
     my $self  = bless {}, $class;
-
-    $self->_init(@_);
+    my %params = @_;
+    
+    if ( ref $self eq __PACKAGE__ ) {
+	$self->_setup_logger( $params{logconfig} );
+	my $status = new Yggdrasil::Status;
+	$status->set( 200 );
+    } else {
+	$self->{name}      = $params{name};
+	$self->{yggdrasil} = $params{yggdrasil};
+	$self->{logger} = get_logger( __PACKAGE__ );
+    }
+    
     return $self;
 }
 
-sub _init {
+sub status {
+    return new Yggdrasil::Status;
+}
+  
+sub connect {
     my $self = shift;
 
-    if( ref $self eq __PACKAGE__ ) {
-	my %params = @_;
-	$self->{namespace} = $NAMESPACE = $params{namespace} || '';
-
-	my $project_root = $self->_project_root() || ".";
-
-	my $logconfig = "$project_root/etc/log4perl-debug";
-	if( -e $logconfig ) {
-	    $params{logconfig} = $logconfig;
-	    Log::Log4perl->init( $params{logconfig} );
-	}
-
-	$self->{logger} = $YGGLOGGER = get_logger();
-	$self->{storage} = $STORAGE = Yggdrasil::Storage->new(@_);
-	Yggdrasil::fatal("No storage layer initalized.") unless $STORAGE;
-	
-	$self->_db_init();
-    } else {
-	$self->{storage} = $STORAGE;
-	$self->{namespace} = $NAMESPACE;
-	$self->{logger} = get_logger( __PACKAGE__ );
-    }
+    return $self->{storage} = Yggdrasil::Storage->new(@_, yggdrasil => $self);
 }
 
+sub login {
+    my $self = shift;
+    my %params = @_;
+
+    my $auth = define Yggdrasil::Auth( yggdrasil => $self );
+    $auth->authenticate( user => $params{user}, pass => $params{password} );
+}
+
+sub define_entity {
+    my $self = shift;
+
+    my $entity = shift;
+    my $ygg    = $self->{yggdrasil} || $self;
+
+    my $aref = $ygg->{storage}->fetch( 'MetaEntity', { where => [ entity => $entity ],
+						       return => 'entity' } );
+    
+    if (defined $aref->[0]->{entity}) {
+	my $status = new Yggdrasil::Status;
+	$status->set( 202, "Entity already existed." );
+	return new Yggdrasil::Entity( name => $entity, yggdrasil => $ygg );
+    }
+    
+    $entity = define Yggdrasil::Entity( name => $entity, yggdrasil => $ygg );
+    return $entity;
+}
+
+sub get_entity {
+    my $self = shift;
+
+    my $entity = shift;
+    my $ygg    = $self->{yggdrasil} || $self;
+
+    my $aref = $ygg->{storage}->fetch( 'MetaEntity', { where => [ entity => $entity ],
+						       return => 'entity' } );
+
+    unless (defined $aref->[0]->{entity}) {
+	my $status = new Yggdrasil::Status;
+	$status->set( 404, "Entity '$entity' not found." );
+	return undef;
+    } 
+    
+    my $status = new Yggdrasil::Status;
+    $status->set( 200 );
+    $entity = new Yggdrasil::Entity( name => $entity, yggdrasil => $ygg );
+    return $entity;
+}
+
+sub define_property {
+    return;
+}
+
+sub _setup_logger {
+    my $self = shift;
+    
+    my $project_root = $self->_project_root() || ".";
+    my $logconfig = shift || "$project_root/etc/log4perl-debug";
+    
+    if( -e $logconfig ) {
+	Log::Log4perl->init( $logconfig );
+	$self->{logger} = get_logger();
+    } else {
+	warn( 'No working Log4perl configuration found.' );
+    }
+}
 
 sub _project_root {
     my $self = shift;
@@ -78,51 +133,9 @@ sub _project_root {
     return abs_path($path);
 }
 
-# Defines structures based on the database if there is anything
-# present in it.
-sub _db_init {    
-    my $self = shift;
-
-    # Check for bootstrap data, bootstrap if needed.  Check for
-    # consistency, create any meta tables that are missing
-    $self->bootstrap();
-    
-    # Populate $namespace from entities from MetaEntity.
-    my @entities = $self->entities();
-
-    for my $entity (@entities) {
-	my $package = join '::', $self->{namespace}, $entity;
-	$self->_register_namespace( $package );
-    }
-}
-
-sub _register_namespace {
-    my $self = shift;
-    my $package = shift;
-
-    $self->{logger}->info( "Registering namespace '$package'..." );
-    
-    eval "package $package; use base qw(Yggdrasil::Entity::Instance);";
-    return $package;
-}
-
 sub _extract_entity {
   my $self = shift;
-
-  my $to_remove = $NAMESPACE . "::";
-
-  # 'ref' because we are confused!
-  my $class;
-  if( ref $self) {
-      $class = ref $self;
-  } else {
-      $class = $self;
-  }
-
-  my $cpy = $class;
-  $class =~ s/^$to_remove//;
-  #print "---> Removing $to_remove from [$cpy] => [$class]\n";
-  return $class;
+  return $self->{name};
 }
 
 sub bootstrap {
@@ -130,6 +143,7 @@ sub bootstrap {
     define Yggdrasil::MetaRelation;
     define Yggdrasil::MetaProperty;
     define Yggdrasil::MetaInheritance;
+    
     define Yggdrasil::MetaAuth;
 
     Yggdrasil::Auth->_setup_default_users_and_roles();
@@ -137,8 +151,8 @@ sub bootstrap {
 
 # entities, returns all the entities known to Yggdrasil.
 sub entities {
-    my $class = shift;
-    my $aref = $STORAGE->fetch( 'MetaEntity', { return => 'entity' } );
+    my $self = shift;
+    my $aref = $self->{storage}->fetch( 'MetaEntity', { return => 'entity' } );
     
     return map { $_->{entity} } @$aref;
 }
@@ -146,28 +160,27 @@ sub entities {
 
 # relations, returns all the relations known to Yggdrasil.
 sub relations {
-    my $class = shift;
-    my $aref = $STORAGE->fetch( 'MetaRelation', { return => [ 'rval', 'lval', 'label' ] });
+    my $self = shift;
+    my $aref = $self->{storage}->fetch( 'MetaRelation', { return => [ 'rval', 'lval', 'label' ] });
 
     return map { $_->{label} } @$aref;
 }
 
 # Generic exist method for non-instanced calls across Yggdrasil to see
-# if a given instance of a given entity exists.  This requires
-# $STORAGE to access the backend layer.  It is called as
-# "Ygg::Host->exists( 'nommo' )", or "Ygg::Room->exists( 'B810' ) etc.
+# if a given instance of a given entity exists.  It is called as
+# "$HOSTOBJ->exists( 'nommo' )", or "$ROOMOBJ->exists( 'B810' ) etc.
 sub exists {
-    my $class = shift;
+    my $self = shift;
     my $visual_id = shift;
     my @time = @_;
 
-    my $entity = _extract_entity($class);
+    my $entity = $self->_extract_entity(ref $self);
 
-    my $fetchref = $STORAGE->fetch( 'Entities', { return => 'id',
-						  where  => [ visual_id => $visual_id,
-							      entity    => $entity ] },
-				    { start => $time[0], stop => $time[1] } );
-
+    my $fetchref = $self->{storage}->fetch( 'Entities', { return => 'id',
+							  where  => [ visual_id => $visual_id,
+								      entity    => $entity ] },
+					    { start => $time[0], stop => $time[1] } );
+    
     return undef unless $fetchref->[0];
     return $fetchref->[0]->{id};
 }

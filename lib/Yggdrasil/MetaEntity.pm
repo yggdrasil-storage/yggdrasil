@@ -7,7 +7,7 @@ use base qw(Yggdrasil::Meta);
 
 sub _define {
     my $self = shift;
-
+    
     # --- Tell Storage to create SCHEMA, noop if it exists.
     $self->{storage}->define( "MetaEntity",
 			      fields   => {
@@ -34,7 +34,7 @@ sub _meta_add {
     my $self = shift;
     my $name = shift;
 
-    $self->{storage}->store( "MetaEntity", key => "entity", fields => { entity => $name } );
+    $self->{yggdrasil}->{storage}->store( "MetaEntity", key => "entity", fields => { entity => $name } );
 }
 
 sub _admin_dump {

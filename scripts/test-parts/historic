@@ -39,6 +39,8 @@ new Yggdrasil(
 print "$user\@$host ($db / $engine)\n";
 
 my $hoste = define Yggdrasil::Entity 'Host';
+define $hoste 'ip';
+
 my $nommo  = Ygg::Host->new( 'nommo' );
 my $baal   = Ygg::Host->new( 'baal' );
 my $escher = Ygg::Host->new( 'escher' );
@@ -60,7 +62,10 @@ for my $current_node (search $hoste 'ip', 'n') {
 }
 
 print "Historic search, ip => 'n' ($now - 10)\n";
-for my $historic_node (search $hoste 'ip', 'n', ($now-10), undef) {
+my @nodes = search $hoste 'ip', 'n', ($now-10), undef;
+
+print "No hits?\n" unless @nodes;
+for my $historic_node (@nodes) {
     print $historic_node->id(), " => ", $historic_node->property( 'ip' ), " @ ", $historic_node->{_start}, " : ", $historic_node->{_start} || 'CURRENT', "\n";
 }
 
