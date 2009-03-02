@@ -1,13 +1,16 @@
 #!/usr/bin/perl
-
 use strict;
 use warnings;
+
+BEGIN { our $VERSION = 0.05 }
 
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
 
+
 use Yggdrasil::Common::Config;
-use Yggdrasil::Common::CommandLine;
+use Yggdrasil::Common::CommandLine ("foo=s", "bar:s");
+				    
 
 use IO::Socket;
 # use IO::Socket::SSL;
@@ -15,7 +18,9 @@ use IO::Socket;
 # 1. cmdline arg
 # 2. config
 # 3. program defaults
-my $label = shift || 'default';
+my $cmdline = Yggdrasil::Common::CommandLine->new();
+
+my $label = $cmdline->get('label') || 'default';
 
 my $c = Yggdrasil::Common::Config->new();
 my $config = $c->get($label);
@@ -70,3 +75,6 @@ sub handle_client {
     print " $$ closing anyway!\n";
     exit;
 }
+
+__DATA__
+help here
