@@ -7,40 +7,40 @@ use base qw(Yggdrasil::Meta);
 
 sub _define {
   my $self = shift;
+  my $storage = $self->{yggdrasil}->{storage};
 
-
-  $self->{storage}->define( "Relations", 
-			    fields   => { 
-					 id   => { type => 'INTEGER' },
-					 lval => { type => "INTEGER" },
-					 rval => { type => "INTEGER" },
-					},
-			    temporal => 1,
-			    nomap    => 1,
-			    hints    => {
-					 id   => { index => 1, foreign => 'MetaRelation' },
-					 lval => { foreign => 'Entities' },
-					 rval => { foreign => 'Entities' },
-					 },
-			  );
-    
+  $storage->define( "Relations", 
+		    fields   => { 
+				 id   => { type => 'INTEGER' },
+				 lval => { type => "INTEGER" },
+				 rval => { type => "INTEGER" },
+				},
+		    temporal => 1,
+		    nomap    => 1,
+		    hints    => {
+				 id   => { index => 1, foreign => 'MetaRelation' },
+				 lval => { foreign => 'Entities' },
+				 rval => { foreign => 'Entities' },
+				},
+		  );
   
-  $self->{storage}->define( "MetaRelation",
-			    fields   => { id          => { type => "SERIAL" },
-					  requirement => { type => "VARCHAR(255)", null => 1 },
-					  lval        => { type => "INTEGER",      null => 0 },
-					  rval        => { type => "INTEGER",      null => 0 },
-					  label       => { type => 'VARCHAR(255)', null => 0 },
-					  l2r         => { type => 'VARCHAR(255)', null => 1 },
-					  r2l         => { type => 'VARCHAR(255)', null => 1 },
-					},
-			    temporal => 1,
-			    nomap    => 1,
-			    hints    => {
-					 lval => { index => 1, foreign => 'MetaEntity' },
-					 rval => { index => 1, foreign => 'MetaEntity' },
-					 }
-			  );
+  
+  $storage->define( "MetaRelation",
+		    fields   => { id          => { type => "SERIAL" },
+				  requirement => { type => "VARCHAR(255)", null => 1 },
+				  lval        => { type => "INTEGER",      null => 0 },
+				  rval        => { type => "INTEGER",      null => 0 },
+				  label       => { type => 'VARCHAR(255)', null => 0 },
+				  l2r         => { type => 'VARCHAR(255)', null => 1 },
+				  r2l         => { type => 'VARCHAR(255)', null => 1 },
+				},
+		    temporal => 1,
+		    nomap    => 1,
+		    hints    => {
+				 lval => { index => 1, foreign => 'MetaEntity' },
+				 rval => { index => 1, foreign => 'MetaEntity' },
+				}
+		  );
 }
 
 sub _meta_add {

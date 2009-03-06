@@ -8,6 +8,7 @@ use Cwd qw(abs_path);
 use File::Basename;
 use File::Spec;
 use Log::Log4perl qw(get_logger :levels :nowarn);
+use Carp;
 
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
@@ -22,6 +23,7 @@ use Yggdrasil::Relation;
 use Yggdrasil::Property;
 
 use Yggdrasil::Status;
+use Yggdrasil::Debug;
 
 our $VERSION = '0.10';
 
@@ -29,12 +31,15 @@ sub new {
     my $class = shift;
     my $self  = bless {}, $class;
     my %params = @_;
-    
+
     if ( ref $self eq __PACKAGE__ ) {
 	$self->_setup_logger( $params{logconfig} );
 	my $status = new Yggdrasil::Status;
 	$status->set( 200 );
+	Yggdrasil::Debug->new( $params{debug} );
+	$self->{strict} = $params{strict} || 1;
     } else {
+	Yggdrasil::fatal( "Did not get an yggdrasil reference passed upon creation of '$class'") unless $params{yggdrasil};
 	$self->{name}      = $params{name};
 	$self->{yggdrasil} = $params{yggdrasil};
 	$self->{logger} = get_logger( __PACKAGE__ );
@@ -58,31 +63,43 @@ sub login {
     my %params = @_;
 
     my $auth = define Yggdrasil::Auth( yggdrasil => $self );
-    $auth->authenticate( user => $params{user}, pass => $params{password} );
+    $auth->authenticate( user => $params{user}, pass => $params{password} );    
 }
 
+# Interface to get / define users.
+sub define_user {
+    my $self = shift;
+    
+    my $ygg  = $self->{yggdrasil} || $self;
+    my $ao = new Yggdrasil::Auth( yggdrasil => $ygg );
+    
+    return $ao->_define_user( @_ );
+}
+
+# Interface to get / define roles.
+sub define_role {
+    my $self = shift;
+
+    my $ygg  = $self->{yggdrasil} || $self;
+    my $ao = new Yggdrasil::Auth( yggdrasil => $ygg );
+    
+    return $ao->_define_role( @_ );
+}
+
+
+# Interface to get / define entities.
 sub define_entity {
     my $self = shift;
 
     my $entity = shift;
     my $ygg    = $self->{yggdrasil} || $self;
 
-    my $aref = $ygg->{storage}->fetch( 'MetaEntity', { where => [ entity => $entity ],
-						       return => 'entity' } );
-    
-    if (defined $aref->[0]->{entity}) {
-	my $status = new Yggdrasil::Status;
-	$status->set( 202, "Entity already existed." );
-	return new Yggdrasil::Entity( name => $entity, yggdrasil => $ygg );
-    }
-    
-    $entity = define Yggdrasil::Entity( name => $entity, yggdrasil => $ygg );
-    return $entity;
+    return Yggdrasil::Entity->define( name => $entity, yggdrasil => $ygg );
 }
 
 sub get_entity {
     my $self = shift;
-
+    
     my $entity = shift;
     my $ygg    = $self->{yggdrasil} || $self;
 
@@ -102,6 +119,11 @@ sub get_entity {
 }
 
 sub define_property {
+    my $self = shift; # Entity.
+    my $name = shift; # Name of property;
+    my %param = @_; # Options hash.
+    
+    my $property = Yggdrasil::Property->define( $self, $name, @_, yggdrasil => $self->{yggdrasil});
     return;
 }
 
@@ -139,14 +161,31 @@ sub _extract_entity {
 }
 
 sub bootstrap {
-    define Yggdrasil::MetaEntity;
-    define Yggdrasil::MetaRelation;
-    define Yggdrasil::MetaProperty;
-    define Yggdrasil::MetaInheritance;
+    my $self = shift;
+    my %userlist = @_;
     
-    define Yggdrasil::MetaAuth;
+    if ($self->{storage}->yggdrasil_is_empty()) {
+	Yggdrasil::MetaEntity->define( yggdrasil => $self );
+	Yggdrasil::MetaRelation->define( yggdrasil => $self );
+	Yggdrasil::MetaProperty->define( yggdrasil => $self );
+	Yggdrasil::MetaInheritance->define( yggdrasil => $self );
+	
+	Yggdrasil::MetaAuth->define( yggdrasil => $self );
 
-    Yggdrasil::Auth->_setup_default_users_and_roles();
+	my $universal = $self->define_entity( 'UNIVERSAL' );
+	
+	my @users = Yggdrasil::Auth->_setup_default_users_and_roles( yggdrasil => $self, users => \%userlist );
+	my %usermap;
+	
+	for my $user (@users) {
+	    $usermap{$user->id()} = $user->property( 'password' );
+	}
+	return \%usermap;
+    } else {
+	my $status = new Yggdrasil::Status;
+	$status->set( 406, "Unable to bootstrap, data exists." );
+	return;
+    }
 }
 
 # entities, returns all the entities known to Yggdrasil.
@@ -196,10 +235,8 @@ sub fatal {
     my ($package, $filename, $line) = caller();
     my ($subroutine) = (caller(1))[3];
     print STDERR "Yggdrasil encountered a fatal error, in $subroutine (line $line):\n";
-    print STDERR "$text\n";
-    exit 1;
+    confess( "$text" );
 }
-
 
 1;
 

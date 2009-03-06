@@ -20,9 +20,9 @@ use Yggdrasil::Status;
 my $status = new Yggdrasil::Status;
 
 my ($user, $password, $host, $port,
-    $db, $engine, $mapper, $yuser, $ypass) =
+    $db, $engine, $mapper, $yuser, $ypass, $debug) =
   ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, 
-   $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef, undef, undef);
+   $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef, undef, undef, undef);
 
 sub getopts {
     my %opts;
@@ -30,6 +30,7 @@ sub getopts {
     GetOptions(
 	       "user=s"       => \$user,
 	       "engine=s"     => \$engine,
+	       "debug:i"      => \$debug,
 	       "password=s"   => \$password,
 	       "host=s"       => \$host,
 	       "database=s"   => \$db,
@@ -40,10 +41,14 @@ sub getopts {
 	       "ypass=s"      => \$ypass,
 	      );
 
+
 #    print "$user\@$host ($db / $engine)\n";
     
     return { user => $user, engine => $engine, password => $password, host => $host,
-      db => $db, port => $port, mapper => $mapper, yuser => $yuser, ypass => $ypass };
+	     db => $db, port => $port, mapper => $mapper,
+	     yuser => $yuser, ypass => $ypass,
+	     debug => $debug,
+	   };
     
 }
 

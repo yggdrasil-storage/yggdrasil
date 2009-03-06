@@ -7,33 +7,36 @@ use base qw(Yggdrasil::Meta);
 
 sub _define {
     my $self = shift;
+    my $storage = $self->{yggdrasil}->{storage};
     
     # --- Tell Storage to create SCHEMA, noop if it exists.
-    $self->{storage}->define( "MetaEntity",
-			      fields   => {
-					   id     => { type => 'SERIAL' },
-					   entity => { type => "VARCHAR(255)", null => 0 },
-					  },
-			      temporal => 1,
-			      nomap    => 1, );
+    $storage->define( "MetaEntity",
+		      fields   => {
+				   id     => { type => 'SERIAL' },
+			       entity => { type => "VARCHAR(255)", null => 0 },
+				  },
+		      temporal => 1,
+		      nomap    => 1, );
+    
+    $storage->define( "Entities",
+		      fields   => { 
+				   entity    => { type => "INTEGER" },
+				   visual_id => { type => "TEXT" },
+				   id        => { type => "SERIAL" } },
+		      temporal => 1,
+		      nomap    => 1,
+		      hints    => {
+				   entity => { foreign => 'MetaEntity' },
+				  }			      
 
-    $self->{storage}->define( "Entities",
-			      fields   => { 
-					   entity    => { type => "INTEGER" },
-					   visual_id => { type => "TEXT" },
-					   id        => { type => "SERIAL" } },
-			      temporal => 1,
-			      nomap    => 1,
-			      hints    => {
-					   entity => { foreign => 'MetaEntity' },
-					  }			      
-			    );
+
+		    );
 }    
 
 sub _meta_add {
     my $self = shift;
     my $name = shift;
-
+    
     $self->{yggdrasil}->{storage}->store( "MetaEntity", key => "entity", fields => { entity => $name } );
 }
 

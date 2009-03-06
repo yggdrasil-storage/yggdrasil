@@ -7,48 +7,42 @@ use Preamble qw|getopts status status_die|;
 
 my $opts = getopts();
 
-my $ygg = new Yggdrasil();
+my $ygg = new Yggdrasil( debug => $opts->{debug} );
 status_die( "Yggdrasil", $ygg );
 
-my $connect = $ygg->connect(
-			    user     => $opts->{user},
-			    engine   => $opts->{engine},
-			    password => $opts->{password},
-			    host     => $opts->{host},
-			    db       => $opts->{db},
-			    engine   => $opts->{engine},
-			    port     => $opts->{port},
-			   );
+my $connect = $ygg->connect( %$opts );
 status_die( "Connect", $connect, 1 );
 
 my $login = $ygg->login( user => $opts->{yuser}, password => $opts->{ypass} );
 status_die( "Login", $login, 1 );
 
 # Define entities
-my $host_entity   = $ygg->define_entity( 'Host' );
-my $room_entity   = $ygg->define_entity( 'Room' );
-my $person_entity = $ygg->define_entity( 'Person' );
-my $p_s_entity    = $ygg->define_entity( 'Person::Student' );
+my $host_entity   = $ygg->define_entity( 'Hoste' );
+status( 'Hoste', $host_entity );
 
-status( 'Host', $host_entity );
+my $room_entity   = $ygg->define_entity( 'Room' );
 status( 'Room', $room_entity );
+my $person_entity = $ygg->define_entity( 'Person' );
 status( 'Person', $person_entity );
+my $p_s_entity    = $ygg->define_entity( 'Person::Student' );
 status( 'Person::Student', $p_s_entity );
 
-$host_entity   = $ygg->get_entity( 'Host' );
+$host_entity   = $ygg->get_entity( 'Hoste' );
+$host_entity->define_property( 'ip' );
 
-status( 'Host', $host_entity );
+status( 'Hoste', $host_entity );
 
 # Define instance
 my $nommo = $host_entity->create( 'nommo2' );
 status( 'Create', $nommo );
 $nommo    = $host_entity->fetch( 'nommo2' );
 status( 'Fetch', $nommo );
-exit;
 
 $nommo->get( 'ip' );
 $nommo->set( 'ip', '129.240.222.179' );
-  
+
+exit;
+
 # Define properties, cannot be "gotten".
 my $host_property_ip      = $host_entity->define_property( 'ip' );
 my $room_property_comment = $room_entity->define_property( 'comment' );

@@ -27,6 +27,15 @@ sub new {
   return $self;
 }
 
+sub yggdrasil_is_empty {
+    my $self = shift;
+
+    for my $struct ($self->_list_structures()) {
+	return 0 if $struct !~ /Storage_/;
+    }
+    return 1;
+}
+
 sub _structure_exists {
     my $self = shift;
     my $structure = shift;

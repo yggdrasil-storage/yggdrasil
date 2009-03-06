@@ -5,44 +5,68 @@ use warnings;
 
 use base qw(Yggdrasil::Meta);
 
+use Yggdrasil::Status;
+
 sub _define {
   my $self    = shift;
-  my $entity   = shift;
-  my $property = shift;
+  my $entity   = shift; # object.
+  my $property = shift; # string.
   my %data     = @_;
-
-  Yggdrasil::fatal("Unable to create properties with zero length names.") unless length $property;
   
-  $entity = Yggdrasil::_extract_entity($entity);
-  my $name = join(":", $entity, $property);
+  my $yggdrasil = $self->{yggdrasil} = $data{yggdrasil};
+  my $storage   = $yggdrasil->{storage};
 
+  my $status = new Yggdrasil::Status;
+  unless (length $property) {
+      $status->set( 400, "Unable to create properties with zero length names." );
+      return;
+  }
+  
+  $entity = $entity->{name};
+
+  my $name;
+  # Auth passes MetaAuthUser request as a MetaAuth object, hackish.
+  # This catches requests on the form MetaAuthRole:password and similar constructs.
+  if ($property =~ /^([^:]+):([^:]+)$/) {
+      $name = $property;
+      $entity = $1;
+      $property = $2;
+  } else {
+      $name = join(":", $entity, $property);
+  }
+  
   # --- Set the default data type.
   $data{type} = uc $data{type} || 'TEXT';
   $data{null} = 1 if $data{null} || ! defined $data{null};
   
   # --- Create Property table
-  $self->{storage}->define( $name,
-			    fields   => { id    => { type => "INTEGER" },
-					  value => { type => $data{type},
-						     null => $data{null}}},
-			    
-			    temporal => 1,
-			    hints => { id => { index => 1, foreign => 'Entities' }},
-			  );
+  $storage->define( $name,
+		    fields   => { id    => { type => "INTEGER" },
+				  value => { type => $data{type},
+					     null => $data{null}}},
+		    
+		    temporal => 1,
+		    hints => { id => { index => 1, foreign => 'Entities' }},
+		  );
+  
+  my $idref = $storage->fetch( MetaEntity => { return => 'id',
+					       where  => [ entity => $entity ] } );
 
-  my $idref = $self->{storage}->fetch( MetaEntity => { return => 'id',
-						       where  => [ entity => $entity ] } );
 
-  Yggdrasil::fatal( "Unknown entity '$entity' requested." ) unless @$idref;
+  unless (@$idref) {
+      $status->set( 400, "Unknown entity '$entity' requested for property '$property'." );
+      return;
+  }
   
   # --- Add to MetaProperty
-  $self->{storage}->store("MetaProperty", key => "id",
-			   fields => { entity   => $idref->[0]->{id},
-				       property => $property,
-				       type     => $data{type},
-				       nullp    => $data{null},
-				     } ) unless $data{raw};
-
+  $storage->store("MetaProperty", key => "id",
+		  fields => { entity   => $idref->[0]->{id},
+			      property => $property,
+			      type     => $data{type},
+			      nullp    => $data{null},
+			    } ) unless $data{raw};
+  
+  $status->set( 201, "Property '$property' created for '$entity'." );
   return $property;
 }
 

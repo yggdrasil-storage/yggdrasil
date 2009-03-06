@@ -60,7 +60,8 @@ sub _get_id {
     return $idfetch->[0]->{id};
 }
 
-sub get {
+# FIXME; this is supposed to be fetch in Yggdrasil::Entity now.
+sub _get {
   my $self = shift;
   my $visual_id = shift;
   my @time = @_;
@@ -199,6 +200,16 @@ sub _filter_start_times {
     return \%times;
 }
 
+sub get {
+    my $self = shift;
+    return $self->property( @_ );
+}
+
+sub set {
+    my $self = shift;
+    return $self->property( @_ );
+}
+
 sub property {
     my $self = shift;
     my ($key, $value) = @_;
@@ -230,7 +241,7 @@ sub property {
 	    $status->set( 406, "Temporal objects are immutable.");
 	    return undef;
 	}
-       
+
 	$storage->store( $schema, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 

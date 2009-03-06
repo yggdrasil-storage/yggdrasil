@@ -59,8 +59,10 @@ sub new {
     Yggdrasil::fatal $@ if $@;
     #  $class->import();
     $storage = $engine_class->new(@_);
-
+    
     return undef unless defined $storage;
+    $storage->{yggdrasil} = $data{yggdrasil};
+    $storage->{bootstrap} = $data{bootstrap};
     
     $MAPPER = $data{mapper};
     $ADMIN  = $data{admin};
@@ -93,6 +95,15 @@ sub define {
     my %data = @_;
     my $originalname = $schema;
 
+    unless ($self->{bootstrap}) {
+	my $parent = $self->my_parent();
+	if (! $self->can( operation => 'define', target => $parent )) {
+	    my $status = new Yggdrasil::Status;
+	    $status->set( 403, "You are not permitted to create the structure '$schema' under '$parent'." );
+	    return;
+	} 
+    }
+    
     for my $fieldhash (values %{$data{fields}}) {	
 	my $type = uc $fieldhash->{type};
 	if ($type eq 'SERIAL' && $fieldhash->{null}) {
@@ -104,7 +115,10 @@ sub define {
 
     $schema = $self->_map_schema_name( $schema ) unless $data{nomap};
 
-    return if $self->_structure_exists( $schema );
+    if ($self->_structure_exists( $schema )) {
+	$self->status( 202, "Structure '$schema' already existed" );
+	return;
+    }
 
     my $retval = $self->_define( $schema, %data );
 
@@ -131,6 +145,15 @@ sub define {
 sub store {
     my $self = shift;
     my $schema = shift;
+
+    unless ($self->{bootstrap}) {
+	my %params = @_;
+	if (! $self->can( operation => 'store', target => $schema, data => \%params )) {
+	    my $status = new Yggdrasil::Status;
+	    $status->set( 403 );
+	    return;
+	} 
+    }
     
     return $self->_store( $self->_get_schema_name( $schema ), @_ );
 }
@@ -171,6 +194,14 @@ sub fetch {
     }
 
     return $self->_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_, $time );
+}
+
+# Ask Auth if an action can be performed on a target.  Returns true / false.
+sub can {
+    my $self = shift;
+
+    my $auth = new Yggdrasil::Auth( yggdrasil => $self->{yggdrasil} );
+    return $auth->can( @_ );
 }
 
 sub raw_fetch {
@@ -241,6 +272,25 @@ sub get_entity_name {
     
     my $eref = $self->fetch('MetaEntity', { return => 'entity', where => [ id => $id ]});
     return $eref->[0]->{entity};
+}
+
+sub my_parent {
+    my $self = shift;
+
+    return $self->parent_of( $self->{name}, @_ );
+}
+
+sub parent_of {
+    my ($self, $name, $start, $stop) = @_;
+
+    my $p = $self->fetch( 'MetaInheritance', { return => "parent", where => [ child => $name ] },
+			  { start => $start, stop => $stop });
+
+    if ($p->[0]->{parent}) {
+	return $p->[0]->{parent};
+    } else {
+	return 'UNIVERSAL';
+    }
 }
 
 

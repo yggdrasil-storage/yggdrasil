@@ -9,15 +9,16 @@ use base qw(Yggdrasil::MetaAuth);
 
 use Yggdrasil::Auth::Role;
 use Yggdrasil::Status;
+use Yggdrasil::Debug qw|debug_if debug_level|;
 
 sub _define {
     my $self = shift;
     my %params = @_;
 
     if( exists $params{role} ) {
-	return _define_role( $params{role} );
+	return $self->_define_role( $params{role} );
     } elsif( exists $params{user} && exists $params{password} ) {
-	return _define_user( $params{user}, $params{password} );
+	return $self->_define_user( user => $params{user}, password => $params{password} );
     } else {
 	# be angry
     }
@@ -38,6 +39,7 @@ sub authenticate {
     # and we don't want to touch the session.  $> is effective UID.
     if (-t && ! defined $user && ! defined $pass) {
 	$self->{user} = (getpwuid($>))[0];
+	$self->{yggdrasil}->{user} = $self->{user};
 	$status->set( 200 );
 	return 1;
     } 
@@ -61,7 +63,9 @@ sub authenticate {
 	my $sid = md5_hex(time() * $$ * rand(time() + $$));
 	$self->{session} = $sid;
 	$userobject->property( 'session', $sid );
+	print "**", $status->status(), $status->message(), "\n";
 	$status->set( 200 );
+	$self->{yggdrasil}->{user} = $user;
 	return $sid;
     } elsif ($session) {
 	my @hits = $authentity->search( session => $session );
@@ -75,45 +79,151 @@ sub authenticate {
 	$self->{user} = $authentity->get( $hits[0]->id() );
 
 	$status->set( 200 );
-	return $self->{session};
+	$self->{yggdrasil}->{user} = $user;
+	return $self->{session};	
     }
 
     return;
 }
 
-sub _define_role {
-    my $role = shift;
+# TODO: Sanitycheck $operator, make property-compatible.
+sub can {
+    my $self = shift;
+    my %params = @_;
+    
+    my $ygg       = $self->{yggdrasil};
+    my $target    = $params{target};
+    my $operation = $params{operation};
+    my $storage   = $ygg->{storage};
+    my $user      = $ygg->{user};
 
-    my $meta_role = get Yggdrasil::Entity 'MetaAuthRole';
-    return bless $meta_role->new( $role ), 'Yggdrasil::Auth::Role';
+    my $dataref   = $params{data};
+
+    my @targets_to_check;
+
+    if ($target =~ /:/) {
+	# Properties not implemented.
+	return 1;
+    }
+    
+    # If we wish to write to MetaEntity, we have in reality asked to
+    # create an entity.  To be allowed to do this we have to ask if we
+    # are allowed to subclass the entity in question, which is a 'w'
+    # operation.  We might wish to have a "subclass" bit.
+    if (($target eq 'MetaEntity' || $target eq 'MetaProperty') && $operation eq 'store') {
+	for my $t ($self->_get_store_targets( $dataref )) {
+	    push @targets_to_check, $storage->parent_of( $t );
+	}
+	$operation = 'writeable';
+    } elsif ($target eq 'Entities' && $operation eq 'store') {
+	for my $t ($self->_get_store_targets( $dataref )) {
+	    push @targets_to_check, $storage->parent_of( $t );
+	}
+	$operation = 'createable';
+    } elsif ($target eq 'MetaInheritance') {
+	push @targets_to_check, $self->_get_inheritance_parent( $dataref );
+	$operation = 'writeable';
+    } elsif ($operation eq 'define') {
+	push @targets_to_check, $target;
+	$operation = 'writeable';
+    } elsif ($target =~ '^Storage_') {
+	return 1;
+    } else {
+	print " -- WARNING, unexpected check of $operation on $target for $user...\n";
+#	debug_if( 4, "Requested check of $operation on $target for $user..." );
+	if( $operation =~ /^c/ ) {
+	    $operation = 'createable';
+	} elsif ($operation =~ /^d/) {
+	    $operation = 'deleteable';
+	} elsif ($operation =~ /^w/) {
+	    $operation = 'writeable';
+	} elsif ($operation =~ /^r/) {
+	    $operation = 'readable';
+	} else {
+	    return undef;
+	}
+	@targets_to_check = $target;
+    }
+
+    for my $entity (@targets_to_check) {
+	debug_if( 4, "Checking $operation on $entity for $user..." );
+	
+	my $roleid_of_user = $self->_get_user_role( $user );
+
+	debug_if( 4, "Roleid is $roleid_of_user." );
+	
+	my $permission     = $self->_can( $roleid_of_user, $entity, $operation );
+# 	my $idfetch = $storage->fetch(
+# 				      MetaEntity => { where => [ entity    => $entity ] },
+# 				      Entities   => { where => [
+# 								visual_id => $user,
+# 								entity    => \qq{MetaEntity.id}
+# 							       ] },
+# 				      MetaAuthRolemembership => { where => [ user   => \qq{Entities.id} ] },
+# 				      MetaAuthEntity         => {
+# 								 where => [
+# 									   entity => \qq{MetaEntity.id},
+# 									   role   => \qq{MetaAuthRolemembership.role},
+# 									  ],
+# 								 return => $operation,
+# 								},
+    
+	return unless $permission;
+    }
+    return 1;
+}
+
+sub _define_role {
+    my $self  = shift;
+    my %params = @_;
+
+    my $ygg  = $self->{yggdrasil} || $self;
+    
+    my $meta_role = $ygg->get_entity( 'MetaAuthRole' );
+    my $ro = $meta_role->create( $params{'role'});
+#    return bless $meta_role->new( $params{'role'} ), 'Yggdrasil::Auth::Role';
 }
 
 sub _define_user {
-    my $user = shift;
-    my $pass = shift;
+    my $self = shift;
+    my %params = @_;
 
-    my $meta_user = get Yggdrasil::Entity 'MetaAuthUser';
-    my $uo = $meta_user->new( $user );
-    $uo->property( password => $pass );
+    my $ygg  = $self->{yggdrasil} || $self;
 
+    my $meta_user = $ygg->get_entity( 'MetaAuthUser' );
+    my $uo = $meta_user->create( $params{'user'} );
+    $uo->property( password => $params{'password'} );
+    
     return $uo;
 }
 
 sub _setup_default_users_and_roles {
-    my( $adminrole, $userrole ) = Yggdrasil::Auth->_generate_default_roles();
-    my @users = Yggdrasil::Auth->_generate_default_users();
+    my $self = bless {}, shift;
+    my %params = @_;
+    $self->{yggdrasil} = $params{yggdrasil};
+    
+    my( $adminrole, $userrole ) = $self->_generate_default_roles( @_ );
+    my @users = $self->_generate_default_users( @_ );
 
     # both users 'root' and '$>' are admins.
     for my $user (@users) {
-	$adminrole->add($user);	    
+	$adminrole->add($user);	 
     }
+    return @users;
 }
 
 sub _generate_default_roles {
+    my $self = shift;
+    my %params = @_;
+    my $ygg = $params{yggdrasil};
+    
     my @roles;
     for my $r ( "admin", "user" ) {
-	my $role = __PACKAGE__->define( role => $r );
-
+	my $meta_role = $ygg->get_entity( 'MetaAuthRole' );
+	my $ro = $meta_role->create( $r );
+	my $role = bless $ro, 'Yggdrasil::Auth::Role';
+	$role->{name} = 'MetaAuthRole';
+	
 	if ($r eq 'admin') {
 	    $role->grant( 'UNIVERSAL', 'd' );
 	} else {
@@ -127,14 +237,19 @@ sub _generate_default_roles {
 }
 
 sub _generate_default_users {
+    my $self = shift;
+    my %params = @_;
+    my $ygg  = $params{yggdrasil};
+
+    my %requested_users = %{$params{users}};
     my @users;
-    for my $u ( "root", (getpwuid( $> ) || "default") ) {
-	my $meta_user = get Yggdrasil::Entity 'MetaAuthUser';
-	my $user = $meta_user->get( $u );
+    
+    for my $u ( "root", (getpwuid( $> ) || "default"), keys %requested_users ) {
+	my $meta_user = $ygg->get_entity( 'MetaAuthUser' );
+	my $user = $meta_user->fetch( $u );
 	next if $user;
 
-	my $pass = _generate_password();
-	my $uo = __PACKAGE__->define( user => $u, password => $pass );
+	my $uo = $self->_define_user( user => $u, password => $requested_users{$u} || _generate_password() );
 	push( @users, $uo );
     }
 
@@ -157,5 +272,56 @@ sub _generate_password {
 
     return $password;
 }
+
+sub _get_user_role {
+    my $self = shift;
+    my $user = shift;
+
+    my $ref = $self->{yggdrasil}->{storage}->fetch( 
+						   MetaAuthRolemembership => { where => [ user => \qq{Entities.id} ],
+									       return => 'role' },
+						   Entities     => { where => [ visual_id => $user ]}
+						  );
+
+    return $ref->[0]->{role};
+}
+
+sub _can {
+    my $self = shift;
+    my $role = shift;
+    my $entity = shift;
+    my $operation = shift;
+
+    my $ref;
+    if ($entity =~ /^\d+/) {
+	$ref = $self->{yggdrasil}->{storage}->fetch( 
+						    MetaAuthEntity => { where => [ role => $role, ],
+									           entity => $entity,
+									return => $operation },
+						   );
+    } else {
+	$ref = $self->{yggdrasil}->{storage}->fetch( 
+						    MetaAuthEntity => { where => [ role => $role ],
+									return => $operation },
+						    MetaEntity     => { where => [
+										  id => \qq{MetaAuthEntity.entity},
+										  entity => $entity,
+										 ]},
+						   );
+    }
+    
+
+    return $ref->[0]->{$operation};
+}
+
+sub _get_store_targets {
+    my ($self, $dataref) = @_;
+    return values %{$dataref->{fields}};
+}
+sub _get_inheritance_parent {
+    my ($self, $dataref) = @_;
+    return $dataref->{fields}->{parent};
+}
+
 
 1;

@@ -4,15 +4,36 @@ use strict;
 use warnings;
 
 use FindBin qw($RealBin);
+use lib qq(./test-parts);
 use lib qq(../lib);
 
+use Preamble qw|getopts status status_die|;
 use Yggdrasil;
+use Yggdrasil::Status;
 
-my $yggdrasil = new Yggdrasil( user     => $ENV{YGG_USER}, 
-			       password => $ENV{YGG_PASSWORD},
-			       host     => $ENV{YGG_HOST},
-			       port     => $ENV{YGG_PORT},
-			       db       => $ENV{YGG_DB},
-			       engine   => $ENV{YGG_ENGINE} );
+my $status = new Yggdrasil::Status;
 
-bootstrap $yggdrasil;
+my $opts = getopts();
+$opts->{bootstrap} = 1;
+
+my $ygg = new Yggdrasil( %$opts );
+_die( "Unable to load Yggdrasil" ) unless $status->OK();
+
+my $connect = $ygg->connect( %$opts );
+_die( "Unable to connect to Yggdrasil" ) unless $status->OK();
+
+my $bootstrap = $ygg->bootstrap( terjekv => 'flappa' );
+_die( "Unable to bootstrap" ) unless $status->OK();
+
+print "Yggdrasil is now bootstrapped with the following users:\n";
+printf "%20s | %s\n", 'Username', 'Password';
+for my $u (keys %{$bootstrap}) {
+    printf "%20s | %s\n", $u, $bootstrap->{$u};
+}
+
+sub _die {
+    my $msg = shift;
+
+    print "$msg: ", join ", ", $status->status(), $status->english(), "<" . $status->message() . ">\n";
+    exit;
+}

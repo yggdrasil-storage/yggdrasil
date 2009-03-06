@@ -6,6 +6,7 @@ use warnings;
 use base 'Yggdrasil::Storage';
 
 use Yggdrasil::Status;
+use Yggdrasil::Debug qw|debug_if debug_level|;
 
 # Define a structure, it is assumed that the Storage layer has called
 # _structure_exists() with the name of the structure to check its
@@ -71,8 +72,6 @@ sub _define {
     $self->{logger}->debug( $sql );
     $self->_sql( $sql );
 
-    print "$sql\n";
-    
     for my $field (@indexes) {
 	my $indexsql = $self->_create_index_sql($schema, $field );
 	$self->{logger}->fatal( $indexsql );
@@ -130,6 +129,7 @@ sub _sql {
 
     my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);
     $self->{logger}->debug( "$sql -> Args: [$args_str]" );
+    debug_if( 5, "SQL: $sql -> Args: [$args_str]" );
 
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
@@ -319,7 +319,7 @@ sub _store {
 	$status->set( 200, 'Value(s) already set' );
 	return 1;
     }
-    
+
     # Expire the old value
     my %keys;
     if ($key) {

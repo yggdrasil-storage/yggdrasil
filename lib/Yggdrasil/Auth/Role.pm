@@ -93,10 +93,10 @@ sub _set_permissions {
     my $self  = shift;
     my %param = @_;
 
-    my $schema = Yggdrasil::_extract_entity( $param{schema} );
-    my($e, $p) = split ':', $schema, 2;
-
-
+    my $storage = $self->{yggdrasil}->{storage};
+    
+    my($e, $p) = split ':', $param{schema}, 2;
+    
     # FIX: gah we don't get Host_ip on property ip, but only "ip"
     #      for the time being we "solve" this by checking for ... casing! YAY!
     if( $e !~ /^[A-Z]/ ) {
@@ -105,39 +105,41 @@ sub _set_permissions {
 	# FIX: we don't do properties yet, because we don't know what bloody entity we belong to
 	return;
 
-	my $ido = $self->{storage}->fetch( MetaProperty => { return => "id",
-							     where  => [ property => $p,
-									 entity   => \qq<MetaEntity.id> ]
-					   },
-					   MetaEntity => { where => [ entity => $e ] } );
+	my $ido = $storage->fetch( MetaProperty => { return => "id",
+						     where  => [ property => $p,
+								 entity   => \qq<MetaEntity.id> ]
+						   },
+				   MetaEntity => { where => [ entity => $e ] } );
 	my $id = $ido->[0]->{id};
 
-	$self->{storage}->store( "MetaAuthProperty",
-				 key => [ qw/role property/ ],
-				 fields => {
-				     writeable => $param{write},
-				     readable  => $param{read},
-				     role      => $self->{_id},
-				     property  => $id,
-				 } );
-
-
+	$storage->store( "MetaAuthProperty",
+			 key => [ qw/role property/ ],
+			 fields => {
+				    writeable => $param{write},
+				    readable  => $param{read},
+				    role      => $self->{_id},
+				    property  => $id,
+				   } );
+	
+	
     } else {
 	# revoke rights for entity access
-	my $ido= $self->{storage}->fetch( MetaEntity => { return => "id", where => [ entity => $e ] } );
+	my $ido= $storage->fetch( MetaEntity => { return => "id", where => [ entity => $e ] } );
 	my $id = $ido->[0]->{id};
 
-	$self->{storage}->store( "MetaAuthEntity",
-				 key => [ qw/role entity/ ],
-				 fields => { 
-				     deleteable => $param{delete},
-				     createable => $param{create},
-				     writeable  => $param{write},
-				     readable   => $param{read},
-				     role       => $self->{_id},
-				     entity     => $id,
-				 } );
-
+	Yggdrasil::fatal( "Unable to set access to entity '$e', no such entity!" ) unless $id;
+	
+	$storage->store( "MetaAuthEntity",
+			 key => [ qw/role entity/ ],
+			 fields => { 
+				    deleteable => $param{delete},
+				    createable => $param{create},
+				    writeable  => $param{write},
+				    readable   => $param{read},
+				    role       => $self->{_id},
+				    entity     => $id,
+				   } );
+	
     } 
 
 }
@@ -146,20 +148,20 @@ sub add {
     my $self = shift;
     my $user = shift;
 
-    $self->{storage}->store( "MetaAuthRolemembership",
-			     key => [ qw/role user/ ],
-			     fields => { role => $self->{_id},
-					 user => $user->{_id},
-			     } );
+    $self->{yggdrasil}->{storage}->store( "MetaAuthRolemembership",
+					  key => [ qw/role user/ ],
+					  fields => { role => $self->{_id},
+						      user => $user->{_id},
+						    } );
 }
 
 sub remove {
     my $self = shift;
     my $user = shift;
 
-    $self->{storage}->expire( "MetaAuthRolemembership",
-			      role => $self->{_id},
-			      user => $user->{_id} );
+    $self->{yggdrasil}->{storage}->expire( "MetaAuthRolemembership",
+					   role => $self->{_id},
+					   user => $user->{_id} );
 }
 
 1;

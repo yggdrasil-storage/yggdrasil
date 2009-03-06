@@ -7,14 +7,17 @@ use Getopt::Long;
 
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
+use lib qq(./test-parts);
+
+use Preamble qw|getopts status status_die|;
 
 use Yggdrasil;
+use Yggdrasil::Storage;
 
 my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 1, 0, 1);
 
 my ($user, $password, $host, $port, $db, $engine) =
   ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE});
-
 
 GetOptions(
 	   "zap"         => \$zap,
@@ -33,18 +36,21 @@ GetOptions(
 	   "port=s"       => \$port,
 	  );
 
-my $y = new Yggdrasil(
-		      user      => $user,
-		      password  => $password,
-		      host      => $host,
-		      port      => $port,
-		      db        => $db,
-		      engine    => $engine,
-		      namespace => 'Ygg',
-		      admin     => 1,
-		     );
+my $y = new Yggdrasil();
 
-my $storage = $Yggdrasil::STORAGE;
+$y->connect( 
+	    user      => $user,
+	    password  => $password,
+	    host      => $host,
+	    port      => $port,
+	    db        => $db,
+	    engine    => $engine,
+	    admin     => 1,
+	   );
+
+$y->login();
+
+my $storage = $y->{storage};
 
 $zap = 1 if $bootstrap;
 
@@ -127,7 +133,7 @@ for my $structure (@structures) {
 	    my ($lval, $rval) = ();
 	    for my $c (@row) {
 		if ($dereference && $c && $c =~ /^\d+$/ &&
-		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[RIP]/ ||
+		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[ARIP]/ ||
 		     $mapped_struct eq 'Entities' || $mapped_struct eq 'Relations')) {
 		    my $key = $1;
 		    if ($mapped_struct eq 'Relations') {
@@ -140,6 +146,17 @@ for my $structure (@structures) {
 		    } elsif ($mapped_struct eq 'MetaRelation') {
 			if ($i == 1 || $i == 2) {
 			    $c = "$c (" . $entities{$c} . ")";
+			}
+		    } elsif ($mapped_struct eq 'MetaAuthEntity') {
+			$c = $c?'d':'' if $i == 1;
+			$c = "$c (" . $entities{$c} . ")" if $i == 2;
+			$c = $c?'c':'' if $i == 3;
+			$c = $c?'w':'' if $i == 4;
+			$c = "$c (" . $idents{$c} . ")" if $i == 5;
+			$c = $c?'r':'' if $i == 6;
+		    } elsif ($mapped_struct eq 'MetaAuthRolemembership') {
+			if ($i == 0 || $i == 1) {
+			    $c = "$c (" . $idents{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'MetaInheritance') {
 			if ($i < 3) {

@@ -7,16 +7,17 @@ use base qw(Yggdrasil::Meta);
 
 sub _define {
     my $self = shift;
-
-    return $self->{yggdrasil}->{storage}->define( "MetaInheritance",
-				     fields   => { parent => { type => "INTEGER", null => 0 },
-						   child  => { type => "INTEGER", null => 0 } },
-				     temporal => 1,
-				     nomap    => 1,
-				     hints    => {
-						  parent => { foreign => 'MetaEntity' },
-						  child  => { foreign => 'MetaEntity' }
-						 });
+    my $storage = $self->{yggdrasil}->{storage};
+    
+    $storage->define( "MetaInheritance",
+		      fields   => { parent => { type => "INTEGER", null => 0 },
+				    child  => { type => "INTEGER", null => 0 } },
+		      temporal => 1,
+		      nomap    => 1,
+		      hints    => {
+				   parent => { foreign => 'MetaEntity' },
+				   child  => { foreign => 'MetaEntity' }
+				  });
 }
 
 sub _add_inheritance {

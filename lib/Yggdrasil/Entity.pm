@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Yggdrasil::Entity::Instance;
+use Yggdrasil::Status;
 
 # We inherit _add_meta from MetaEntity and _add_inheritance from
 # MetaInheritance.
@@ -13,15 +14,35 @@ sub _define {
     my $self  = shift;    
     my %params = @_;
     my $name = $self->{name};
+    my $parent = $params{inherit};
     
+    my @entities = split /::/, $name;
+
+    # @entities[-1] is the new one.
+    if (@entities > 1) {
+	for my $entity (@entities[ 0 .. ( $#entities - 1 ) ]) {
+	    if ($self->{yggdrasil}->{strict}) {
+		if (! $self->get_entity( $entity )) {
+		    my $status = new Yggdrasil::Status;
+		    $status->set( 400, "Unable to access parent entity $entity." );
+		    return;
+		} 
+	    } else {
+		# print " ** Create $entity\n";
+	    }
+	}
+	$name = $entities[-1];
+	$parent = $entities[$#entities - 1];
+    }
+
     # --- Add to MetaEntity, noop if it exists.
     $self->_meta_add($name);
 
-    # --- Update MetaInheritance
-    if( defined $params{inherit} ) {
-	my $parent = Yggdrasil::_extract_entity($params{inherit});
+    # --- Update MetaInheritance  
+    if( defined $parent ) {
 	$self->_add_inheritance( $name, $parent );
     } else {
+	# warnings, this does update, which sets status.
 	$self->_expire_inheritance( $name );
     }
 

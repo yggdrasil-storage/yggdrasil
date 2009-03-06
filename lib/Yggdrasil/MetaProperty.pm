@@ -7,19 +7,20 @@ use base qw(Yggdrasil::Meta);
 
 sub _define {
     my $self = shift;
-
-    return $self->{storage}->define( "MetaProperty",
-				     fields   => { entity   => { type => "INTEGER",      null => 0 },
-						   property => { type => "VARCHAR(255)", null => 0 },
-						   type     => { type => "VARCHAR(255)", null => 0 },
-						   nullp    => { type => "BOOLEAN",      null => 0 },
-						   id       => { type => "SERIAL" } },
-				     temporal => 1,
-				     nomap    => 1,
-				     hints    => {
-						  entity => { foreign => 'MetaEntity', index => 1 },
+    my $storage = $self->{yggdrasil}->{storage};
+    
+    $storage->define( "MetaProperty",
+		      fields   => { entity   => { type => "INTEGER",      null => 0 },
+				    property => { type => "VARCHAR(255)", null => 0 },
+				    type     => { type => "VARCHAR(255)", null => 0 },
+				    nullp    => { type => "BOOLEAN",      null => 0 },
+				    id       => { type => "SERIAL" } },
+		      temporal => 1,
+		      nomap    => 1,
+		      hints    => {
+				   entity => { foreign => 'MetaEntity', index => 1 },
 						 },
-				   );
+		    );
 }
 
 sub _admin_dump {

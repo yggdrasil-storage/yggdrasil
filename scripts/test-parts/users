@@ -3,47 +3,32 @@
 use strict;
 use warnings;
 
-use Getopt::Long;
+use Preamble qw|getopts status status_die|;
 
-use FindBin qw($Bin);
-use lib qq($Bin/../../lib);
+my $opts = getopts();
 
-use Yggdrasil;
+my $ygg = new Yggdrasil( %$opts );
+status_die( "Yggdrasil", $ygg );
 
-my ($user, $password, $host, $port, $db, $engine, $mapper) =
-  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef);
+my $connect = $ygg->connect( %$opts );
+status_die( "Connect", $connect, 1 );
 
-GetOptions(
-	   "user=s"       => \$user,
-	   "engine=s"     => \$engine,
-	   "password=s"   => \$password,
-	   "host=s"       => \$host,
-	   "database=s"   => \$db,
-	   "engine=s"     => \$engine,
-	   "port=s"       => \$port,
-	   "mapper=s"     => \$mapper,
-	  );
+my $login = $ygg->login( user => $opts->{yuser}, password => $opts->{ypass} );
+status_die( "Login", $login, 1 );
 
-new Yggdrasil(
-	      user      => $user,
-	      password  => $password,
-	      host      => $host,
-	      port      => $port,
-	      db        => $db,
-	      engine    => $engine,
-	      namespace => 'Ygg',
-	      mapper    => $mapper,
-	      admin     => 1,
-	     );
+my $bark = $ygg->define_user( user => "bark", password => "secret" );
+status( "User", $bark, 1 );
 
-print "$user\@$host ($db / $engine)\n";
+my $boss = $ygg->define_role( role => "Boss" );
+status( "Role", $boss, 1 );
 
-my $bark = define Yggdrasil::Auth user => "bark", password => "secret";
-my $boss = define Yggdrasil::Auth role => "Boss";
+exit;
 
+my $hoste = $ygg->get_entity( 'Host' );
+status( "Entity", $hoste, 1 );
+my $ip = $hoste->define_property( 'ip', 'type' => 'text' );
+status( "Property", $ip, 1 );
 
-my $hoste = define Yggdrasil::Entity 'Host';
-my $ip = define $hoste 'ip', 'type' => 'text';
 $boss->grant( $hoste, "w" );
 $boss->revoke( $hoste, "w" );
 
