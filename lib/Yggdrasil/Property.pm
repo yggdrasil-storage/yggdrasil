@@ -65,8 +65,13 @@ sub _define {
 			      type     => $data{type},
 			      nullp    => $data{null},
 			    } ) unless $data{raw};
+
+  if ($status->status() == 202) {
+      $status->set( 202, "Property '$property' already existed for '$entity'." );
+  } else {
+      $status->set( 201, "Property '$property' created for '$entity'." );
+  }
   
-  $status->set( 201, "Property '$property' created for '$entity'." );
   return $property;
 }
 

@@ -37,6 +37,9 @@ sub _define {
     # --- Add to MetaEntity, noop if it exists.
     $self->_meta_add($name);
 
+    my $status = new Yggdrasil::Status;
+    return 1 if $status->status() == 202;
+    
     # --- Update MetaInheritance  
     if( defined $parent ) {
 	$self->_add_inheritance( $name, $parent );

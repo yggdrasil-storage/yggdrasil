@@ -342,6 +342,7 @@ sub _store {
 	$self->_sql( "INSERT INTO $schema (" . join(", ", keys %$fields) . ") VALUES ( "
 		     . join(", ", ('?') x keys %$fields) . ')', values %$fields)
     }
+    $status->set( 200, "Value(s) set" );
     return 1;
 }
 
