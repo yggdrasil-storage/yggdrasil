@@ -316,7 +316,7 @@ sub _store {
     # Check if we already have the value
     my $aref = $self->fetch( $schema, { where => [ %$fields ] } );
     if (@$aref) {
-	$status->set( 200, 'Value(s) already set' );
+	$status->set( 202, 'Value(s) already set' );
 	return 1;
     }
 
