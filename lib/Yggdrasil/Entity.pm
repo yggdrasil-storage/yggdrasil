@@ -20,16 +20,15 @@ sub _define {
 
     # @entities[-1] is the new one.
     if (@entities > 1) {
-	for my $entity (@entities[ 0 .. ( $#entities - 1 ) ]) {
-	    if ($self->{yggdrasil}->{strict}) {
-		if (! $self->get_entity( $entity )) {
-		    my $status = new Yggdrasil::Status;
-		    $status->set( 400, "Unable to access parent entity $entity." );
-		    return;
-		} 
-	    } else {
-		# print " ** Create $entity\n";
-	    }
+	if ($self->{yggdrasil}->{strict}) {
+	    my $entity = $entities[ -2 ];
+	    if (! $self->get_entity( $entity )) {
+		my $status = new Yggdrasil::Status;
+		$status->set( 400, "Unable to access parent entity $entity." );
+		return;
+	    } 
+	} else {
+	    # print " ** Create $entity\n";
 	}
 	$name = $entities[-1];
 	$parent = $entities[$#entities - 1];
