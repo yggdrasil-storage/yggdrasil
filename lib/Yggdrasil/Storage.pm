@@ -94,11 +94,11 @@ sub define {
 
     my %data = @_;
     my $originalname = $schema;
+    my $status = new Yggdrasil::Status;
 
     unless ($self->{bootstrap}) {
 	my $parent = $self->my_parent();
 	if (! $self->can( operation => 'define', target => $parent )) {
-	    my $status = new Yggdrasil::Status;
 	    $status->set( 403, "You are not permitted to create the structure '$schema' under '$parent'." );
 	    return;
 	} 
@@ -116,7 +116,7 @@ sub define {
     $schema = $self->_map_schema_name( $schema ) unless $data{nomap};
 
     if ($self->_structure_exists( $schema )) {
-	$self->status( 202, "Structure '$schema' already existed" );
+	$status->set( 202, "Structure '$schema' already existed" );
 	return;
     }
 
