@@ -123,7 +123,7 @@ sub define_property {
     my $name = shift; # Name of property;
     my %param = @_; # Options hash.
     
-    my $property = Yggdrasil::Property->define( $self, $name, @_, yggdrasil => $self->{yggdrasil});
+    my $property = Yggdrasil::Property->define( $self, $name, @_, yggdrasil => $self->{yggdrasil} || $self);
     return;
 }
 

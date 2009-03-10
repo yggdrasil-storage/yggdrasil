@@ -15,6 +15,7 @@ sub _define {
     my %params = @_;
     my $name = $self->{name};
     my $parent = $params{inherit};
+    $self->{yggdrasil} = $params{yggdrasil};
     
     my @entities = split /::/, $name;
 
@@ -38,7 +39,7 @@ sub _define {
     $self->_meta_add($name);
 
     my $status = new Yggdrasil::Status;
-    return 1 if $status->status() == 202;
+    return $self if $status->status() == 202;
     
     # --- Update MetaInheritance  
     if( defined $parent ) {
