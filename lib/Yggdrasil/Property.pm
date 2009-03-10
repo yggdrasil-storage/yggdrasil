@@ -25,15 +25,22 @@ sub _define {
   $entity = $entity->{name};
 
   my $name;
+
+  # Input types:
+  # $somepointer->define_property( Foo::Bar::Baz:prop )
+  # $baz_entity->define_property( prop );
+  
   # Auth passes MetaAuthUser request as a MetaAuth object, hackish.
   # This catches requests on the form MetaAuthRole:password and similar constructs.
-  if ($property =~ /^([^:]+):([^:]+)$/) {
+  if ($property =~ /:/) {
+      my $real_entity   = (split /::/, $property)[-1];
+      ($entity, $property) = (split /:/, $real_entity);
       $name = $property;
-      $entity = $1;
-      $property = $2;
-  } else {
-      $name = join(":", $entity, $property);
   }
+  
+  $name = join(":", $entity, $property);
+  
+  # print "$name :: $entity :: $property\n";
   
   # --- Set the default data type.
   $data{type} = uc $data{type} || 'TEXT';
