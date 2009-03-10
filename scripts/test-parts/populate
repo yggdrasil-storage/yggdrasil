@@ -27,10 +27,21 @@ status( 'Person', $person_entity );
 my $p_s_entity    = $ygg->define_entity( 'Person::Student' );
 status( 'Person::Student', $p_s_entity );
 
-$host_entity   = $ygg->get_entity( 'Hoste' );
-$host_entity->define_property( 'ip' );
 
+$host_entity   = $ygg->get_entity( 'Hoste' );
 status( 'Hoste', $host_entity );
+
+my $ipdef = $host_entity->define_property( 'ip' );
+status( 'Host:ip', $ipdef );
+
+# Define properties, cannot be "gotten".
+# my $host_property_ip      = $host_entity->define_property( 'ip' );
+my $room_property_comment = $room_entity->define_property( 'comment' );
+status( 'Room:comment', $room_property_comment );
+my $person_property_name   = $person_entity->define_property( 'name' );
+status( 'Person:name', $person_property_name );
+my $p_s_property_grade    = $ygg->define_property( 'Person::Student:grade', type => 'text', null => 0);
+status( 'Person::Student:grade', $p_s_property_grade );
 
 # Define instance
 my $nommo = $host_entity->create( 'nommo2' );
@@ -38,16 +49,16 @@ status( 'Create', $nommo );
 $nommo    = $host_entity->fetch( 'nommo2' );
 status( 'Fetch', $nommo );
 
-$nommo->get( 'ip' );
-$nommo->set( 'ip', '129.240.222.179' );
+my $ipp = $nommo->get( 'ip' );
+status( 'Get:ip', $ipp );
+$ipp = $nommo->set( 'ip', '129.240.222.179' );
+status( 'Set:ip', $ipp );
+$ipp = $nommo->set( 'ip', '129.240.222.178' );
+status( 'Set:ip', $ipp );
+$ipp = $nommo->set( 'ip', '129.240.222.179' );
+status( 'Set:ip', $ipp );
 
 exit;
-
-# Define properties, cannot be "gotten".
-my $host_property_ip      = $host_entity->define_property( 'ip' );
-my $room_property_comment = $room_entity->define_property( 'comment' );
-my $person_propert_name   = $person_entity->define_property( 'name' );
-my $p_s_property_grade    = $ygg->define_property( 'Person::Student:grade', type => 'text', null => 0);
 
 # Define relations
 my $host_room_relation   = $ygg->define_relation( $host_entity, $room_entity, 'hr' );
