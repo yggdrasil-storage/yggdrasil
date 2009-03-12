@@ -23,7 +23,7 @@ sub _define {
     if (@entities > 1) {
 	if ($self->{yggdrasil}->{strict}) {
 	    my $entity = $entities[ -2 ];
-	    if (! $self->get_entity( $entity )) {
+	    if (! $self->{yggdrasil}->get_entity( $entity )) {
 		my $status = new Yggdrasil::Status;
 		$status->set( 400, "Unable to access parent entity $entity." );
 		return;
