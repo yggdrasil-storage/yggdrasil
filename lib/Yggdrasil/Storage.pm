@@ -172,7 +172,8 @@ sub raw_store {
 # We remap the schema names (the non-reference parameters) here.
 sub fetch {
     my $self = shift;
-
+    my @targets;
+    
     my $time;
     if( @_ % 2 ) { 
 	$time = pop @_;
@@ -191,6 +192,16 @@ sub fetch {
 	my( $schema, $queryref ) = ($_[$i], $_[$i+1]);
 	next unless $queryref->{join} || $queryref->{as};
 	$queryref->{as} = $schema;
+	push @targets, $schema;
+    }
+
+    unless ($self->{bootstrap}) {
+	my %params = @_;
+	if (! $self->can( operation => 'read', data => \%params, target => \@targets )) {
+	    my $status = new Yggdrasil::Status;
+	    $status->set( 403 );
+	    return;
+	} 
     }
 
     return $self->_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_, $time );

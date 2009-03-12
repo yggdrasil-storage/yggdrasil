@@ -38,6 +38,11 @@ sub _meta_add {
     my $name = shift;
     
     $self->{yggdrasil}->{storage}->store( "MetaEntity", key => "entity", fields => { entity => $name } );
+
+    unless ($self->{yggdrasil}->{bootstrap}) {
+	my $role = $self->{yggdrasil}->get_role_from_active_user();
+	$role->grant( $name, 'd' );
+    }
 }
 
 sub _admin_dump {

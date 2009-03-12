@@ -50,19 +50,19 @@ sub _meta_add {
   my $label = shift;
   my %param = @_;
   
-  $self->{storage}->store( "MetaRelation",
-			   key    => "label",
-			   fields => {
-				      label => $label,
-				      lval  => $lval,
-				      rval  => $rval,
-				      l2r   => $param{l2r},
-				      r2l   => $param{r2l},
-
-				      requirement => $param{requirement},				      
-				     });
+  $self->{yggdrasil}->{storage}->store( "MetaRelation",
+					key    => "label",
+					fields => {
+						   label => $label,
+						   lval  => $lval,
+						   rval  => $rval,
+						   l2r   => $param{l2r},
+						   r2l   => $param{r2l},
+						   
+						   requirement => $param{requirement},				      
+						  });
   
-  my $ref = $self->{storage}->fetch( 'MetaRelation', { return => 'id', where => [ label => $label ]});
+  my $ref = $self->{yggdrasil}->{storage}->fetch( 'MetaRelation', { return => 'id', where => [ label => $label ]});
   return $ref->[0]->{id};
 }
 

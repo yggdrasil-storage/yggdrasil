@@ -76,16 +76,33 @@ sub define_user {
     return $ao->_define_user( @_ );
 }
 
+# This is awefully ugly.  FIXME.
+sub get_role_from_active_user {
+    my $self = shift;
+    
+    my $idref = $self->{storage}->_fetch(MetaAuthRolemembership => { where => [ user => \qq{Entities.id} ],
+								     return => 'role' },
+					 Entities => { where => [ visual_id => $self->{user} ]});
+
+    my $roref = $self->{storage}->_fetch(Entities => { where => [ id => $idref->[0]->{role} ],
+						       return => 'visual_id' });
+
+    my $meta_role = $self->get_entity( 'MetaAuthRole' );
+    my $ro = $meta_role->fetch( $roref->[0]->{visual_id} );
+    my $role = bless $ro, 'Yggdrasil::Auth::Role';
+    $role->{name} = 'MetaAuthRole';
+    return $role;
+}
+
 # Interface to get / define roles.
 sub define_role {
     my $self = shift;
-
+    
     my $ygg  = $self->{yggdrasil} || $self;
     my $ao = new Yggdrasil::Auth( yggdrasil => $ygg );
     
     return $ao->_define_role( @_ );
 }
-
 
 # Interface to get / define entities.
 sub define_entity {
@@ -99,13 +116,11 @@ sub define_entity {
 
 sub get_entity {
     my $self = shift;
-    
     my $entity = shift;
-    my $ygg    = $self->{yggdrasil} || $self;
-
-    my $aref = $ygg->{storage}->fetch( 'MetaEntity', { where => [ entity => $entity ],
-						       return => 'entity' } );
-
+    
+    my $aref = $self->{storage}->fetch( 'MetaEntity', { where => [ entity => $entity ],
+							return => 'entity' } );
+    
     unless (defined $aref->[0]->{entity}) {
 	my $status = new Yggdrasil::Status;
 	$status->set( 404, "Entity '$entity' not found." );
@@ -114,8 +129,23 @@ sub get_entity {
     
     my $status = new Yggdrasil::Status;
     $status->set( 200 );
-    $entity = new Yggdrasil::Entity( name => $entity, yggdrasil => $ygg );
+    $entity = new Yggdrasil::Entity( name => $entity, yggdrasil => $self );
     return $entity;
+}
+
+sub define_relation {
+    my $self = shift;
+    my ($e1, $e2, $label) = @_;
+    
+    return Yggdrasil::Relation->define( entities  => [ $e1, $e2 ], label => $label,
+					yggdrasil => $self->{yggdrasil} || $self );
+}
+
+sub get_relation {
+    my $self = shift;
+    my $label = shift;
+    
+    return Yggdrasil::Relation->fetch( label => $label, yggdrasil => $self->{yggdrasil} || $self );
 }
 
 sub define_property {
@@ -124,7 +154,7 @@ sub define_property {
     my %param = @_; # Options hash.
     
     my $property = Yggdrasil::Property->define( $self, $name, @_, yggdrasil => $self->{yggdrasil} || $self);
-    return;
+    return $property;
 }
 
 sub _setup_logger {
@@ -165,6 +195,7 @@ sub bootstrap {
     my %userlist = @_;
     
     if ($self->{storage}->yggdrasil_is_empty()) {
+	$self->{bootstrap} = 1;
 	Yggdrasil::MetaEntity->define( yggdrasil => $self );
 	Yggdrasil::MetaRelation->define( yggdrasil => $self );
 	Yggdrasil::MetaProperty->define( yggdrasil => $self );

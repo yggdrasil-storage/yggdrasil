@@ -32,7 +32,7 @@ sub authenticate {
     my ($user, $pass, $session) = ($params{'user'}, $params{'pass'}, $params{'session'});
 
     my $status = new Yggdrasil::Status;
-    my $authentity = $self->get_entity( 'MetaAuthUser' );
+    my $authentity = $self->{yggdrasil}->get_entity( 'MetaAuthUser' );
     
     # First, let see if we're connected to a tty without getting a
     # username / password, at which point we're already authenticated
@@ -63,7 +63,6 @@ sub authenticate {
 	my $sid = md5_hex(time() * $$ * rand(time() + $$));
 	$self->{session} = $sid;
 	$userobject->property( 'session', $sid );
-	print "**", $status->status(), $status->message(), "\n";
 	$status->set( 200 );
 	$self->{yggdrasil}->{user} = $user;
 	return $sid;
@@ -95,42 +94,58 @@ sub can {
     my $target    = $params{target};
     my $operation = $params{operation};
     my $storage   = $ygg->{storage};
-    my $user      = $ygg->{user};
+    my $user      = $ygg->{user} || '';
 
     my $dataref   = $params{data};
 
     my @targets_to_check;
 
-    if ($target =~ /:/) {
-	# Properties not implemented.
-	return 1;
+    return 1 if $target =~ /:/; # properties not implemented.
+
+    my $roleid_of_user;
+    if ($user) {
+	$roleid_of_user = $self->_get_user_role( $user );
+	debug_if( 4, "Roleid is $roleid_of_user." );
     }
     
     # If we wish to write to MetaEntity, we have in reality asked to
     # create an entity.  To be allowed to do this we have to ask if we
     # are allowed to subclass the entity in question, which is a 'w'
     # operation.  We might wish to have a "subclass" bit.
-    if (($target eq 'MetaEntity' || $target eq 'MetaProperty') && $operation eq 'store') {
-	for my $t ($self->_get_store_targets( $dataref )) {
+    if ($target eq 'MetaEntity' && $operation eq 'store') {
+	for my $t ($self->_get_metaentity_store_targets( $dataref )) {
+	    push @targets_to_check, $storage->parent_of( $t );
+	}
+	$operation = 'writeable';
+    } elsif ($target eq 'MetaProperty' && $operation eq 'store') {
+	for my $t ($self->_get_metaproperty_store_targets( $dataref )) {
 	    push @targets_to_check, $storage->parent_of( $t );
 	}
 	$operation = 'writeable';
     } elsif ($target eq 'Entities' && $operation eq 'store') {
-	for my $t ($self->_get_store_targets( $dataref )) {
+	for my $t ($self->_get_metaentity_store_targets( $dataref )) {
 	    push @targets_to_check, $storage->parent_of( $t );
 	}
 	$operation = 'createable';
     } elsif ($target eq 'MetaInheritance') {
 	push @targets_to_check, $self->_get_inheritance_parent( $dataref );
 	$operation = 'writeable';
+    } elsif ($target eq 'MetaRelation') {
+	push @targets_to_check, $self->_get_relation_targets( $dataref );
+	$operation = 'writeable';
     } elsif ($operation eq 'define') {
 	push @targets_to_check, $target;
 	$operation = 'writeable';
     } elsif ($target =~ '^Storage_') {
 	return 1;
+    } elsif ($operation eq 'read') {
+	for my $t (@$target) {
+	    print "$t\n";
+	    push @targets_to_check, $t;
+	}
+    } elsif ($target eq 'MetaAuthEntity') { # FIXME, check parents.
+	return 1;
     } else {
-	print " -- WARNING, unexpected check of $operation on $target for $user...\n";
-#	debug_if( 4, "Requested check of $operation on $target for $user..." );
 	if( $operation =~ /^c/ ) {
 	    $operation = 'createable';
 	} elsif ($operation =~ /^d/) {
@@ -142,17 +157,14 @@ sub can {
 	} else {
 	    return undef;
 	}
-	@targets_to_check = $target;
     }
-
+	  
+    #	debug_if( 4, "Requested check of $operation on $target for $user..." );
     for my $entity (@targets_to_check) {
+	return 1 if $operation eq 'readable' && $self->_global_read_access( $entity );
+       
 	debug_if( 4, "Checking $operation on $entity for $user..." );
-	
-	my $roleid_of_user = $self->_get_user_role( $user );
-
-	debug_if( 4, "Roleid is $roleid_of_user." );
-	
-	my $permission     = $self->_can( $roleid_of_user, $entity, $operation );
+	my $permission = $self->_can( $roleid_of_user, $entity, $operation );
 # 	my $idfetch = $storage->fetch(
 # 				      MetaEntity => { where => [ entity    => $entity ] },
 # 				      Entities   => { where => [
@@ -277,11 +289,12 @@ sub _get_user_role {
     my $self = shift;
     my $user = shift;
 
-    my $ref = $self->{yggdrasil}->{storage}->fetch( 
-						   MetaAuthRolemembership => { where => [ user => \qq{Entities.id} ],
-									       return => 'role' },
-						   Entities     => { where => [ visual_id => $user ]}
-						  );
+    # To avoid recursion, call _fetch directly.  :-/
+    my $ref = $self->{yggdrasil}->{storage}->_fetch( 
+						    MetaAuthRolemembership => { where => [ user => \qq{Entities.id} ],
+										return => 'role' },
+						    Entities     => { where => [ visual_id => $user ]}
+						   );
 
     return $ref->[0]->{role};
 }
@@ -295,8 +308,8 @@ sub _can {
     my $ref;
     if ($entity =~ /^\d+/) {
 	$ref = $self->{yggdrasil}->{storage}->fetch( 
-						    MetaAuthEntity => { where => [ role => $role, ],
-									           entity => $entity,
+						    MetaAuthEntity => { where  => [ role   => $role,
+									            entity => $entity ],
 									return => $operation },
 						   );
     } else {
@@ -309,19 +322,43 @@ sub _can {
 										 ]},
 						   );
     }
-    
 
     return $ref->[0]->{$operation};
 }
 
-sub _get_store_targets {
+sub _get_read_targets {
+    my ($self, $dataref) = @_;
+    return keys %{$dataref};
+}
+
+sub _get_metaentity_store_targets {
     my ($self, $dataref) = @_;
     return values %{$dataref->{fields}};
 }
+
+sub _get_metaproperty_store_targets {
+    my ($self, $dataref) = @_;
+    return $dataref->{fields}->{entity}
+}
+
+sub _get_relation_targets {
+    my ($self, $dataref) = @_;
+    return ($dataref->{fields}->{rval}, $dataref->{fields}->{lval});
+}
+
 sub _get_inheritance_parent {
     my ($self, $dataref) = @_;
     return $dataref->{fields}->{parent};
 }
 
+sub _global_read_access {
+    my ($self, $entity) = @_;
+
+    if ($entity =~ /^Storage/ || $entity =~ /Meta/ || $entity eq 'Entities') {
+	return 1;
+    } else {
+	return 0;
+    }
+}
 
 1;

@@ -58,13 +58,16 @@ status( 'Set:ip', $ipp );
 $ipp = $nommo->set( 'ip', '129.240.222.179' );
 status( 'Set:ip', $ipp );
 
-exit;
-
 # Define relations
 my $host_room_relation   = $ygg->define_relation( $host_entity, $room_entity, 'hr' );
+status( 'Host<->Room', $host_room_relation );
 my $person_room_relation = $ygg->define_relation( $person_entity, $room_entity, 'pr' );
+status( 'Person<->Room', $person_room_relation );
 
 $host_room_relation = $ygg->get_relation( 'hr' );
+status( 'Person<->Room (fetch)', $person_room_relation );
+
+exit;
 
 # --- Define Hosts
 my $hoste = define Yggdrasil::Entity 'Host';
