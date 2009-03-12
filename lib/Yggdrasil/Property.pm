@@ -40,12 +40,18 @@ sub _define {
   
   $name = join(":", $entity, $property);
   
-  # print "$name :: $entity :: $property\n";
-  
   # --- Set the default data type.
   $data{type} = uc $data{type} || 'TEXT';
   $data{null} = 1 if $data{null} || ! defined $data{null};
-  
+
+  my $idref = $storage->fetch( MetaEntity => { return => 'id',
+					       where  => [ entity => $entity ] } );
+
+  unless (@$idref) {
+      $status->set( 400, "Unknown entity '$entity' requested for property '$property'." );
+      return;
+  }
+
   # --- Create Property table
   $storage->define( $name,
 		    fields   => { id    => { type => "INTEGER" },
@@ -56,14 +62,6 @@ sub _define {
 		    hints => { id => { index => 1, foreign => 'Entities' }},
 		  );
   
-  my $idref = $storage->fetch( MetaEntity => { return => 'id',
-					       where  => [ entity => $entity ] } );
-
-
-  unless (@$idref) {
-      $status->set( 400, "Unknown entity '$entity' requested for property '$property'." );
-      return;
-  }
   
   # --- Add to MetaProperty
   $storage->store("MetaProperty", key => "id",
