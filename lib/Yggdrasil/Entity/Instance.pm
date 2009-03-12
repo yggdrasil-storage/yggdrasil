@@ -248,7 +248,12 @@ sub property {
     my $r = $storage->fetch( $schema => { return => "value", where => [ id => $self->{_id} ] },
 			     { start => $self->{_start}, stop => $self->{_stop} } );
 
-    $r->[0]->{value} ? $status->set( 200 ) : $status->set( 204 );
+    if ($r->[0]->{value}) {
+	$status->set( 200 );
+    } else {
+	$status->set( 204 ) if $status->OK();
+    }
+
     return $r->[0]->{value};
 }
 
