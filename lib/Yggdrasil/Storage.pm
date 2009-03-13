@@ -120,6 +120,7 @@ sub define {
 	return;
     }
 
+    $data{fields}->{committer} = { type => 'VARCHAR(255)', null => 0 };
     my $retval = $self->_define( $schema, %data );
 
    # We might create a schema with name "0", so check for a defined value.
@@ -145,17 +146,23 @@ sub define {
 sub store {
     my $self = shift;
     my $schema = shift;
+    my %params = @_;
 
     unless ($self->{bootstrap}) {
-	my %params = @_;
 	if (! $self->can( operation => 'store', target => $schema, data => \%params )) {
 	    my $status = new Yggdrasil::Status;
 	    $status->set( 403 );
 	    return;
 	} 
     }
+
+    if ($self->{bootstrap}) {
+	$params{fields}->{committer} = 'bootstrap';
+    } else {
+	$params{fields}->{committer} = $self->{yggdrasil}->{user};
+    }
     
-    return $self->_store( $self->_get_schema_name( $schema ), @_ );
+    return $self->_store( $self->_get_schema_name( $schema ), %params );
 }
 
 sub raw_store {
