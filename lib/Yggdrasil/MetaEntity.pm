@@ -13,7 +13,7 @@ sub _define {
     $storage->define( "MetaEntity",
 		      fields   => {
 				   id     => { type => 'SERIAL' },
-			       entity => { type => "VARCHAR(255)", null => 0 },
+				   entity => { type => "VARCHAR(255)", null => 0 },
 				  },
 		      temporal => 1,
 		      nomap    => 1, );
