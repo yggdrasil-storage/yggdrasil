@@ -6,6 +6,7 @@ use warnings;
 use base qw(Yggdrasil::Meta);
 
 use Yggdrasil::Status;
+use Yggdrasil::Utilities;
 
 sub _define {
   my $self    = shift;
@@ -22,7 +23,7 @@ sub _define {
       return;
   }
   
-  $entity = $entity->{name};
+  $entity = $self->{entity} = $entity->{name};
 
   my $name;
 
@@ -39,6 +40,7 @@ sub _define {
   }
   
   $name = join(":", $entity, $property);
+  $self->{name} = $property;
   
   # --- Set the default data type.
   $data{type} = uc $data{type} || 'TEXT';
@@ -77,8 +79,48 @@ sub _define {
       $status->set( 201, "Property '$property' created for '$entity'." );
   }
   
-  return $property;
+  return $self;
 }
+
+sub null {
+    my ($self) = (shift, shift);
+    return $self->_get_meta( 'null', @_ );
+}
+
+sub type {
+    my ($self, $property) = (shift, shift);
+    return $self->_get_meta( 'type', @_ );
+}
+
+# _get_meta returns meta data for a property, information about nullp
+# and type is currently supported.
+sub _get_meta {
+    my ($self, $meta) = (shift, shift);
+    my ($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
+    my $property = $self->{name};
+    
+    Yggdrasil::fatal( "$meta is not a valid metadata request." ) 
+	unless $meta eq 'null' || $meta eq 'type';
+
+    # The internal name for the null field is "nullp".
+    $meta = 'nullp' if $meta eq 'null';
+
+    my $entity = $self->{entity};
+    my $storage = $self->{yggdrasil}->{storage};
+    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
+
+    foreach my $e ( $self, @ancestors ) {
+	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e->{entity} ]},
+				  'MetaProperty',{ return => $meta,
+						    where  => [ entity   => \qq{MetaEntity.id},
+								property => $property ]},
+				   { start => $start, stop => $stop });
+	next unless @$ret;
+	return $ret->[0]->{$meta};
+    }
+}
+
+
 
 sub _admin_dump {
     my $self = shift;

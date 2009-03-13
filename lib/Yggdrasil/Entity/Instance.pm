@@ -3,6 +3,7 @@ package Yggdrasil::Entity::Instance;
 use base 'Yggdrasil::Meta';
 
 use Yggdrasil::Status;
+use Yggdrasil::Utilities;
 
 use strict;
 use warnings;
@@ -259,11 +260,11 @@ sub property {
 
 sub property_exists {
     my ($self, $property) = (shift, shift);
-    my ($start, $stop) = $self->_get_times_from( @_ );
+    my ($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
     
     my $entity = $self->{entity};
-    my @ancestors = $self->_ancestors($entity, $start, $stop);
     my $storage = $self->{storage};
+    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
     
     # Check to see if the property exists.
     foreach my $e ( $entity, @ancestors ) {
@@ -283,11 +284,11 @@ sub property_exists {
 
 sub properties {
     my $self = shift;
-    my ($start, $stop) = $self->_get_times_from( @_ );
+    my ($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
 
     my $entity = $self->{entity};
-    my @ancestors = $self->_ancestors($entity, $start, $stop);
     my $storage = $self->{storage};
+    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
 
     my %properties;
     
@@ -359,58 +360,17 @@ sub instances {
 }
 
 
-# _get_meta returns meta data for a property, information about nullp
-# and type is currently supported.
-sub _get_meta {
-    my ($self, $property, $meta) = (shift, shift, shift);
-    my ($start, $stop) = $self->_get_times_from( @_ );
-    
-    Yggdrasil::fatal( "$meta is not a valid metadata request." ) 
-	unless $meta eq 'null' || $meta eq 'type';
-
-    # The internal name for the null field is "nullp".
-    $meta = 'nullp' if $meta eq 'null';
-
-    my $entity = $self->{entity};
-    my @ancestors = $self->_ancestors($entity, $start, $stop);
-    my $storage = $self->{storage};
-
-    foreach my $e ( $self, @ancestors ) {
-	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e ]},
-				  'MetaProperty',{ return => $meta,
-						    where  => [ entity   => \qq{MetaEntity.id},
-								property => $property ]},
-				   { start => $start, stop => $stop });
-	next unless @$ret;
-	return $ret->[0]->{$meta};
-    }
-}
-
-# Property null function for non-instanced calls.
-# It is called as "Ygg::Entity->null( 'propertyname' );
-sub null {
-    my ($self, $property) = (shift, shift);
-    return $self->_get_meta( $property, 'null', @_ );
-}
-
-# Property type function for non-instanced calls.
-# It is called as "Ygg::Entity->type( 'propertyname' );
-sub type {
-    my ($self, $property) = (shift, shift);
-    return $self->_get_meta( $property, 'type', @_ );
-}
-
 sub isa {
     my $self = shift;
     my $isa = shift;
-    my($start, $stop) = $self->_get_times_from( @_ );
+    my($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
 
     my $entity = $self->{entity};
     my $storage = $self->{storage};
 
     return 1 if $isa eq $entity;
 
-    my @ancestors = $self->_ancestors($entity, $start, $stop);
+    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
 
     if( defined $isa ) {
 	my $r = grep { $isa eq $_ } @ancestors;
@@ -435,7 +395,7 @@ sub pathlength {
 sub fetch_related {
   my $self = shift;
   my $relative = shift;
-  my($start, $stop) = $self->_get_times_from( @_ );
+  my($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
   
   $relative = Yggdrasil::_extract_entity($relative);
   my $source = $self->{entity};
@@ -504,7 +464,7 @@ sub _fetch_related {
   my $stop = shift;
   my $path = [ @{ shift || [] } ];
   my $all = shift || [];
-  my($tstart, $tstop) = $self->_get_times_from( @_ );
+  my($tstart, $tstop) = Yggdrasil::Utilities::get_times_from( @_ );
 
   my $storage = $self->{storage};
 
@@ -537,46 +497,5 @@ sub _fetch_related {
 
   return $all if @$path == 1;
 }
-
-
-sub _ancestors {
-    my $self = shift;
-    my $entity = shift;
-    my ($start, $stop) = @_;
-
-    $entity = $self->{entity};
-    my $storage = $self->{storage};
-    $entity = $storage->get_entity_id( $entity );
-    
-    my @ancestors;
-    my %seen = ( $entity => 1 );
-
-    my $r = $storage->fetch( 'MetaInheritance', { return => "parent", where => [ child => $entity ] },
-			     { start => $start, stop => $stop });
-
-    while( @$r ) {
-	my $parent = $r->[0]->{parent};
-	last if $seen{$parent};
-	$seen{$parent} = 1;
-	push( @ancestors, $storage->get_entity_name( $parent ) );
-
-	$r = $storage->fetch( 'MetaInheritance', { return => "parent", where => [ child => $parent ] },
-			      { start => $start, stop => $stop } );
-    }
-
-    return @ancestors;
-}
-
-sub _get_times_from {
-    my $self = shift;
-
-    if (@_ == 1) {
-	return ($_[0], $_[0]);
-    } elsif (@_ == 2) {
-	return ($_[0], $_[1]);
-    } else {
-	return ();
-    }
-} 
 
 1;

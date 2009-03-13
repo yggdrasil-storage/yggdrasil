@@ -67,18 +67,17 @@ status( 'Person<->Room', $person_room_relation );
 $host_room_relation = $ygg->get_relation( 'hr' );
 status( 'Person<->Room (fetch)', $person_room_relation );
 
+my $blob = $host_entity->define_property( 'blobbie', 'type' => 'binary', null => 0 );
+status( 'Defining Host:blobbie', $blob );
+my $ser = $host_entity->define_property( 'serial' );
+status( 'Defining Host:serial', $ser );
+
+print "S->null:", $ser->null(), " B->null:", $blob->null(), "\n";
+print "S->type:", $ser->type(), " B->type:", $blob->type(), "\n";
+
 exit;
 
-# --- Define Hosts
-my $hoste = define Yggdrasil::Entity 'Host';
-status( 'Defining Host' );
-my $ip = define $hoste 'ip', 'type' => 'text';
-my $blob = define $hoste 'blobbie', 'type' => 'binary', null => 0;
-my $serial = define $hoste 'serial';
-status( 'Defining Host:serial' );
 
-print $hoste->null( 'serial' ), " : ", $hoste->null( 'blobbie' ), "\n";
-print $hoste->type( 'serial' ), " : ", $hoste->type( 'blobbie' ), "\n";
 
 # my $nommo  = Ygg::Host->new( 'nommo' );
 status( 'Creating the instance nommo (Ygg::Host)' );
@@ -158,9 +157,9 @@ my $bravida = $con->new( "Bravida" );
 # host<->room
 # person<->host
 
-my $hr = define Yggdrasil::Relation $hoste, 'Room';
+my $hr = define Yggdrasil::Relation $host_entity, 'Room';
 define Yggdrasil::Relation $room, $phone;
-define Yggdrasil::Relation $person, $hoste;
+define Yggdrasil::Relation $person, $host_entity;
 define Yggdrasil::Relation $phone, $con;
 
 define Yggdrasil::Relation $person, $phone;
