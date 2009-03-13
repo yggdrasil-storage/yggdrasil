@@ -77,34 +77,34 @@ if ($onlytables) {
 
 my $configstruct = $storage->_dump_structure( 'Storage_config' );
 for my $rowref (@$configstruct) {
-    $config{$rowref->[0]} = $rowref->[1];
+    $config{$rowref->[0]} = $rowref->[2];
 }
 
 my $mapstruct = $storage->_dump_structure( 'Storage_mapname' );
 for my $rowref (@$mapstruct) {
-    $mapper{$rowref->[1]} = $rowref->[0];
-    $human_to_machine{$rowref->[0]} = $rowref->[1];
+    $mapper{$rowref->[2]} = $rowref->[1];
+    $human_to_machine{$rowref->[1]} = $rowref->[2];
 }
 
 my $realname = $human_to_machine{'Entities'} || 'Entities';
 my $tableref = $storage->_dump_structure( $realname );
 for my $rowref (@$tableref) {
     my @row = @$rowref;
-    $idents{$row[0]} = $row[2];
+    $idents{$row[0]} = $row[3];
 }
 
 $realname = $human_to_machine{'MetaEntity'} || 'MetaEntity';
 $tableref = $storage->_dump_structure( $realname );
 for my $rowref (@$tableref) {
     my @row = @$rowref;
-    $entities{$row[0]} = $row[1];
+    $entities{$row[0]} = $row[2];
 }
 
 $realname = $human_to_machine{'MetaRelation'} || 'MetaRelation';
 $tableref = $storage->_dump_structure( $realname );
 for my $rowref (@$tableref) {
     my @row = @$rowref;
-    $relations{$row[0]} = $row[3];
+    $relations{$row[0]} = $row[4];
 }
 
 for my $structure (@structures) {
@@ -144,30 +144,30 @@ for my $structure (@structures) {
 			    $c = "$c (" . $relations{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'MetaRelation') {
-			if ($i == 1 || $i == 2) {
+			if ($i == 1 || $i == 3) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'MetaAuthEntity') {
-			$c = $c?'d':'' if $i == 1;
-			$c = "$c (" . $entities{$c} . ")" if $i == 2;
-			$c = $c?'c':'' if $i == 3;
-			$c = $c?'w':'' if $i == 4;
-			$c = "$c (" . $idents{$c} . ")" if $i == 5;
-			$c = $c?'r':'' if $i == 6;
+			$c = $c?'w':'' if $i == 1;
+			$c = $c?'d':'' if $i == 2;
+			$c = "$c (" . $entities{$c} . ")" if $i == 3;
+			$c = $c?'c':'' if $i == 5;
+			$c = "$c (" . $idents{$c} . ")" if $i == 6;
+			$c = $c?'r':'' if $i == 7;
 		    } elsif ($mapped_struct eq 'MetaAuthRolemembership') {
-			if ($i == 0 || $i == 1) {
+			if ($i == 1 || $i == 2) {
 			    $c = "$c (" . $idents{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'MetaInheritance') {
-			if ($i < 3) {
+			if ($i > 0 && $i < 4) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'MetaProperty') {
-			if ($i == 2) {
+			if ($i == 3) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'Entities') {
-			if ($i == 1) {
+			if ($i == 2) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } else {
