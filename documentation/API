@@ -1,0 +1,58 @@
+Yggdrasil
+---------
+* define_entity
+  define_property
+  define_relation
+  define_user
+  define_role
+
+* get_entity
+  get_property
+  get_relation
+  get_user
+  get_role
+
+* undefine_entity
+  undefine_property
+  undefine_relation
+  undefine_user
+  undefine_role
+
+Entity
+------
+* create
+* fetch
+* delete
+
+Instance
+--------
+* get
+* set
+* entity
+
+Property
+--------
+* null
+* type
+* entity
+
+Relation
+--------
+* link
+* unlink
+* entities
+* label
+
+User
+----
+* password
+* session
+* username
+* fullname
+
+Role
+----
+* members
+* add_member
+* del_member
+* name
