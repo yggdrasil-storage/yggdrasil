@@ -28,15 +28,17 @@ sub _define {
   my $name;
 
   # Input types:
-  # $somepointer->define_property( Foo::Bar::Baz:prop )
+  # $ygg->define_property( Foo::Bar::Baz:prop )
   # $baz_entity->define_property( prop );
   
   # Auth passes MetaAuthUser request as a MetaAuth object, hackish.
   # This catches requests on the form MetaAuthRole:password and similar constructs.
   if ($property =~ /:/) {
-      my $real_entity   = (split /::/, $property)[-1];
-      ($entity, $property) = (split /:/, $real_entity);
-      $name = $property;
+      my @parts = split /::/, $property;
+      my $last = pop @parts;
+      ($entity, $property) = (split /:/, $last, 2);
+      push( @parts, $entity );
+      $entity = join('::', @parts);
   }
   
   $name = join(":", $entity, $property);

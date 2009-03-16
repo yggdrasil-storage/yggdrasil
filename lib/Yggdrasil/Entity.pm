@@ -17,36 +17,41 @@ sub _define {
     my $parent = $params{inherit};
     $self->{yggdrasil} = $params{yggdrasil};
     
-    my @entities = split /::/, $name;
+    my $fqn;
+    if( $parent ) {
+	$fqn = join('::', $parent, $name);
+    } else {
+	$fqn = $name;
+    }
 
-    # @entities[-1] is the new one.
+    my @entities = split /::/, $fqn;
     if (@entities > 1) {
+	$name = pop @entities;
+	$parent = join('::', @entities);
+
 	if ($self->{yggdrasil}->{strict}) {
-	    my $entity = $entities[ -2 ];
-	    if (! $self->{yggdrasil}->get_entity( $entity )) {
+	    if (! $self->{yggdrasil}->get_entity( $parent )) {
 		my $status = new Yggdrasil::Status;
-		$status->set( 400, "Unable to access parent entity $entity." );
+		$status->set( 400, "Unable to access parent entity $parent." );
 		return;
 	    } 
 	} else {
-	    # print " ** Create $entity\n";
+	    # print " ** Create $fqn\n";
 	}
-	$name = $entities[-1];
-	$parent = $entities[$#entities - 1];
     }
 
     # --- Add to MetaEntity, noop if it exists.
-    $self->_meta_add($name);
+    $self->_meta_add($fqn);
 
     my $status = new Yggdrasil::Status;
     return $self if $status->status() == 202;
     
     # --- Update MetaInheritance  
     if( defined $parent ) {
-	$self->_add_inheritance( $name, $parent );
+	$self->_add_inheritance( $fqn, $parent );
     } else {
 	# warnings, this does update, which sets status.
-	$self->_expire_inheritance( $name );
+	$self->_expire_inheritance( $fqn );
     }
 
     return $self;

@@ -43,6 +43,15 @@ status( 'Person:name', $person_property_name );
 my $p_s_property_grade    = $ygg->define_property( 'Person::Student:grade', type => 'text', null => 0);
 status( 'Person::Student:grade', $p_s_property_grade );
 
+# Create instance of P::S
+my $ola = $p_s_entity->create( "Ola" );
+status( 'Create Ola', $ola );
+my $g = $ola->set( grade => "EPIC FAIL!" );
+status( "Set:grade", $g );
+$g = $ola->get( "grade" );
+status( "Get:grade", $g );
+
+
 # Define instance
 my $nommo = $host_entity->create( 'nommo2' );
 status( 'Create', $nommo );
