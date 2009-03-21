@@ -2,6 +2,10 @@ package Yggdrasil::Utilities;
 
 use strict;
 use warnings;
+use Exporter;
+
+our @ISA = qw(Exporter);
+our @EXPORT_OK = qw(get_times_from ancestors);
 
 sub get_times_from {
     if (@_ == 1) {
