@@ -3,84 +3,114 @@ package Yggdrasil::Property;
 use strict;
 use warnings;
 
-use base qw(Yggdrasil::Meta);
+use base qw(Yggdrasil::Object);
 
 use Yggdrasil::Utilities qw|ancestors get_times_from|;
 
-sub _define {
-  my $self    = shift;
-  my $entity   = shift; # object.
-  my $property = shift; # string.
-  my %data     = @_;
-  
-  my $yggdrasil = $self->{yggdrasil} = $data{yggdrasil};
-  my $storage   = $yggdrasil->{storage};
+sub define {
+    my $class  = shift;
+    my $self   = $class->SUPER::new(@_);
+    my %params = @_;
 
-  my $status = $self->get_status();
-  unless (length $property) {
-      $status->set( 400, "Unable to create properties with zero length names." );
-      return;
-  }
+    my $entity   = $params{entity};
+    my $property = $params{property};
   
-  $entity = $self->{entity} = $entity->{name};
+    my $yggdrasil = $self->yggdrasil();
+    my $storage   = $yggdrasil->{storage};
 
-  my $name;
+    my $status = $self->get_status();
+    unless (length $property) {
+	$status->set( 400, "Unable to create properties with zero length names." );
+	return;
+    }
+    
+    # Input types:
+    # $ygg->define_property( Foo::Bar::Baz:prop )
+    # $baz_entity->define_property( prop );
+    
+    # Auth passes MetaAuthUser request as a MetaAuth object, hackish.
+    # This catches requests on the form MetaAuthRole:password and similar constructs.
+    if ($entity) {
+	if( $property =~ /:/ ) {
+	    # fatal - property contains entity information - illegal something
+	    # FIX: Set status
+	    return;
+	}
+	$entity = $entity->{name};
+    } elsif( $property =~ /:/ ) {
+	my @parts = split /::/, $property;
+	my $last = pop @parts;
+	($entity, $property) = (split /:/, $last, 2);
+	push( @parts, $entity );
+	$entity = join('::', @parts);
+    } else {
+	# we have no entity and the property name contains no ":"
+	# This means we were called as $ygg->define_property( "foo" );
+	# that makes no sense!
+	# FIX: Set status
+	return;
+    }
+    
+    my $name = join(":", $entity, $property);
 
-  # Input types:
-  # $ygg->define_property( Foo::Bar::Baz:prop )
-  # $baz_entity->define_property( prop );
-  
-  # Auth passes MetaAuthUser request as a MetaAuth object, hackish.
-  # This catches requests on the form MetaAuthRole:password and similar constructs.
-  if ($property =~ /:/) {
-      my @parts = split /::/, $property;
-      my $last = pop @parts;
-      ($entity, $property) = (split /:/, $last, 2);
-      push( @parts, $entity );
-      $entity = join('::', @parts);
-  }
-  
-  $name = join(":", $entity, $property);
-  $self->{name} = $property;
-  
-  # --- Set the default data type.
-  $data{type} = uc $data{type} || 'TEXT';
-  $data{null} = 1 if $data{null} || ! defined $data{null};
+    $self->{name} = $property;
+    $self->{entity} = $entity;
 
-  my $idref = $storage->fetch( MetaEntity => { return => 'id',
-					       where  => [ entity => $entity ] } );
-
-  unless (@$idref) {
-      $status->set( 400, "Unknown entity '$entity' requested for property '$property'." );
-      return;
-  }
-
-  # --- Create Property table
-  $storage->define( $name,
-		    fields   => { id    => { type => "INTEGER" },
-				  value => { type => $data{type},
-					     null => $data{null}}},
-		    
-		    temporal => 1,
-		    hints => { id => { index => 1, foreign => 'Entities' }},
-		  );
+    # --- Set the default data type.
+    $params{type} = uc $params{type} || 'TEXT';
+    $params{null} = 1 if $params{null} || ! defined $params{null};
+    
+    my $idref = $storage->fetch( MetaEntity => { return => 'id',
+						 where  => [ entity => $entity ] } );
+    
+    unless (@$idref) {
+	$status->set( 400, "Unknown entity '$entity' requested for property '$property'." );
+	return;
+    }
+    
+    # --- Create Property table
+    $storage->define( $name,
+		      fields   => { id    => { type => "INTEGER" },
+				    value => { type => $params{type},
+					       null => $params{null}}},
+		      
+		      temporal => 1,
+		      hints => { id => { index => 1, foreign => 'Entities' }},
+		    );
   
-  
-  # --- Add to MetaProperty
-  $storage->store("MetaProperty", key => "id",
-		  fields => { entity   => $idref->[0]->{id},
-			      property => $property,
-			      type     => $data{type},
-			      nullp    => $data{null},
-			    } ) unless $data{raw};
+    
+    # --- Add to MetaProperty
+    # Why isn't this in Y::MetaProperty?
+    $storage->store("MetaProperty", key => "id",
+		    fields => { entity   => $idref->[0]->{id},
+				property => $property,
+				type     => $params{type},
+				nullp    => $params{null},
+			      } ) unless $params{raw};
 
-  if ($status->status() == 202) {
-      $status->set( 202, "Property '$property' already existed for '$entity'." );
-  } else {
-      $status->set( 201, "Property '$property' created for '$entity'." );
-  }
+    if ($status->status() == 202) {
+	$status->set( 202, "Property '$property' already existed for '$entity'." );
+    } else {
+	$status->set( 201, "Property '$property' created for '$entity'." );
+    }
   
-  return $self;
+    return $self;
+}
+
+sub get {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %params = @_;
+
+    # FIX: duh! just fix this - maybe actually ask storage about something?
+    $self->{name} = $params{property};
+    $self->{entity} = $params{entity};
+
+    return $self;
+}
+
+sub undefine {
+
 }
 
 sub null {
@@ -108,6 +138,7 @@ sub _get_meta {
     }
 
     # The internal name for the null field is "nullp".
+    # FIX: why cant null() send 'nullp' as param instead of 'null' and void this test?
     $meta = 'nullp' if $meta eq 'null';
 
     my $entity = $self->{entity};

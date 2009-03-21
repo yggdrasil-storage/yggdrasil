@@ -1,9 +1,55 @@
-package Yggdrasil::Auth::Role;
+package Yggdrasil::Role;
+
+# This class acts as a wrapper class for the entity MetaAuthRole.
+# It provides a handy interface to defining, getting, undefining roles,
+# as well as getters and setters for some predefined properties.
 
 use strict;
 use warnings;
 
-use base qw(Yggdrasil::Entity::Instance);
+use base qw(Yggdrasil::Object);
+
+use Yggdrasil::Entity;
+
+sub define {
+    my $class = shift;
+    my $self  = $class->SUPER::new(@_);
+    my %params = @_;
+
+    my $meta_role = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthRole' );
+    my $ro = $meta_role->create( $params{'role'});
+
+    $self->{_role_obj} = $ro;
+
+    return $self;
+}
+
+sub get {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %params = @_;
+
+    my $id = $params{id};
+
+    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => "MetaAuthRole" );
+    my $ro = $e->fetch( $id );
+    $self->{_role_obj} = $ro;
+
+    return $self;
+}
+
+sub undefine {
+
+}
+
+sub members {
+    # list all role members
+}
+
+sub name {
+    # name of role
+}
+
 
 sub grant {
     my $self   = shift;
@@ -93,6 +139,7 @@ sub _set_permissions {
     my $self  = shift;
     my %param = @_;
 
+    my $robj = $self->{_role_obj};
     my $storage = $self->{yggdrasil}->{storage};
     
     my($e, $p) = split ':', $param{schema}, 2;
@@ -136,7 +183,7 @@ sub _set_permissions {
 				    createable => $param{create},
 				    writeable  => $param{write},
 				    readable   => $param{read},
-				    role       => $self->{_id},
+				    role       => $robj->{_id},
 				    entity     => $id,
 				   } );
 	
@@ -148,10 +195,13 @@ sub add {
     my $self = shift;
     my $user = shift;
 
+    my $robj = $self->{_role_obj};
+    my $uobj = $user->{_user_obj};
+
     $self->{yggdrasil}->{storage}->store( "MetaAuthRolemembership",
 					  key => [ qw/role user/ ],
-					  fields => { role => $self->{_id},
-						      user => $user->{_id},
+					  fields => { role => $robj->{_id},
+						      user => $uobj->{_id},
 						    } );
 }
 
@@ -159,9 +209,12 @@ sub remove {
     my $self = shift;
     my $user = shift;
 
+    my $robj = $self->{_role_obj};
+    my $uobj = $user->{_user_obj};
+
     $self->{yggdrasil}->{storage}->expire( "MetaAuthRolemembership",
-					   role => $self->{_id},
-					   user => $user->{_id} );
+					   role => $robj->{_id},
+					   user => $uobj->{_id} );
 }
 
 1;

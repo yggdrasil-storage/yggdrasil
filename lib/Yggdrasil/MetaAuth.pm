@@ -3,23 +3,22 @@ package Yggdrasil::MetaAuth;
 use strict;
 use warnings;
 
-use base qw(Yggdrasil::Meta);
+use base qw(Yggdrasil::Object);
 
 use Yggdrasil::Entity;
 use Yggdrasil::Property;
 
-sub _define {
-    my $self = shift;
+sub define {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
     my %params = @_;
-    $self->{yggdrasil} = $params{yggdrasil};
     $self->{storage}   = $params{yggdrasil}->{storage};
     
     # Temporality for free is nice.
-    my $user = $self->define_entity( "MetaAuthUser" );
-    $self->define_property( "MetaAuthUser:password", type => "PASSWORD" );
-    $self->define_property( "MetaAuthUser:session", type => "TEXT" );
-
-    my $role = $self->define_entity( "MetaAuthRole" );
+    my $user = Yggdrasil::Entity->define( yggdrasil => $self, entity => "MetaAuthUser" );
+    $user->define_property( "password", type => "PASSWORD" );
+    $user->define_property( "session", type => "TEXT" );
+    my $role = Yggdrasil::Entity->define( yggdrasil => $self, entity => "MetaAuthRole" );
 
     # --- Tell Storage to create SCHEMA, noop if it exists
     $self->{storage}->define( "MetaAuthProperty",

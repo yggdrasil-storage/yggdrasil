@@ -3,10 +3,11 @@ package Yggdrasil::MetaInheritance;
 use strict;
 use warnings;
 
-use base qw(Yggdrasil::Meta);
+use base qw(Yggdrasil::Object);
 
-sub _define {
-    my $self = shift;
+sub define {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
     my $storage = $self->{yggdrasil}->{storage};
     
     $storage->define( "MetaInheritance",
@@ -20,8 +21,9 @@ sub _define {
 				  });
 }
 
-sub _add_inheritance {
-    my $self   = shift;
+sub add {
+    my $class = shift;
+    my $self   = $class->SUPER::new(@_);
     my $me     = $self->{yggdrasil}->{storage}->get_entity_id( shift );
     my $parent = $self->{yggdrasil}->{storage}->get_entity_id( shift );
 
@@ -34,9 +36,14 @@ sub _add_inheritance {
 
 }
 
-sub _expire_inheritance {
-    my $self = shift;
-    my $me   = $self->{yggdrasil}->{storage}->get_entity_id( shift );
+sub expire {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %params = @_;
+
+    my $entity = $params{entity};
+
+    my $me   = $self->{yggdrasil}->{storage}->get_entity_id( $entity );
 
     $self->{yggdrasil}->{storage}->expire('MetaInheritance', child => $me);
 }

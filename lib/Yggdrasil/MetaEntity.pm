@@ -3,10 +3,11 @@ package Yggdrasil::MetaEntity;
 use strict;
 use warnings;
 
-use base qw(Yggdrasil::Meta);
+use base qw(Yggdrasil::Object);
 
-sub _define {
-    my $self = shift;
+sub define {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
     my $storage = $self->{yggdrasil}->{storage};
     
     # --- Tell Storage to create SCHEMA, noop if it exists.
@@ -33,14 +34,19 @@ sub _define {
 		    );
 }    
 
-sub _meta_add {
-    my $self = shift;
-    my $name = shift;
+sub add {
+    my $class  = shift;
+    my $self   = $class->SUPER::new(@_);
+    my %params = @_;
+
+    my $name = $params{entity};
     
     $self->{yggdrasil}->{storage}->store( "MetaEntity", key => "entity", fields => { entity => $name } );
 
     unless ($self->{yggdrasil}->{bootstrap}) {
-	my $role = $self->{yggdrasil}->get_role_from_active_user();
+	# FIX: should we have a ->get_authenticated_user() ?
+	my $user = $self->yggdrasil()->{user};
+	my $role = Yggdrasil::User->get_roles(yggdrasil => $self, user => $user);
 	$role->grant( $name, 'd' );
     }
 }

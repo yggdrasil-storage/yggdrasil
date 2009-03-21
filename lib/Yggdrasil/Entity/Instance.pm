@@ -1,6 +1,6 @@
 package Yggdrasil::Entity::Instance;
 
-use base 'Yggdrasil::Meta';
+use base 'Yggdrasil::Object';
 
 use Yggdrasil::Utilities;
 
@@ -8,47 +8,43 @@ use strict;
 use warnings;
 
 sub new {
-  my $class = shift;
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %params = @_;
+    
+    # --- do stuff
+    my $visual_id;
+    
+    $self->{visual_id} = $visual_id = $params{visual_id};
+    
+    $self->{entity}    = $params{entity};
+    
+    $self->{_start} = $params{start};
+    $self->{_stop}  = $params{stop};
+    
+    my $entity = $self->{entity};
+    
+    $self->{_id} = $self->_get_id(); 
 
-#  my( $pkg ) = caller();
-  my $self = bless {}, $class;
-  my $visual_id;
+    unless ($self->{_id}) { 
+	my $idref = $self->storage()->fetch('MetaEntity', { return => 'id',
+							    where => [ entity => $entity ],
+							  });
+	$self->storage()->store( 'Entities', fields => {
+							visual_id => $visual_id,
+							entity    => $idref->[0]->{id},
+						       } );
+	$self->{_id} = $self->_get_id();
+    }
 
-  # --- do stuff
-  my %params = @_;
-  
-  $self->{visual_id} = $visual_id = $params{visual_id};
-  
-  $self->{yggdrasil} = $params{yggdrasil};
-  $self->{storage}   = $params{yggdrasil}->{storage};
-  $self->{entity}    = $params{entity};
-
-  $self->{_start} = $params{start};
-  $self->{_stop}  = $params{stop};
-
-  my $entity = $self->{entity};
-
-  $self->{_id} = $self->_get_id(); 
-
-  unless ($self->{_id}) { 
-      my $idref = $self->{storage}->fetch('MetaEntity', { return => 'id',
-							  where => [ entity => $entity ],
-							});
-      $self->{storage}->store( 'Entities', fields => {
-						      visual_id => $visual_id,
-						      entity    => $idref->[0]->{id},
-						     } );
-      $self->{_id} = $self->_get_id();
-  }
-  
-  return $self;
+    return $self;
 }
 
 sub _get_id {
     my $self = shift;
     my $entity = $self->{entity};
 
-    my $idfetch = $self->{storage}->fetch('MetaEntity', { 
+    my $idfetch = $self->storage()->fetch('MetaEntity', { 
 							 where => [ entity => $entity, 
 								    id     => \qq{Entities.entity}, ],
 							},
@@ -57,6 +53,7 @@ sub _get_id {
 						       where => [ 
 								 visual_id => $self->id(),
 								] } );
+
     return $idfetch->[0]->{id};
 }
 
@@ -96,7 +93,7 @@ sub _get_in_time {
     my @time = @_;
     
     my $entity = $self->{entity};
-    my $idref  = $self->{storage}->fetch('MetaEntity', { 
+    my $idref  = $self->storage()->fetch('MetaEntity', { 
 							where => [ entity => $entity, 
 								   id     => \qq{Entities.entity}, ],
 						       },
@@ -114,7 +111,7 @@ sub _get_in_time {
 	}
     }
     
-    my $fetchref = $self->{storage}->fetch('MetaEntity', { where => [
+    my $fetchref = $self->storage()->fetch('MetaEntity', { where => [
 								     entity => $entity, 
 								     id     => \qq<MetaProperty.entity>,
 								    ]},
@@ -129,7 +126,7 @@ sub _get_in_time {
 	push( @wheres, $table => { join => "left" } );
     }
 
-    my $ref = $self->{storage}->fetch( @wheres, { start => $time[0], stop => $time[1] } );
+    my $ref = $self->storage()->fetch( @wheres, { start => $time[0], stop => $time[1] } );
     
     # If we're within a time slice, filter out the relevant hits, sort
     # them and return.  Remember to set the start of the first hit to
@@ -217,7 +214,7 @@ sub property {
     my $self = shift;
     my ($key, $value) = @_;
 
-    my $storage = $self->{storage};
+    my $storage = $self->storage();
 
     my $entity = $self->{entity};
     my $name = join(":", $entity, $key );
@@ -239,7 +236,14 @@ sub property {
 	}
 
 	# FIXME, $self->null is void, need to get $prop->null
-	if (! defined $value && ! $self->null( $key )) {	   
+	my $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity, property => $key );
+
+	unless ( $p ) {
+	    $status->set( 404, "Property '$key' not defined for '$entity'" );
+	    return;
+	}
+
+	if (! defined $value && ! $p->null() ) {
 	    $status->set( 406, "Property does not allow NULL values.");
 	    return undef;
 	}
@@ -259,12 +263,13 @@ sub property {
     return $r->[0]->{value};
 }
 
+# FIX: Should this be in Y::Property / Y::MetaProperty?
 sub property_exists {
     my ($self, $property) = (shift, shift);
     my ($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
     
     my $entity = $self->{entity};
-    my $storage = $self->{storage};
+    my $storage = $self->storage();
     my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
     
     # Check to see if the property exists.
@@ -283,12 +288,13 @@ sub property_exists {
     return;
 }
 
+# FIX: Should this be in Y::Property / Y::MetaProperty?
 sub properties {
     my $self = shift;
     my ($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
 
     my $entity = $self->{entity};
-    my $storage = $self->{storage};
+    my $storage = $self->storage();
     my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
 
     my %properties;
@@ -308,6 +314,7 @@ sub properties {
 }
 
 # FIXME, temporal search.  FIXME, JUST FIX ME!
+# FIX: Should this be moved to Y::Entity?
 sub relations {
     my $self = shift;
 
@@ -330,7 +337,7 @@ sub relations {
 
     # FIXME, needs to check for all parents, not just self.
     
-    my $other = $Yggdrasil::STORAGE->fetch('MetaEntity', { where => [ entity => $self ] },
+    my $other = $self->storage()->fetch('MetaEntity', { where => [ entity => $self ] },
 					   'MetaRelation',
 					    { return => [ 'label' ],
 					      where => [ rval => \qq{MetaEntity.id},
@@ -343,6 +350,7 @@ sub relations {
 }
 
 # fetches all current instances for an Entity
+# FIX: Should this be moved to Y::Entity?
 sub instances {
     my $self = shift;
 
@@ -352,7 +360,7 @@ sub instances {
 	$self = Yggdrasil::_extract_entity($self);
     }
     
-    my $instances = $Yggdrasil::STORAGE->fetch( 'MetaEntity' => { where  => [ entity => $self ] },
+    my $instances = $self->storage()->fetch( 'MetaEntity' => { where  => [ entity => $self ] },
 					        'Entities'   => { return => 'visual_id',
 								  where => [ entity => \qq{MetaEntity.id} ] } );
 
@@ -367,7 +375,7 @@ sub isa {
     my($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
 
     my $entity = $self->{entity};
-    my $storage = $self->{storage};
+    my $storage = $self->storage();
 
     return 1 if $isa eq $entity;
 
@@ -401,8 +409,8 @@ sub fetch_related {
   $relative = Yggdrasil::_extract_entity($relative);
   my $source = $self->{entity};
 
-  my $source_id = $self->{storage}->_get_entity( $source );
-  my $destin_id = $self->{storage}->_get_entity( $relative );
+  my $source_id = $self->storage()->_get_entity( $source );
+  my $destin_id = $self->storage()->_get_entity( $relative );
   
   my $paths = $self->_fetch_related( $source_id, $destin_id, undef, undef, $start, $stop );
 
@@ -443,7 +451,7 @@ sub fetch_related {
 			 bind => "or" },
 	   Entities => { where => [ entity => $path->[-1] ] } );
 
-      my $res = $self->{storage}->fetch( @schema, { start => $start, stop => $stop } );
+      my $res = $self->storage()->fetch( @schema, { start => $start, stop => $stop } );
 
       foreach my $r ( @$res ) {
 	  $self->{logger}->error( $r->{visual_id} );
@@ -467,7 +475,7 @@ sub _fetch_related {
   my $all = shift || [];
   my($tstart, $tstop) = Yggdrasil::Utilities::get_times_from( @_ );
 
-  my $storage = $self->{storage};
+  my $storage = $self->storage();
 
   # This is less than pretty, but we're checking if we're going within
   # the same entity.

@@ -3,59 +3,97 @@ package Yggdrasil::Entity;
 use strict;
 use warnings;
 
+use base qw(Yggdrasil::Object);
+
 use Yggdrasil::Entity::Instance;
+
+use Yggdrasil::MetaEntity;
+use Yggdrasil::MetaInheritance;
+
+use Yggdrasil::Property;
 
 # We inherit _add_meta from MetaEntity and _add_inheritance from
 # MetaInheritance.
-use base qw(Yggdrasil::MetaEntity Yggdrasil::MetaInheritance);
+#use base qw(Yggdrasil::MetaEntity Yggdrasil::MetaInheritance);
 
-sub _define {
-    my $self  = shift;    
+sub define {
+    my $class = shift;
+    my $self  = $class->SUPER::new( @_ );
     my %params = @_;
-    my $name = $self->{name};
+
+    my $name   = $params{entity};
     my $parent = $params{inherit};
-    $self->{yggdrasil} = $params{yggdrasil};
-    
-    my $fqn;
-    if( $parent ) {
-	$fqn = join('::', $parent, $name);
-    } else {
-	$fqn = $name;
-    }
+
+    my $fqn = $parent ? join('::', $parent, $name) : $name;
 
     my @entities = split /::/, $fqn;
     if (@entities > 1) {
-	$name = pop @entities;
+	$name   = pop @entities;
 	$parent = join('::', @entities);
 
-	if ($self->{yggdrasil}->{strict}) {
-	    if (! $self->{yggdrasil}->get_entity( $parent )) {
+	if ($self->{yggdrasil}->{strict}) { # How about $self->strict() 
+                                            # (with strict() living in Y::Object)
+	    if( ! Yggdrasil::Entity->get( yggdrasil => $self, entity => $parent)  ) {
+	    #if (! $self->{yggdrasil}->get_entity( $parent )) {
 		my $status = $self->get_status();
 		$status->set( 400, "Unable to access parent entity $parent." );
 		return;
-	    } 
+	    }
 	} else {
 	    # print " ** Create $fqn\n";
 	}
     }
+    $self->{name} = $fqn;
 
     # --- Add to MetaEntity, noop if it exists.
-    $self->_meta_add($fqn);
+    Yggdrasil::MetaEntity->add( yggdrasil => $self, entity => $fqn );
+    #$self->_meta_add($fqn);
 
     my $status = $self->get_status();
     return $self if $status->status() == 202;
     
     # --- Update MetaInheritance  
     if( defined $parent ) {
-	$self->_add_inheritance( $fqn, $parent );
+	Yggdrasil::MetaInheritance->add( yggdrasil => $self, $fqn, $parent );
+	#$self->_add_inheritance( $fqn, $parent );
     } else {
 	# warnings, this does update, which sets status.
-	$self->_expire_inheritance( $fqn );
+	#$self->_expire_inheritance( $fqn );
+	Yggdrasil::MetaInheritance->expire( yggdrasil => $self, entity => $fqn );
     }
 
     return $self;
 }
 
+# get an entity
+sub get {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %params = @_;
+
+    my $entity = $params{entity};
+    
+    my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ entity => $entity ],
+							return => 'entity' } );
+    
+    unless (defined $aref->[0]->{entity}) {
+	my $status = new Yggdrasil::Status;
+	$status->set( 404, "Entity '$entity' not found." );
+	return undef;
+    } 
+    
+    my $status = new Yggdrasil::Status;
+    $status->set( 200 );
+    my $obj = new Yggdrasil::Entity( name => $entity, yggdrasil => $self );
+    $obj->{name} = $entity;
+    return $obj;
+}
+
+sub undefine {
+
+}
+
+# instance
 sub create {
     my $self  = shift;
     my $name  = shift;
@@ -67,15 +105,15 @@ sub create {
     if ($obj) {
 	$status->set( 202, "Instance '$name' already existed for entity '$self->{name}'." );
     } else {
-	$status->set( 201, "Created instance '$name' in entity'$self->{name}'." );
+	$status->set( 201, "Created instance '$name' in entity '$self->{name}'." );
     }
     
-    return new Yggdrasil::Entity::Instance( visual_id => $name,
-					    entity    => $self->{name},
-					    yggdrasil => $self->{yggdrasil} );    
+    return Yggdrasil::Entity::Instance->new( visual_id => $name,
+					     entity    => $self->{name},
+					     yggdrasil => $self );    
 }
 
-sub _fetch {
+sub fetch {
     my $self  = shift;
     my $name  = shift;
 
@@ -93,6 +131,12 @@ sub _fetch {
 					    yggdrasil => $self->{yggdrasil} );    
 }
 
+sub delete :method {
+    # delete an instance
+}
+
+
+# should this be Y::E::I->get(...)?
 sub _get_instance {
     my $self = shift;
     my $visual_id = shift;
@@ -130,6 +174,23 @@ sub search {
     return @hits;
 }
 
+# Handle property definition and deletion
+sub define_property {
+    my $self = shift;
+    my $name = shift;
+
+    return Yggdrasil::Property->define( yggdrasil => $self, entity => $self, property => $name, @_ );
+}
+
+sub undefine_property {
+
+}
+
+sub get_property {
+
+}
+
+
 sub _admin_dump {
     my $self   = shift;
     my $entity = shift;
@@ -148,5 +209,6 @@ sub _admin_restore {
 					    where => [ %$data ] } );
     return $id->[0]->{id};
 }
+
 
 1;

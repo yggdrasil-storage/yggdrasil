@@ -10,22 +10,31 @@ use File::Spec;
 use Log::Log4perl qw(get_logger :levels :nowarn);
 use Carp;
 
+use Yggdrasil::MetaAuth;
+use Yggdrasil::Auth;
+
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
 use Yggdrasil::MetaInheritance;
-use Yggdrasil::MetaAuth;
 
-use Yggdrasil::Auth;
 use Yggdrasil::Storage;
 use Yggdrasil::Entity;
 use Yggdrasil::Relation;
 use Yggdrasil::Property;
+use Yggdrasil::User;
+use Yggdrasil::Role;
 
 use Yggdrasil::Status;
 use Yggdrasil::Debug;
 
 our $VERSION = '0.10';
+
+sub yggdrasil {
+    my $self = shift;
+
+    return $self;
+}
 
 sub new {
     my $class = shift;
@@ -33,17 +42,18 @@ sub new {
     my %params = @_;
 
     if ( ref $self eq __PACKAGE__ ) {
-	$self->_setup_logger( $params{logconfig} );
 	$self->{status} = new Yggdrasil::Status();
+	$self->_setup_logger( $params{logconfig} );
 	$self->{auth}   = new Yggdrasil::Auth( yggdrasil => $self );
-	$self->{status}->set( 200 );
 	Yggdrasil::Debug->new( $params{debug} );
 	$self->{strict} = $params{strict} || 1;
+	$self->{status}->set( 200 );
     } else {
-	Yggdrasil::fatal( "Did not get an yggdrasil reference passed upon creation of '$class'") unless $params{yggdrasil};
-	$self->{name}      = $params{name};
-	$self->{yggdrasil} = $params{yggdrasil};
-	$self->{logger} = get_logger( __PACKAGE__ );
+	Yggdrasil::fatal( "in new() in Yggdrasil! should not be here!" );
+#	Yggdrasil::fatal( "Did not get an yggdrasil reference passed upon creation of '$class'") unless $params{yggdrasil};
+#	$self->{name}      = $params{name};
+#	$self->{yggdrasil} = $params{yggdrasil};
+#	$self->{logger} = get_logger( __PACKAGE__ );
     }
     
     return $self;
@@ -53,7 +63,39 @@ sub get_status {
     my $self = shift;
     return $self->{status};
 }
-  
+
+
+sub bootstrap {
+    my $self = shift;
+    my %userlist = @_;
+    
+    my $status = $self->get_status();
+    if ($self->{storage}->yggdrasil_is_empty()) {
+	$self->{bootstrap} = 1;
+	Yggdrasil::MetaEntity->define( yggdrasil => $self );
+	Yggdrasil::MetaRelation->define( yggdrasil => $self );
+	Yggdrasil::MetaProperty->define( yggdrasil => $self );
+	Yggdrasil::MetaInheritance->define( yggdrasil => $self );
+	
+	Yggdrasil::MetaAuth->define( yggdrasil => $self );
+
+	my $universal = $self->define_entity( 'UNIVERSAL' );
+	
+	# FIX: add default users to %userlist _here_, before calling this and rename that horrible function name!
+	my @users = Yggdrasil::Auth->_setup_default_users_and_roles( yggdrasil => $self, users => \%userlist );
+	my %usermap;
+	
+	for my $user (@users) {
+	    $usermap{$user->id()} = $user->password();
+	}
+	$status->set( 200, 'Bootstrap successful.');
+	return \%usermap;
+    } else {
+	$status->set( 406, "Unable to bootstrap, data exists." );
+	return;
+    }
+}
+
 sub connect {
     my $self = shift;
 
@@ -68,7 +110,7 @@ sub login {
     my $self = shift;
     my %params = @_;
 
-    my $auth = define Yggdrasil::Auth( yggdrasil => $self );
+    my $auth = new Yggdrasil::Auth( yggdrasil => $self );
     $auth->authenticate( user => $params{user}, pass => $params{password} );
 
     my $status = $self->get_status();
@@ -77,95 +119,111 @@ sub login {
     }
 }
 
-# Interface to get / define users.
+###############################################################################
+# Defines
 sub define_user {
     my $self = shift;
-    
-    my $ygg  = $self->{yggdrasil} || $self;
-    my $ao = new Yggdrasil::Auth( yggdrasil => $ygg );
-    
-    return $ao->_define_user( @_ );
+
+    return Yggdrasil::User->define( yggdrasil => $self, @_ );
 }
 
-# This is awefully ugly.  FIXME.
-sub get_role_from_active_user {
-    my $self = shift;
-    
-    my $idref = $self->{storage}->_fetch(MetaAuthRolemembership => { where => [ user => \qq{Entities.id} ],
-								     return => 'role' },
-					 Entities => { where => [ visual_id => $self->{user} ]});
-
-    my $roref = $self->{storage}->_fetch(Entities => { where => [ id => $idref->[0]->{role} ],
-						       return => 'visual_id' });
-
-    my $meta_role = $self->get_entity( 'MetaAuthRole' );
-    my $ro = $meta_role->fetch( $roref->[0]->{visual_id} );
-    my $role = bless $ro, 'Yggdrasil::Auth::Role';
-    $role->{name} = 'MetaAuthRole';
-    return $role;
-}
-
-# Interface to get / define roles.
 sub define_role {
     my $self = shift;
-    
-    my $ygg  = $self->{yggdrasil} || $self;
-    my $ao = new Yggdrasil::Auth( yggdrasil => $ygg );
-    
-    return $ao->_define_role( @_ );
+
+    return Yggdrasil::Role->define( yggdrasil => $self, @_ );
 }
 
-# Interface to get / define entities.
 sub define_entity {
-    my $self = shift;
-
+    my $self   = shift;
     my $entity = shift;
-    my $ygg    = $self->{yggdrasil} || $self;
 
-    return Yggdrasil::Entity->define( name => $entity, yggdrasil => $ygg );
-}
-
-sub get_entity {
-    my $self = shift;
-    my $entity = shift;
-    
-    my $aref = $self->{storage}->fetch( 'MetaEntity', { where => [ entity => $entity ],
-							return => 'entity' } );
-    
-    my $status = $self->get_status();
-    unless (defined $aref->[0]->{entity}) {
-	$status->set( 404, "Entity '$entity' not found." );
-	return undef;
-    } 
-    
-    $status->set( 200 );
-    $entity = new Yggdrasil::Entity( name => $entity, yggdrasil => $self );
-    return $entity;
+    return Yggdrasil::Entity->define( yggdrasil => $self, entity => $entity, @_ );
 }
 
 sub define_relation {
     my $self = shift;
-    my ($e1, $e2, $label) = @_;
+    my $e1 = shift;
+    my $e2 = shift;
+    my $label = shift;
+
+    return Yggdrasil::Relation->define( yggdrasil => $self, entities => [$e1, $e2], label => $label, @_ );
+}
+
+sub define_property {
+    my $self = shift;
+    my $prop = shift;
     
-    return Yggdrasil::Relation->define( entities  => [ $e1, $e2 ], label => $label,
-					yggdrasil => $self->{yggdrasil} || $self );
+    return Yggdrasil::Property->define( yggdrasil => $self, property => $prop, @_ );
+}
+
+###############################################################################
+# Get
+sub get_user {
+    my $self = shift;
+    my $user = shift;
+
+    return Yggdrasil::User->get( yggdrasil => $self, user => $user, @_ );
+}
+
+sub get_role {
+    my $self = shift;
+
+    return Yggdrasil::Role->get( yggdrasil => $self, @_ );
+}
+
+sub get_entity {
+    my $self   = shift;
+    my $entity = shift;
+
+    return Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity, @_ );
 }
 
 sub get_relation {
     my $self = shift;
     my $label = shift;
-    
-    return Yggdrasil::Relation->fetch( label => $label, yggdrasil => $self->{yggdrasil} || $self );
+
+    return Yggdrasil::Relation->get( yggdrasil => $self, label => $label, @_ );
 }
 
-sub define_property {
-    my $self = shift; # Entity.
-    my $name = shift; # Name of property;
-    my %param = @_; # Options hash.
-    
-    my $property = Yggdrasil::Property->define( $self, $name, @_, yggdrasil => $self->{yggdrasil} || $self);
-    return $property;
+sub get_property {
+    my $self = shift;
+
+    return Yggdrasil::Property->get( yggdrasil => $self, @_ );
 }
+
+###############################################################################
+# Undefines
+sub undefine_user {
+    my $self = shift;
+
+    Yggdrasil::User->undefine( yggdrasil => $self, @_ );
+}
+
+sub undefine_role {
+    my $self = shift;
+
+    Yggdrasil::Role->undefine( yggdrasil => $self, @_ );
+}
+
+sub undefine_entity {
+    my $self = shift;
+
+    Yggdrasil::Entity->undefine( yggdrasil => $self, @_ );
+}
+
+sub undefine_relation {
+    my $self = shift;
+
+    Yggdrasil::Relation->undefine( yggdrasil => $self, @_ );
+}
+
+sub undefine_property {
+    my $self = shift;
+
+    Yggdrasil::Property->undefine( yggdrasil => $self, @_ );
+}
+
+
 
 sub _setup_logger {
     my $self = shift;
@@ -195,44 +253,10 @@ sub _project_root {
     return abs_path($path);
 }
 
-sub _extract_entity {
-  my $self = shift;
-  return $self->{name};
-}
-
-sub bootstrap {
-    my $self = shift;
-    my %userlist = @_;
-    
-    my $status = $self->get_status();
-    if ($self->{storage}->yggdrasil_is_empty()) {
-	$self->{bootstrap} = 1;
-	Yggdrasil::MetaEntity->define( yggdrasil => $self );
-	Yggdrasil::MetaRelation->define( yggdrasil => $self );
-	Yggdrasil::MetaProperty->define( yggdrasil => $self );
-	Yggdrasil::MetaInheritance->define( yggdrasil => $self );
-	
-	Yggdrasil::MetaAuth->define( yggdrasil => $self );
-
-	my $universal = $self->define_entity( 'UNIVERSAL' );
-	
-	my @users = Yggdrasil::Auth->_setup_default_users_and_roles( yggdrasil => $self, users => \%userlist );
-	my %usermap;
-	
-	for my $user (@users) {
-	    $usermap{$user->id()} = $user->property( 'password' );
-	}
-	$status->set( 200, 'Bootstrap successful.');
-	return \%usermap;
-    } else {
-	$status->set( 406, "Unable to bootstrap, data exists." );
-	return;
-    }
-}
-
 # entities, returns all the entities known to Yggdrasil.
 sub entities {
     my $self = shift;
+
     my $aref = $self->{storage}->fetch( 'MetaEntity', { return => 'entity' } );
     
     return map { $_->{entity} } @$aref;

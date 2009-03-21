@@ -3,43 +3,46 @@ package Yggdrasil::Relation;
 use strict;
 use warnings;
 
-use base qw(Yggdrasil::MetaRelation);
+use base qw(Yggdrasil::Object);
 
-sub _define {
-  my $self = shift;
-  my %param   = @_;
-  my ($lval, $rval) = @{$param{entities}};
+sub define {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %param   = @_;
+    my ($lval, $rval) = @{$param{entities}};
   
-  my $storage = $self->{yggdrasil}->{storage};
+    my $storage = $self->{yggdrasil}->{storage};
+    
+    $lval = $lval->{name} if $lval->{name};
+    $rval = $rval->{name} if $rval->{name};
+    
+    my $label = $param{'label'} || "$lval<->$rval";
+    $self->{label} = $label;
+    
+    $lval = $storage->fetch( 'MetaEntity', { return => 'id', where => [ entity => $lval ] } );
+    $rval = $storage->fetch( 'MetaEntity', { return => 'id', where => [ entity => $rval ] } );
+    
+    $lval = $lval->[0]->{id};
+    $rval = $rval->[0]->{id};
+    
+    unless( $param{raw} ) {
+	my $id = $storage->_get_relation( $label );
+	if (defined $id) {
+	    $self->{_id} = $id;
+	    return $self 
+	}
+    }
 
-  $lval = $lval->{name} if $lval->{name};
-  $rval = $rval->{name} if $rval->{name};
-  
-  my $label = $param{'label'} || "$lval<->$rval";
-  $self->{label} = $label;
-
-  $lval = $storage->fetch( 'MetaEntity', { return => 'id', where => [ entity => $lval ] } );
-  $rval = $storage->fetch( 'MetaEntity', { return => 'id', where => [ entity => $rval ] } );
-
-  $lval = $lval->[0]->{id};
-  $rval = $rval->[0]->{id};
-  
-  unless( $param{raw} ) {
-      my $id = $storage->_get_relation( $label );
-      if (defined $id) {
-	  $self->{_id} = $id;
-	  return $self 
-      }
-  }
-
-  # --- Add to MetaRelation
-  my $id = $self->_meta_add($lval, $rval, $label, %param) unless $param{raw};
-  $self->{_id} = $id;
-  return $self;
+    # --- Add to MetaRelation
+    my $id = Yggdrasil::MetaRelation->add( yggdrasil => $self, lval => $lval, rval => $rval, label => $label, %param) unless $param{raw};
+    #my $id = $self->_meta_add($lval, $rval, $label, %param) unless $param{raw};
+    $self->{_id} = $id;
+    return $self;
 }
 
-sub _fetch {
+sub get {
     my $class = shift;
+    my $self  = $class->SUPER::new(@_);
     my %param = @_; 
     
     my $id = $param{yggdrasil}->{storage}->_get_relation( $param{label} );
@@ -65,6 +68,17 @@ sub _get_real_val {
 							  where  => [ id => \qq<MetaRelation.$side> ]},
 					  'MetaRelation', { where => [ label => $label ]});
     return $retref->[0]->{entity};
+}
+
+sub entities {
+    my $self = shift;
+
+    # return entities making up this relation
+}
+
+sub label {
+    my $self = shift;
+    # return label
 }
 
 sub link :method {

@@ -3,67 +3,71 @@ package Yggdrasil::MetaRelation;
 use strict;
 use warnings;
 
-use base qw(Yggdrasil::Meta);
+use base qw(Yggdrasil::Object);
 
-sub _define {
-  my $self = shift;
-  my $storage = $self->{yggdrasil}->{storage};
-
-  $storage->define( "Relations", 
-		    fields   => { 
-				 id   => { type => 'INTEGER' },
-				 lval => { type => "INTEGER" },
-				 rval => { type => "INTEGER" },
-				},
-		    temporal => 1,
-		    nomap    => 1,
-		    hints    => {
-				 id   => { index => 1, foreign => 'MetaRelation' },
-				 lval => { foreign => 'Entities' },
-				 rval => { foreign => 'Entities' },
-				},
-		  );
+sub define {
+    my $class = shift;
+    my $self =  $class->SUPER::new(@_);
   
-  
-  $storage->define( "MetaRelation",
-		    fields   => { id          => { type => "SERIAL" },
-				  requirement => { type => "VARCHAR(255)", null => 1 },
-				  lval        => { type => "INTEGER",      null => 0 },
-				  rval        => { type => "INTEGER",      null => 0 },
-				  label       => { type => 'VARCHAR(255)', null => 0 },
-				  l2r         => { type => 'VARCHAR(255)', null => 1 },
-				  r2l         => { type => 'VARCHAR(255)', null => 1 },
-				},
-		    temporal => 1,
-		    nomap    => 1,
-		    hints    => {
-				 lval => { index => 1, foreign => 'MetaEntity' },
-				 rval => { index => 1, foreign => 'MetaEntity' },
-				}
-		  );
+    my $storage = $self->{yggdrasil}->{storage};
+    
+    $storage->define( "Relations", 
+		      fields   => { 
+				   id   => { type => 'INTEGER' },
+				   lval => { type => "INTEGER" },
+				   rval => { type => "INTEGER" },
+				  },
+		      temporal => 1,
+		      nomap    => 1,
+		      hints    => {
+				   id   => { index => 1, foreign => 'MetaRelation' },
+				   lval => { foreign => 'Entities' },
+				   rval => { foreign => 'Entities' },
+				  },
+		    );
+    
+    
+    $storage->define( "MetaRelation",
+		      fields   => { id          => { type => "SERIAL" },
+				    requirement => { type => "VARCHAR(255)", null => 1 },
+				    lval        => { type => "INTEGER",      null => 0 },
+				    rval        => { type => "INTEGER",      null => 0 },
+				    label       => { type => 'VARCHAR(255)', null => 0 },
+				    l2r         => { type => 'VARCHAR(255)', null => 1 },
+				    r2l         => { type => 'VARCHAR(255)', null => 1 },
+				  },
+		      temporal => 1,
+		      nomap    => 1,
+		      hints    => {
+				   lval => { index => 1, foreign => 'MetaEntity' },
+				   rval => { index => 1, foreign => 'MetaEntity' },
+				  }
+		    );
 }
 
-sub _meta_add {
-  my $self     = shift;
-  my $lval  = shift;
-  my $rval  = shift;
-  my $label = shift;
-  my %param = @_;
+sub add {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %params = @_;
+
+    my $lval  = $params{lval};
+    my $rval  = $params{rval};
+    my $label = $params{label};
   
-  $self->{yggdrasil}->{storage}->store( "MetaRelation",
-					key    => "label",
-					fields => {
+    $self->{yggdrasil}->{storage}->store( "MetaRelation",
+					  key    => "label",
+					  fields => {
 						   label => $label,
-						   lval  => $lval,
-						   rval  => $rval,
-						   l2r   => $param{l2r},
-						   r2l   => $param{r2l},
+						     lval  => $lval,
+						     rval  => $rval,
+						     l2r   => $params{l2r},
+						     r2l   => $params{r2l},
 						   
-						   requirement => $param{requirement},				      
-						  });
+						     requirement => $params{requirement},				      
+						    });
   
-  my $ref = $self->{yggdrasil}->{storage}->fetch( 'MetaRelation', { return => 'id', where => [ label => $label ]});
-  return $ref->[0]->{id};
+    my $ref = $self->{yggdrasil}->{storage}->fetch( 'MetaRelation', { return => 'id', where => [ label => $label ]});
+    return $ref->[0]->{id};
 }
 
 sub _admin_dump {

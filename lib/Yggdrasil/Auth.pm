@@ -5,25 +5,12 @@ use warnings;
 
 use Digest::MD5 qw(md5_hex);
 
-use base qw(Yggdrasil::MetaAuth);
+use base qw(Yggdrasil::Object);
 
-use Yggdrasil::Auth::Role;
+use Yggdrasil::Role;
+use Yggdrasil::User;
 use Yggdrasil::Status;
 use Yggdrasil::Debug qw|debug_if debug_level|;
-
-sub _define {
-    my $self = shift;
-    my %params = @_;
-
-    if( exists $params{role} ) {
-	return $self->_define_role( $params{role} );
-    } elsif( exists $params{user} && exists $params{password} ) {
-	return $self->_define_user( user => $params{user}, password => $params{password} );
-    } else {
-	# be angry
-    }
-    return $self;
-}
 
 sub authenticate {
     my $self = shift;
@@ -184,29 +171,6 @@ sub can {
     return 1;
 }
 
-sub _define_role {
-    my $self  = shift;
-    my %params = @_;
-
-    my $ygg  = $self->{yggdrasil} || $self;
-    
-    my $meta_role = $ygg->get_entity( 'MetaAuthRole' );
-    my $ro = $meta_role->create( $params{'role'});
-#    return bless $meta_role->new( $params{'role'} ), 'Yggdrasil::Auth::Role';
-}
-
-sub _define_user {
-    my $self = shift;
-    my %params = @_;
-
-    my $ygg  = $self->{yggdrasil} || $self;
-
-    my $meta_user = $ygg->get_entity( 'MetaAuthUser' );
-    my $uo = $meta_user->create( $params{'user'} );
-    $uo->property( password => $params{'password'} );
-    
-    return $uo;
-}
 
 sub _setup_default_users_and_roles {
     my $self = bless {}, shift;
@@ -230,17 +194,13 @@ sub _generate_default_roles {
     
     my @roles;
     for my $r ( "admin", "user" ) {
-	my $meta_role = $ygg->get_entity( 'MetaAuthRole' );
-	my $ro = $meta_role->create( $r );
-	my $role = bless $ro, 'Yggdrasil::Auth::Role';
-	$role->{name} = 'MetaAuthRole';
-	
+	my $role = Yggdrasil::Role->define( yggdrasil => $self, role => $r );
+
 	if ($r eq 'admin') {
 	    $role->grant( 'UNIVERSAL', 'd' );
 	} else {
 	    $role->grant( 'UNIVERSAL', 'r' );
 	}
-	 
 	push( @roles, $role );
     }
 
@@ -256,12 +216,9 @@ sub _generate_default_users {
     my @users;
     
     for my $u ( "root", (getpwuid( $> ) || "default"), keys %requested_users ) {
-	my $meta_user = $ygg->get_entity( 'MetaAuthUser' );
-	my $user = $meta_user->fetch( $u );
-	next if $user;
+	my $user = Yggdrasil::User->define( yggdrasil => $self, user => $u, password => $requested_users{$u} || _generate_password() );
 
-	my $uo = $self->_define_user( user => $u, password => $requested_users{$u} || _generate_password() );
-	push( @users, $uo );
+	push( @users, $user );
     }
 
     return @users;

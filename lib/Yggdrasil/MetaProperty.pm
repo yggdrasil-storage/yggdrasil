@@ -3,10 +3,11 @@ package Yggdrasil::MetaProperty;
 use strict;
 use warnings;
 
-use base qw(Yggdrasil::Meta);
+use base qw(Yggdrasil::Object);
 
-sub _define {
-    my $self = shift;
+sub define {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
     my $storage = $self->{yggdrasil}->{storage};
     
     $storage->define( "MetaProperty",
