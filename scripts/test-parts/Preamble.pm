@@ -15,9 +15,8 @@ require Exporter;
 @EXPORT_OK = qw|getopts status status_die|;
   
 use Yggdrasil;
-use Yggdrasil::Status;
 
-my $status = new Yggdrasil::Status;
+my $status;
 
 my ($user, $password, $host, $port,
     $db, $engine, $mapper, $yuser, $ypass, $debug) =
@@ -56,6 +55,13 @@ sub status {
     my $msg = shift;
     my $var = shift;
     my $die_on_not_ok = shift;
+
+    if (ref $var eq 'Yggdrasil') {
+	$status = $var->{status};
+    } elsif (! $status) {
+	print "Yggdrasil not checked first";
+	return;
+    }
     
     $var = 'undefined!' unless defined $var;
     

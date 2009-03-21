@@ -5,9 +5,11 @@ use warnings;
 
 use Preamble qw|getopts status status_die|;
 
+my $status;
 my $opts = getopts();
+my $ygg  = new Yggdrasil( debug => $opts->{debug} );
 
-my $ygg = new Yggdrasil( debug => $opts->{debug} );
+$status = $ygg->get_status() if $ygg;
 status_die( "Yggdrasil", $ygg );
 
 my $connect = $ygg->connect( %$opts );
@@ -81,33 +83,32 @@ status( 'Defining Host:blobbie', $blob );
 my $ser = $host_entity->define_property( 'serial' );
 status( 'Defining Host:serial', $ser );
 
-print "S->null:", $ser->null(), " B->null:", $blob->null(), "\n";
-print "S->type:", $ser->type(), " B->type:", $blob->type(), "\n";
+print "S->null: ", $ser->null(), ", S->type: ", $ser->type(), ".\n";
+print "B->null: ", $blob->null(), ", B->type: ", $blob->type(), ".\n";
+
+# my $nommo  = Ygg::Host->new( 'nommo' );
+my $baal   = $host_entity->create( 'baal' );
+status( 'Create', $baal );
+my $escher = $host_entity->create( 'escher' );
+status( 'Create', $escher );
+
+my $ns = $nommo->property( 'serial', 1 );
+status( 'Setting nommo->serial to 1', $ns );
+
+$ns = $nommo->property( 'serialasda', undef );
+status( 'Setting nommo->serialasda to undef', $ns );
+
+$ns = $nommo->property( 'serial', '1');
+status( 'Setting nommo->serial to 1', $ns );
+$ns = $nommo->property( 'serial', undef);
+status( 'Setting nommo->serial to undef', $ns );
+$ns = $nommo->property( 'serial', '1');
+status( 'Setting nommo->serial to 1', $ns );
+$ns = $nommo->property( 'serial', undef);
+status( 'Setting nommo->serial to undef', $ns );
 
 exit;
 
-
-
-# my $nommo  = Ygg::Host->new( 'nommo' );
-status( 'Creating the instance nommo (Ygg::Host)' );
-my $baal   = Ygg::Host->new( 'baal' );
-my $escher = Ygg::Host->new( 'escher' );
-
-$nommo->property( 'serial', 1 );
-status( 'Setting nommo->serial to 1' );
-
-$nommo->property( 'serialasda', undef );
-status( 'Setting nommo->serialasda to undef' );
-
-$nommo->property( 'serial', '1');
-status( 'Setting nommo->serial to 1' );
-$nommo->property( 'serial', undef);
-status( 'Setting nommo->serial to undef' );
-$nommo->property( 'serial', '1');
-status( 'Setting nommo->serial to 1' );
-$nommo->property( 'serial', undef);
-status( 'Setting nommo->serial to undef' );
-  
 $baal->property( 'ip' , 'b1' );
 $baal->property( 'ip' , 'b2' );
 $baal->property( 'serial', 'bserial');
