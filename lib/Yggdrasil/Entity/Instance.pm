@@ -66,8 +66,11 @@ sub _get {
   my $visual_id = shift;
   my @time = @_;
 
-  Yggdrasil::fatal("When calling get with a time slice specified, you will recieve a list")
-    if @time > 1 && ! wantarray && ! $time[0] == $time[1];
+  my $status = $self->get_status();
+  if (@time > 1 && ! wantarray && ! $time[0] == $time[1]) {
+      $status->set( 406, "When calling get with a time slice specified, you will recieve a list" );
+      return undef;
+  }
   
   # If the user only specifies one time argument, then stop should be set equal to start,
   # meaning get is called for a specific moment in time.
@@ -221,8 +224,6 @@ sub property {
 
     my $schema = $self->property_exists( $key );
 
-    # This should perhaps be a warning instead (when under strict => 1)
-    # Yggdrasil::fatal("Unable to find property '$key' for entity '$entity'.")
     my $status = $self->get_status();
     
     unless (defined $schema) {

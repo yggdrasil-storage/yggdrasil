@@ -5,17 +5,25 @@ use strict;
 
 sub new {
     my $class = shift;
-    my $mappername = shift;
-
+    my %params = @_;
+    
     # Throw-away object to access class methods
     my $self = {};
     bless $self, $class; 
+    my ($mappername, $status) = ($params{mapper}, $params{status});
     
-    Yggdrasil::fatal( "Bad mapper '$mappername' requested" ) unless $self->_valid_mapper( $mappername );
+    unless ($self->_valid_mapper( $mappername )) {
+	$status->set( 500, "Bad mapper '$mappername' requested" );
+	return undef;
+    }
     
     my $mapper_class = join("::", __PACKAGE__, $mappername );
     eval qq( require $mapper_class );
-    Yggdrasil::fatal( $@ ) if $@;
+
+    if ( $@ ) {
+	$status->set( 500, $@ );
+	return undef;
+    }
 
     return $mapper_class->new();
 }

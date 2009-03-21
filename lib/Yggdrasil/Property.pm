@@ -97,18 +97,22 @@ sub type {
 # and type is currently supported.
 sub _get_meta {
     my ($self, $meta) = (shift, shift);
-    my ($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
+    my ($start, $stop) = get_times_from( @_ );
     my $property = $self->{name};
-    
-    Yggdrasil::fatal( "$meta is not a valid metadata request." ) 
-	unless $meta eq 'null' || $meta eq 'type';
+
+    my $status = $self->get_status();
+
+    unless ($meta eq 'null' || $meta eq 'type') {
+	$status->set( 406, "$meta is not a valid metadata request" );
+	return undef;
+    }
 
     # The internal name for the null field is "nullp".
     $meta = 'nullp' if $meta eq 'null';
 
     my $entity = $self->{entity};
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
+    my @ancestors = ancestors($storage, $entity, $start, $stop);
 
     foreach my $e ( $self, @ancestors ) {
 	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e->{entity} ]},

@@ -76,12 +76,18 @@ sub link :method {
 
   my $reallval = $self->_get_real_val( 'lval', $label );
   my $realrval = $self->_get_real_val( 'rval', $label );
-  
-  Yggdrasil::fatal( $lval->id() . " cannot use the relation $label, incompatible instance / inheritance.")
-      unless $lval->isa( $reallval );
 
-  Yggdrasil::fatal( $rval->id() . " cannot use the relation $label, incompatible instance / inheritance.")
-      unless $rval->isa( $realrval );
+  my $status = $self->get_status();
+  
+  unless ($lval->isa( $reallval )) {
+      $status->set( 406, $lval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
+      return undef;
+  }
+
+  unless ($rval->isa( $realrval )) {
+      $status->set( 406, $rval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
+      return undef;
+  }
 
   $self->{storage}->store( 'Relations',
 			   key => ['id', 'lval', 'rval' ],

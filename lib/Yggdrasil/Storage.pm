@@ -59,7 +59,7 @@ sub new {
 	eval qq( require $engine_class );
 	
 	if ($@) {
-	    $status->set( 500, "@_" );
+	    $status->set( 500, $@ );
 	    return undef;
 	}
 	
@@ -354,9 +354,18 @@ sub _isisodate {
 sub _map_schema_name {
     my $self = shift;
     my $schema = shift;
+    
+    my $status = $self->get_status();
 
-    Yggdrasil::fatal( "No schema given to _map_schema_name" ) unless $schema;
-    Yggdrasil::fatal( "Mapper requested for use before one is initialized" ) unless $MAPPER;
+    unless ($schema) {
+	$status->set( 500, "No schema given to _map_schema_name" );
+	return undef;
+    }
+
+    unless ($MAPPER) {
+	$status->set( 500, "Mapper requested for use before one is initialized" );
+	return undef;	
+    }
     
     return $MAPPER->map( $schema );
 }
@@ -380,7 +389,12 @@ sub _check_valid_type {
     return 'TEXT' unless $type;
     
     $size = $1 if $type =~ s/\(\d+\)$//;
-    Yggdrasil::fatal( "Unknown type '$type'" ) unless $TYPES{$type};
+
+    my $status = $self->get_status();
+    unless ($TYPES{$type}) {
+	$status->set( 406, "Unknown type '$type'" );
+	return undef;
+    }
     
     if (defined $size) {
 	if ($size < 1 || $size > $TYPES{$type}) {
@@ -485,11 +499,21 @@ sub _initialize_config {
 
 	    if (lc $key eq 'mapper') {
 		$self->{logger}->warn( "Ignoring request to use $MAPPER as the mapper, the Storage requires $value" ) if $MAPPER && $MAPPER ne $value;
-		$MAPPER = $self->set_mapper( $value )
+		$MAPPER = $self->set_mapper( $value );
+		return undef unless $MAPPER;
 	    }
 	    
 	}
     } else {
+	if ($MAPPER) {
+	    my $mappername = $MAPPER;
+	    $MAPPER = $self->set_mapper( $mappername );
+	    return undef unless $MAPPER;
+
+	} else {
+	    $MAPPER = $self->get_default_mapper();
+	}
+	
 	$self->define( $STORAGECONFIG, 
 		       nomap  => 1,
 		       fields => {
@@ -504,12 +528,6 @@ sub _initialize_config {
 		      fields => { id => 'temporalstruct', value => $STORAGETEMPORAL });
 
 
-	if ($MAPPER) {
-	    my $mappername = $MAPPER;
-	    $MAPPER = $self->set_mapper( $mappername );
-	} else {
-	    $MAPPER = $self->get_default_mapper();
-	}
 	my $mappername = ref $MAPPER;
 	$mappername =~ s/.*::(.*)$/$1/;
 	$self->store( $STORAGECONFIG, key => "id",
@@ -530,7 +548,7 @@ sub set_mapper {
     my $self = shift;
     my $mappername = shift;
     
-    return Yggdrasil::Storage::Mapper->new( $mappername );
+    return Yggdrasil::Storage::Mapper->new( mapper => $mappername, status => $self->get_status() );
 }
 
 # Admin interface, not for normal use.
@@ -538,7 +556,7 @@ sub set_mapper {
 # Require the "admin" parameter to Storage to be set to a true value to access any admin method.
 sub _admin_verify {
     my $self = shift;
-    Yggdrasil::fatal( "Administrative interface unavailable without explicit request." ) unless $ADMIN;
+    die( "Administrative interface unavailable without explicit request." ) unless $ADMIN;
 }
 
 # Returns a list of all the structures, guarantees nothing about the order.

@@ -156,9 +156,14 @@ sub _fetch {
     my @schemalist = @_;
 
     my($start,$stop);
+    my $status = $self->get_status();
     if( @schemalist % 2 ) {
 	my $time = pop @schemalist;
-	Yggdrasil::fatal "Expected HASH-ref" unless ref $time;
+
+	unless (ref $time) {
+	    $status->set( 500, "Time slice given to _fetch wasn't a hash reference" );
+	    return undef;
+	}
 
 	($start,$stop) = ( $self->_convert_time($time->{start}),
 			   $self->_convert_time($time->{stop}) );
@@ -173,7 +178,10 @@ sub _fetch {
     $counter = 0;
     while (@schemalist) {	
 	my ($schema, $queryref) = (shift @schemalist, shift @schemalist);
-	Yggdrasil::fatal( "$queryref as given to _fetch isn't a reference" ) unless ref $queryref;
+	unless (ref $queryref) {
+	    $status->set( 500, "The query reference given to _fetch wasn't a hash reference" );
+	    return undef;
+	}
 
 	my $where    = $queryref->{where};
 	my $operator = $queryref->{operator} || '=';
@@ -486,7 +494,9 @@ sub _process_return {
     if (ref $retrequest eq 'ARRAY') {
 	return $self->_qualify( $schema, @$retrequest );
     } elsif (ref $retrequest) {
-	Yggdrasil::fatal( "Unable to parse reference type, expected ARRAY or SCALAR" );
+	my $status = $self->get_status();
+	$status->set( 500, "Unable to parse the reference type given to _process_return, expected ARRAY or SCALAR" );
+	return undef;
     } else {
 	return $self->_qualify( $schema, $retrequest );
     }
