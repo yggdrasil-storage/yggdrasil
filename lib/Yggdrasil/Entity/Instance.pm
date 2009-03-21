@@ -2,7 +2,6 @@ package Yggdrasil::Entity::Instance;
 
 use base 'Yggdrasil::Meta';
 
-use Yggdrasil::Status;
 use Yggdrasil::Utilities;
 
 use strict;
@@ -224,7 +223,7 @@ sub property {
 
     # This should perhaps be a warning instead (when under strict => 1)
     # Yggdrasil::fatal("Unable to find property '$key' for entity '$entity'.")
-    my $status = new Yggdrasil::Status();
+    my $status = $self->get_status();
     
     unless (defined $schema) {
 	$status->set( 404, "Unable to find property '$key' for entity '$entity'" );
@@ -238,8 +237,9 @@ sub property {
 	    return undef;
 	}
 
-	if (! defined $value && ! $self->null( $key )) {
-	    $status->set( 406, "Temporal objects are immutable.");
+	# FIXME, $self->null is void, need to get $prop->null
+	if (! defined $value && ! $self->null( $key )) {	   
+	    $status->set( 406, "Property does not allow NULL values.");
 	    return undef;
 	}
 

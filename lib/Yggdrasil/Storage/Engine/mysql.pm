@@ -7,8 +7,6 @@ use base 'Yggdrasil::Storage::Engine::Shared::SQL';
 
 use DBI;
 
-use Yggdrasil::Status;
-
 our %TYPEMAP = (
 		DATE     => 'DATETIME',
 		BINARY   => 'MEDIUMBLOB', # 2^24, 16MiB.
@@ -22,7 +20,7 @@ sub new {
 
   bless $self, $class;
 
-  my $status = new Yggdrasil::Status;
+  my $status = $self->get_status();
 
   my @missing;
   for my $param (qw|host user password db|) {

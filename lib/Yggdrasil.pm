@@ -34,8 +34,9 @@ sub new {
 
     if ( ref $self eq __PACKAGE__ ) {
 	$self->_setup_logger( $params{logconfig} );
-	my $status = new Yggdrasil::Status;
-	$status->set( 200 );
+	$self->{status} = new Yggdrasil::Status();
+	$self->{auth}   = new Yggdrasil::Auth( yggdrasil => $self );
+	$self->{status}->set( 200 );
 	Yggdrasil::Debug->new( $params{debug} );
 	$self->{strict} = $params{strict} || 1;
     } else {
@@ -48,14 +49,19 @@ sub new {
     return $self;
 }
 
-sub status {
-    return new Yggdrasil::Status;
+sub get_status {
+    my $self = shift;
+    return $self->{status};
 }
   
 sub connect {
     my $self = shift;
 
-    return $self->{storage} = Yggdrasil::Storage->new(@_, yggdrasil => $self);
+    return $self->{storage} = Yggdrasil::Storage->new(@_,
+						      status => $self->{status},
+						      auth   => $self->{auth},
+						     );
+    
 }
 
 sub login {
@@ -63,7 +69,12 @@ sub login {
     my %params = @_;
 
     my $auth = define Yggdrasil::Auth( yggdrasil => $self );
-    $auth->authenticate( user => $params{user}, pass => $params{password} );    
+    $auth->authenticate( user => $params{user}, pass => $params{password} );
+
+    my $status = $self->get_status();
+    if ($status->OK()) {
+	$self->{storage}->{user} = $self->{user} = $auth->{user};
+    }
 }
 
 # Interface to get / define users.
@@ -121,13 +132,12 @@ sub get_entity {
     my $aref = $self->{storage}->fetch( 'MetaEntity', { where => [ entity => $entity ],
 							return => 'entity' } );
     
+    my $status = $self->get_status();
     unless (defined $aref->[0]->{entity}) {
-	my $status = new Yggdrasil::Status;
 	$status->set( 404, "Entity '$entity' not found." );
 	return undef;
     } 
     
-    my $status = new Yggdrasil::Status;
     $status->set( 200 );
     $entity = new Yggdrasil::Entity( name => $entity, yggdrasil => $self );
     return $entity;
@@ -194,6 +204,7 @@ sub bootstrap {
     my $self = shift;
     my %userlist = @_;
     
+    my $status = $self->get_status();
     if ($self->{storage}->yggdrasil_is_empty()) {
 	$self->{bootstrap} = 1;
 	Yggdrasil::MetaEntity->define( yggdrasil => $self );
@@ -211,9 +222,9 @@ sub bootstrap {
 	for my $user (@users) {
 	    $usermap{$user->id()} = $user->property( 'password' );
 	}
+	$status->set( 200, 'Bootstrap successful.');
 	return \%usermap;
     } else {
-	my $status = new Yggdrasil::Status;
 	$status->set( 406, "Unable to bootstrap, data exists." );
 	return;
     }

@@ -4,9 +4,7 @@ use strict;
 use warnings;
 
 use Yggdrasil::Storage::Mapper;
-use Yggdrasil::Status;
 
-our $storage;
 our $STORAGEMAPPER   = 'Storage_mapname';
 our $STORAGETEMPORAL = 'Storage_temporals';
 our $STORAGECONFIG   = 'Storage_config';
@@ -28,53 +26,71 @@ our %TYPES = (
 	     );
 
 sub new {
-  my $class = shift;
-  my $self  = {};
-  my %data = @_;
+    my $class = shift;
+    my $self  = {};
+    my %data = @_;
+    
+    my $status = $self->{status} = $data{status};
 
-  return $storage if $storage;
+    unless ($data{engine}) {
+	$status->set( 404, "No engine specified?" );
+	return undef;
+    }
+    
+    my $engine = join(".", $data{engine}, "pm" );
+    
+    # Throw-away object, used to get access to class methods.
+    bless $self, $class;
+    
+    my $path = join('/', $self->_storage_path(), 'Engine');
 
-  $self->{yggdrasil} = $data{yggdrasil};
-
-  unless ($data{engine}) {
-      my $status = new Yggdrasil::Status;
-      $status->set( 404, "No engine specified?" );
+    my $db;
+    if (opendir( my $dh, $path )) {
+	( $db ) = grep { $_ eq $engine } readdir $dh;
+	closedir $dh;
+    } else {
+	$status->set( 503, "Unable to find engines under $path: $!");
       return undef;
-  }
+    }
+    
+    if( $db ) {
+	$db =~ s/\.pm//;
+	my $engine_class = join("::", __PACKAGE__, 'Engine', $db );
+	eval qq( require $engine_class );
+	
+	if ($@) {
+	    $status->set( 500, "@_" );
+	    return undef;
+	}
+	
+	my $storage = $engine_class->new(@_);
+	
+	unless (defined $storage) {
+	    $status->set( 500 );
+	    return undef;
+	}
+      
+	$storage->{bootstrap} = $data{bootstrap};
 
-  my $engine = join(".", $data{engine}, "pm" );
+	$storage->{auth}   = $data{auth};
+	$storage->{status} = $status;
 
-  # Throw-away object, used to get access to class methods.
-  bless $self, $class;
+	$MAPPER = $data{mapper};
+	$ADMIN  = $data{admin};
+	
+	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
+	
+	$storage->_initialize_config();
+	$storage->_initialize_mapper();
+	$storage->_initialize_temporal();
+	
+	return $storage;
+    }
+}
   
-  my $path = join('/', $self->_storage_path(), 'Engine');
-  opendir( my $dh, $path ) || Yggdrasil::fatal("Unable to find engines under $path: $!");
-  my( $db ) = grep { $_ eq $engine } readdir $dh;
-  closedir $dh;
-
-  if( $db ) {
-    $db =~ s/\.pm//;
-    my $engine_class = join("::", __PACKAGE__, 'Engine', $db );
-    eval qq( require $engine_class );
-    Yggdrasil::fatal $@ if $@;
-    #  $class->import();
-    $storage = $engine_class->new(@_);
-    
-    return undef unless defined $storage;
-    $storage->{yggdrasil} = $data{yggdrasil};
-    $storage->{bootstrap} = $data{bootstrap};
-    
-    $MAPPER = $data{mapper};
-    $ADMIN  = $data{admin};
-    
-    $storage->{logger} = Yggdrasil::get_logger( ref $storage );
-
-    $storage->_initialize_config();
-    $storage->_initialize_mapper();
-    $storage->_initialize_temporal();
-
-    return $storage;
-  }
+sub get_status {
+    my $self = shift;
+    return $self->{status};
 }
 
 # define( Schema',
@@ -94,7 +110,7 @@ sub define {
 
     my %data = @_;
     my $originalname = $schema;
-    my $status = new Yggdrasil::Status;
+    my $status = $self->get_status();
 
     unless ($self->{bootstrap}) {
 	my $parent = $self->my_parent();
@@ -150,7 +166,7 @@ sub store {
 
     unless ($self->{bootstrap}) {
 	if (! $self->can( operation => 'store', target => $schema, data => \%params )) {
-	    my $status = new Yggdrasil::Status;
+	    my $status = $self->get_status();
 	    $status->set( 403 );
 	    return;
 	} 
@@ -159,7 +175,7 @@ sub store {
     if ($self->{bootstrap}) {
 	$params{fields}->{committer} = 'bootstrap';
     } else {
-	$params{fields}->{committer} = $self->{yggdrasil}->{user};
+	$params{fields}->{committer} = $self->{user};
     }
     
     return $self->_store( $self->_get_schema_name( $schema ), %params );
@@ -205,7 +221,7 @@ sub fetch {
     unless ($self->{bootstrap}) {
 	my %params = @_;
 	if (! $self->can( operation => 'read', data => \%params, target => \@targets )) {
-	    my $status = new Yggdrasil::Status;
+	    my $status = $self->get_status();
 	    $status->set( 403 );
 	    return;
 	} 
@@ -218,8 +234,7 @@ sub fetch {
 sub can {
     my $self = shift;
 
-    my $auth = new Yggdrasil::Auth( yggdrasil => $self->{yggdrasil} );
-    return $auth->can( @_ );
+    return $self->{auth}->can( @_ );
 }
 
 sub raw_fetch {

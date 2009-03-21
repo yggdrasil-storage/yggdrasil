@@ -31,7 +31,7 @@ sub authenticate {
     
     my ($user, $pass, $session) = ($params{'user'}, $params{'pass'}, $params{'session'});
 
-    my $status = new Yggdrasil::Status;
+    my $status = $self->get_status();
     my $authentity = $self->{yggdrasil}->get_entity( 'MetaAuthUser' );
     
     # First, let see if we're connected to a tty without getting a
@@ -39,7 +39,6 @@ sub authenticate {
     # and we don't want to touch the session.  $> is effective UID.
     if (-t && ! defined $user && ! defined $pass) {
 	$self->{user} = (getpwuid($>))[0];
-	$self->{yggdrasil}->{user} = $self->{user};
 	$status->set( 200 );
 	return 1;
     } 
@@ -64,7 +63,7 @@ sub authenticate {
 	$self->{session} = $sid;
 	$userobject->property( 'session', $sid );
 	$status->set( 200 );
-	$self->{yggdrasil}->{user} = $user;
+	$self->{user} = $user;
 	return $sid;
     } elsif ($session) {
 	my @hits = $authentity->search( session => $session );
@@ -78,7 +77,7 @@ sub authenticate {
 	$self->{user} = $authentity->get( $hits[0]->id() );
 
 	$status->set( 200 );
-	$self->{yggdrasil}->{user} = $user;
+	$self->{user} = $user;
 	return $self->{session};	
     }
 

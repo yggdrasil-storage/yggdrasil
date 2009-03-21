@@ -3,9 +3,6 @@ package Yggdrasil::Status;
 use strict;
 use warnings;
 
-# Singleton object reference.
-our $status;
-
 # Status code map
 my %map = (
 	   # 100 series, continue please.
@@ -40,16 +37,13 @@ my %map = (
 	  );
   
 sub new {
-  return $status if $status;
-
   my $class = shift;
   my $self  = {
 	       stack     => [],
 	       stacksize => 10,
 	      };
 
-  $status = bless $self, $class;
-  return $status;
+  return bless $self, $class;
 }
 
 sub set {
@@ -126,7 +120,12 @@ sub get {
 
 sub _current {
     my $self = shift;
-    return $self->{stack}->[0];    
+    my $cur = $self->{stack}->[0];
+    if ($cur) {
+	return $cur;
+    }  else {
+	return [ '500', 'Status not set before called?' ];
+    }
 }
 
 sub _update {

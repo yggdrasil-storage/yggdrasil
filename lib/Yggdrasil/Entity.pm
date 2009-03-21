@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Yggdrasil::Entity::Instance;
-use Yggdrasil::Status;
 
 # We inherit _add_meta from MetaEntity and _add_inheritance from
 # MetaInheritance.
@@ -31,7 +30,7 @@ sub _define {
 
 	if ($self->{yggdrasil}->{strict}) {
 	    if (! $self->{yggdrasil}->get_entity( $parent )) {
-		my $status = new Yggdrasil::Status;
+		my $status = $self->get_status();
 		$status->set( 400, "Unable to access parent entity $parent." );
 		return;
 	    } 
@@ -43,7 +42,7 @@ sub _define {
     # --- Add to MetaEntity, noop if it exists.
     $self->_meta_add($fqn);
 
-    my $status = new Yggdrasil::Status;
+    my $status = $self->get_status();
     return $self if $status->status() == 202;
     
     # --- Update MetaInheritance  
@@ -63,7 +62,7 @@ sub create {
 
     my $obj = $self->_get_instance( $name );
     
-    my $status = new Yggdrasil::Status;
+    my $status = $self->get_status();
 
     if ($obj) {
 	$status->set( 202, "Instance '$name' already existed for entity '$self->{name}'." );
@@ -82,7 +81,7 @@ sub _fetch {
 
     my $obj = $self->_get_instance( $name );
 
-    my $status = new Yggdrasil::Status;
+    my $status = $self->get_status();
     unless ($obj) {
 	$status->set( 404, "Instance '$name' not found in entity '$self->{name}'." );
 	return undef;

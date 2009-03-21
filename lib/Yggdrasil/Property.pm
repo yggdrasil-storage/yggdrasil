@@ -5,8 +5,7 @@ use warnings;
 
 use base qw(Yggdrasil::Meta);
 
-use Yggdrasil::Status;
-use Yggdrasil::Utilities;
+use Yggdrasil::Utilities qw|ancestors get_times_from|;
 
 sub _define {
   my $self    = shift;
@@ -17,7 +16,7 @@ sub _define {
   my $yggdrasil = $self->{yggdrasil} = $data{yggdrasil};
   my $storage   = $yggdrasil->{storage};
 
-  my $status = new Yggdrasil::Status;
+  my $status = $self->get_status();
   unless (length $property) {
       $status->set( 400, "Unable to create properties with zero length names." );
       return;

@@ -5,7 +5,6 @@ use warnings;
 
 use base 'Yggdrasil::Storage';
 
-use Yggdrasil::Status;
 use Yggdrasil::Debug qw|debug_if debug_level|;
 
 # Define a structure, it is assumed that the Storage layer has called
@@ -120,7 +119,7 @@ sub _sql {
     my $dbh = $self->{dbh};
     my $sth = $dbh->prepare( $sql );
 
-    my $status = new Yggdrasil::Status;
+    my $status = $self->get_status();
     
     unless ($sth) {
 	$status->set( 500, 'The DB layer didn\'t return a statement handler' );
@@ -311,7 +310,7 @@ sub _store {
     my $key    = $data{key};
     my $fields = $data{fields};
 
-    my $status = new Yggdrasil::Status;
+    my $status = $self->get_status();
 
     # Check if we already have the value
     my $aref = $self->fetch( $schema, { where => [ %$fields ] } );

@@ -5,8 +5,6 @@ use warnings;
 
 use base qw(Yggdrasil::MetaRelation);
 
-use Yggdrasil::Status;
-
 sub _define {
   my $self = shift;
   my %param   = @_;
@@ -45,7 +43,7 @@ sub _fetch {
     my %param = @_; 
     
     my $id = $param{yggdrasil}->{storage}->_get_relation( $param{label} );
-    my $status = new Yggdrasil::Status;
+    my $status = $param{yggdrasil}->get_status();
 
     if (defined $id) {
 	my $new = Yggdrasil::Relation->new( @_ );

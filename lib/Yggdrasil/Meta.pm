@@ -41,6 +41,12 @@ sub admin_define {
     return $self->_admin_define(@_);
 }
 
+sub get_status {
+    my $self = shift;
+    return $self->{yggdrasil}->{status};
+}
+
+  
 sub _define { Yggdrasil::fatal( "_define not declared for class " . shift() . "\n" )}
 sub _fetch    { Yggdrasil::fatal( "_fetch not declared for class " . shift() . "\n" )}
 sub _admin_dump { Yggdrasil::fatal( "_admin_dump not declared for class " . shift() . "\n" )}
