@@ -11,12 +11,12 @@ use Preamble qw|getopts status status_die|;
 use Yggdrasil;
 use Yggdrasil::Status;
 
-my $status = new Yggdrasil::Status;
-
 my $opts = getopts();
 $opts->{bootstrap} = 1;
 
 my $ygg = new Yggdrasil( %$opts );
+my $status = $ygg->get_status();
+
 _die( "Unable to load Yggdrasil" ) unless $status->OK();
 
 my $connect = $ygg->connect( %$opts );
