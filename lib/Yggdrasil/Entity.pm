@@ -26,7 +26,7 @@ sub define {
 
     my $fqn = $parent ? join('::', $parent, $name) : $name;
 
-    my @entities = split /::/, $fqn;
+    my @entities = split m/::/, $fqn;
     if (@entities > 1) {
 	$name   = pop @entities;
 	$parent = join('::', @entities);
@@ -172,6 +172,12 @@ sub search {
 	push @hits, $obj;
     }
     return @hits;
+}
+
+sub name {
+    my $self = shift;
+
+    return $self->{name};
 }
 
 # Handle property definition and deletion

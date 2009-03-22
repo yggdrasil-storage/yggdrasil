@@ -3,9 +3,9 @@
 use strict;
 use warnings;
 
-use FindBin qw($RealBin);
-use lib qq(./test-parts);
-use lib qq(../lib);
+use FindBin qw($Bin);
+use lib qq($Bin/test-parts);
+use lib qq($Bin/../lib);
 
 use Preamble qw|getopts status status_die|;
 use Yggdrasil;

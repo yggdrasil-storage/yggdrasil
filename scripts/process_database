@@ -7,7 +7,7 @@ use Getopt::Long;
 
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
-use lib qq(./test-parts);
+use lib qq($Bin/test-parts);
 
 use Preamble qw|getopts status status_die|;
 

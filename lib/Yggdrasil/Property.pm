@@ -38,9 +38,9 @@ sub define {
 	}
 	$entity = $entity->{name};
     } elsif( $property =~ /:/ ) {
-	my @parts = split /::/, $property;
+	my @parts = split m/::/, $property;
 	my $last = pop @parts;
-	($entity, $property) = (split /:/, $last, 2);
+	($entity, $property) = (split m/:/, $last, 2);
 	push( @parts, $entity );
 	$entity = join('::', @parts);
     } else {
@@ -95,6 +95,25 @@ sub define {
     }
   
     return $self;
+}
+
+sub name {
+    my $self = shift;
+
+    return $self->{name};
+}
+
+sub entity {
+    my $self = shift;
+
+    # FIX: This should return the entity object
+    return $self->{entity};
+}
+
+sub full_name {
+    my $self = shift;
+
+    return join(':', $self->{entity}, $self->{name});
 }
 
 sub get {

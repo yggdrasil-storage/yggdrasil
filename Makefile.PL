@@ -5,6 +5,7 @@ all_from 'lib/Yggdrasil.pm';
 
 build_requires 'Test::More';
 
-auto_install;
+install_script 'bin/ydump';
+install_script 'bin/yrestore';
 
 WriteAll;

@@ -99,11 +99,13 @@ sub bootstrap {
 sub connect {
     my $self = shift;
 
-    return $self->{storage} = Yggdrasil::Storage->new(@_,
-						      status => $self->{status},
-						      auth   => $self->{auth},
-						     );
-    
+    $self->{storage} = Yggdrasil::Storage->new(@_,
+					       status => $self->{status},
+					       auth   => $self->{auth},
+	);
+
+    return unless $self->get_status()->OK();
+    return 1;
 }
 
 sub login {
@@ -116,7 +118,10 @@ sub login {
     my $status = $self->get_status();
     if ($status->OK()) {
 	$self->{storage}->{user} = $self->{user} = $auth->{user};
+	return $self->{user};
     }
+
+    return;
 }
 
 ###############################################################################
@@ -233,10 +238,11 @@ sub _setup_logger {
     
     if( -e $logconfig ) {
 	Log::Log4perl->init( $logconfig );
-	$self->{logger} = get_logger();
     } else {
-	warn( 'No working Log4perl configuration found.' );
+	# warn( "No working Log4perl configuration found in $logconfig." );
     }
+
+    $self->{logger} = get_logger();
 }
 
 sub _project_root {
