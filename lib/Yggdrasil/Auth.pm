@@ -263,13 +263,13 @@ sub _can {
 
     my $ref;
     if ($entity =~ /^\d+/) {
-	$ref = $self->{yggdrasil}->{storage}->fetch( 
+	$ref = $self->{yggdrasil}->{storage}->_fetch( 
 						    MetaAuthEntity => { where  => [ role   => $role,
 									            entity => $entity ],
 									return => $operation },
 						   );
     } else {
-	$ref = $self->{yggdrasil}->{storage}->fetch( 
+	$ref = $self->{yggdrasil}->{storage}->_fetch( 
 						    MetaAuthEntity => { where => [ role => $role ],
 									return => $operation },
 						    MetaEntity     => { where => [
