@@ -107,6 +107,8 @@ status( 'Setting nommo->serial to 1', $ns );
 $ns = $nommo->property( 'serial', undef);
 status( 'Setting nommo->serial to undef', $ns );
 
+print "Visible entities: ", join( ", ", $ygg->entities() ), "\n";
+
 exit;
 
 $baal->property( 'ip' , 'b1' );
