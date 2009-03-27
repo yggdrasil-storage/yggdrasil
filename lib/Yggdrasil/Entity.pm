@@ -12,6 +12,8 @@ use Yggdrasil::MetaInheritance;
 
 use Yggdrasil::Property;
 
+use Yggdrasil::Utilities qw|ancestors get_times_from|;
+  
 # We inherit _add_meta from MetaEntity and _add_inheritance from
 # MetaInheritance.
 #use base qw(Yggdrasil::MetaEntity Yggdrasil::MetaInheritance);
@@ -51,10 +53,10 @@ sub define {
 
     my $status = $self->get_status();
     return $self if $status->status() == 202;
-    
+
     # --- Update MetaInheritance  
     if( defined $parent ) {
-	Yggdrasil::MetaInheritance->add( yggdrasil => $self, $fqn, $parent );
+	Yggdrasil::MetaInheritance->add( yggdrasil => $self, child => $fqn, parent => $parent );
 	#$self->_add_inheritance( $fqn, $parent );
     } else {
 	# warnings, this does update, which sets status.
@@ -115,8 +117,8 @@ sub create {
     }
     
     return Yggdrasil::Entity::Instance->new( visual_id => $name,
-					     entity    => $self->{name},
-					     yggdrasil => $self );    
+					     entity    => $self,
+					     yggdrasil => $self->{yggdrasil} ); 
 }
 
 sub fetch {
@@ -133,7 +135,7 @@ sub fetch {
     
     $status->set( 200 );
     return new Yggdrasil::Entity::Instance( visual_id => $name,
-					    entity    => $self->{name},
+					    entity    => $self,
 					    yggdrasil => $self->{yggdrasil} );    
 }
 
@@ -169,9 +171,8 @@ sub search {
     my @hits;
     for my $hit (@$nodes) {
 	my $obj = bless {}, 'Yggdrasil::Entity::Instance';
-	$obj->{entity}    = $self->{name};
+	$obj->{entity}    = $self;
 	$obj->{yggdrasil} = $self->{yggdrasil};
- 	$obj->{storage}   = $self->{yggdrasil}->{storage};
 	for my $key (keys %$hit) {
 	    $obj->{$key} = $hit->{$key};
 	}
@@ -201,6 +202,67 @@ sub undefine_property {
 sub get_property {
 
 }
+
+# Handle property queries.
+sub property_exists {
+    my ($self, $property) = (shift, shift);
+    my ($start, $stop) = get_times_from( @_ );
+    
+    my $storage = $self->{yggdrasil}->{storage};
+    my @ancestors = ancestors($storage, $self->name(), $start, $stop);
+    
+    # Check to see if the property exists.
+    foreach my $e ( $self->name(), @ancestors ) {
+	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
+							      entity => $e,
+							    ]},
+				   'MetaProperty', { return => 'property',
+						     where => [ property => $property ] },
+				   { start => $start, stop => $stop });
+
+	# The property name might be "0".
+	return join(":", $e, $property) if defined $aref->[0]->{property};
+    }
+    
+    return;
+}
+
+sub properties {
+    my $self = shift;
+    my ($start, $stop) = get_times_from( @_ );
+
+    my $storage = $self->{yggdrasil}->{storage};
+    my @ancestors = ancestors($storage, $self->name(), $start, $stop);
+
+    my %properties;
+    
+    foreach my $e ( $self->name(), @ancestors ) {
+	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
+							      entity => $e,
+							    ]},
+				   'MetaProperty', 
+				    { return => 'property' },
+				    { start  => $start, stop => $stop });
+
+
+	for my $p (@$aref) {
+	    my $eobj;
+
+	    if ($e eq $self->name()) {
+		$eobj = $self;
+	    } else {
+		$eobj = Yggdrasil::Entity::objectify( name => $e, yggdrasil => $self->{yggdrasil} );
+	    }
+	    
+	    $properties{ $p->{property} } = Yggdrasil::Property::objectify( name      => $p->{property},
+									    yggdrasil => $self->{yggdrasil},
+									    entity    => $eobj );
+	}
+    }
+
+    return values %properties;
+}
+
 
 
 sub _admin_dump {

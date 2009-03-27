@@ -23,17 +23,18 @@ sub define {
 
 sub add {
     my $class = shift;
+    my %params = @_;
     my $self   = $class->SUPER::new(@_);
-    my $me     = $self->{yggdrasil}->{storage}->get_entity_id( shift );
-    my $parent = $self->{yggdrasil}->{storage}->get_entity_id( shift );
-
+    
+    my $me     = $self->{yggdrasil}->{storage}->get_entity_id( $params{child} );
+    my $parent = $self->{yggdrasil}->{storage}->get_entity_id( $params{parent} );
+    
     $self->{yggdrasil}->{storage}->store('MetaInheritance',
 			    key    => [ 'parent', 'child' ],
 			    fields => {
 				       parent => $parent,
 				       child  => $me,
 				      });
-
 }
 
 sub expire {

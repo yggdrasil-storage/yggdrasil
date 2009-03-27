@@ -28,7 +28,7 @@ sub new {
 
     unless ($self->{_id}) { 
 	my $idref = $self->storage()->fetch('MetaEntity', { return => 'id',
-							    where => [ entity => $entity ],
+							    where => [ entity => $entity->name() ],
 							  });
 	$self->storage()->store( 'Entities', fields => {
 							visual_id => $visual_id,
@@ -45,7 +45,7 @@ sub _get_id {
     my $entity = $self->{entity};
 
     my $idfetch = $self->storage()->fetch('MetaEntity', { 
-							 where => [ entity => $entity, 
+							 where => [ entity => $entity->name(), 
 								    id     => \qq{Entities.entity}, ],
 							},
 					  'Entities', {
@@ -94,7 +94,7 @@ sub _get_in_time {
     
     my $entity = $self->{entity};
     my $idref  = $self->storage()->fetch('MetaEntity', { 
-							where => [ entity => $entity, 
+							where => [ entity => $entity->name(), 
 								   id     => \qq{Entities.entity}, ],
 						       },
 					 'Entities', {
@@ -112,7 +112,7 @@ sub _get_in_time {
     }
     
     my $fetchref = $self->storage()->fetch('MetaEntity', { where => [
-								     entity => $entity, 
+								     entity => $entity->name(), 
 								     id     => \qq<MetaProperty.entity>,
 								    ]},
 					   "MetaProperty" => { return => "property" },
@@ -122,7 +122,7 @@ sub _get_in_time {
     push( @wheres, 'Entities' => { join => "left", where => [ id => $id ] } );
     
     foreach my $prop ( map { $_->{property} } @$fetchref ) {
-	my $table = join(":", $entity, $prop);
+	my $table = join(":", $entity->name(), $prop);
 	push( @wheres, $table => { join => "left" } );
     }
 
@@ -217,14 +217,14 @@ sub property {
     my $storage = $self->storage();
 
     my $entity = $self->{entity};
-    my $name = join(":", $entity, $key );
+    my $name = join(":", $entity->name(), $key );
 
-    my $schema = $self->property_exists( $key );
+    my $schema = $entity->property_exists( $key );
 
     my $status = $self->get_status();
     
     unless (defined $schema) {
-	$status->set( 404, "Unable to find property '$key' for entity '$entity'" );
+	$status->set( 404, "Unable to find property '$key' for entity '" . $entity->name() . "'" );
 	return undef;
     }
     
@@ -236,10 +236,10 @@ sub property {
 	}
 
 	# FIXME, $self->null is void, need to get $prop->null
-	my $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity, property => $key );
+	my $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity->name(), property => $key );
 
 	unless ( $p ) {
-	    $status->set( 404, "Property '$key' not defined for '$entity'" );
+	    $status->set( 404, "Property '$key' not defined for '" . $entity->name() . "'" );
 	    return;
 	}
 
@@ -261,56 +261,6 @@ sub property {
     }
 
     return $r->[0]->{value};
-}
-
-# FIX: Should this be in Y::Property / Y::MetaProperty?
-sub property_exists {
-    my ($self, $property) = (shift, shift);
-    my ($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
-    
-    my $entity = $self->{entity};
-    my $storage = $self->storage();
-    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
-    
-    # Check to see if the property exists.
-    foreach my $e ( $entity, @ancestors ) {
-	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
-							      entity => $e,
-							    ]},
-				   'MetaProperty', { return => 'property',
-						     where => [ property => $property ] },
-				   { start => $start, stop => $stop });
-
-	# The property name might be "0".
-	return join(":", $e, $property) if defined $aref->[0]->{property};
-    }
-    
-    return;
-}
-
-# FIX: Should this be in Y::Property / Y::MetaProperty?
-sub properties {
-    my $self = shift;
-    my ($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
-
-    my $entity = $self->{entity};
-    my $storage = $self->storage();
-    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
-
-    my %properties;
-    
-    foreach my $e ( $self->{entity}, @ancestors ) {
-	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
-							      entity => $e,
-							    ]},
-				   'MetaProperty', 
-				    { return => 'property' },
-				    { start  => $start, stop => $stop });
-	
-	$properties{ $_->{property} } = 1 for @$aref;
-    }
-
-    return keys %properties;
 }
 
 # FIXME, temporal search.  FIXME, JUST FIX ME!
@@ -372,14 +322,14 @@ sub instances {
 sub isa {
     my $self = shift;
     my $isa = shift;
-    my($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
+    my($start, $stop) = get_times_from( @_ );
 
     my $entity = $self->{entity};
-    my $storage = $self->storage();
+    my $storage = $self->{yggdrasil}->{storage};
 
-    return 1 if $isa eq $entity;
+    return 1 if $isa eq $entity->name();
 
-    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity, $start, $stop);
+    my @ancestors = ancestors($storage, $entity->name(), $start, $stop);
 
     if( defined $isa ) {
 	my $r = grep { $isa eq $_ } @ancestors;
