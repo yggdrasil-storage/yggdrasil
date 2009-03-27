@@ -124,6 +124,12 @@ sub login {
     return;
 }
 
+# FIXME, should contain the object?
+sub user {
+    my $self = shift;
+    return $self->{user};
+}
+
 ###############################################################################
 # Defines
 sub define_user {
@@ -268,7 +274,7 @@ sub entities {
     my $aref = $self->{storage}->_fetch( 'MetaAuthEntity', { where => [ role => $roleid ]},
 					 'MetaEntity', { where => [ id => \qq{MetaAuthEntity.entity} ],
 							 return => 'entity' });
-    return map { $_->{entity} } @$aref;
+    return map { Yggdrasil::Entity::objectify( name => $_->{entity}, yggdrasil => $self ) } @$aref;
 }
 
 

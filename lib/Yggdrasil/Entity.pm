@@ -84,8 +84,14 @@ sub get {
     
     my $status = new Yggdrasil::Status;
     $status->set( 200 );
-    my $obj = new Yggdrasil::Entity( name => $entity, yggdrasil => $self );
-    $obj->{name} = $entity;
+    return objectify( name => $entity, yggdrasil => $self->{yggdrasil} );
+}
+
+sub objectify {
+    my %params = @_;
+    
+    my $obj = new Yggdrasil::Entity( name => $params{name}, yggdrasil => $params{yggdrasil} );
+    $obj->{name} = $params{name};
     return $obj;
 }
 

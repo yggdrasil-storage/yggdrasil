@@ -107,7 +107,10 @@ status( 'Setting nommo->serial to 1', $ns );
 $ns = $nommo->property( 'serial', undef);
 status( 'Setting nommo->serial to undef', $ns );
 
-print "Visible entities: ", join( ", ", $ygg->entities() ), "\n";
+print "Visible entities for ", $ygg->user(), ":\n";
+for my $e ($ygg->entities()) {
+    print " * ", $e->name(), "\n";
+}
 
 exit;
 
