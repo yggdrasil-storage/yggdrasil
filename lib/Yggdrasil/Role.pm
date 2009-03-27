@@ -141,8 +141,12 @@ sub _set_permissions {
 
     my $robj = $self->{_role_obj};
     my $storage = $self->{yggdrasil}->{storage};
-    
-    my($e, $p) = split ':', $param{schema}, 2;
+
+    my @parts = split m/::/, $param{schema};
+    my $last = pop @parts;
+    my ($e, $p) = (split m/:/, $last, 2);
+    push( @parts, $e );
+    $e = join('::', @parts);
     
     # FIX: gah we don't get Host_ip on property ip, but only "ip"
     #      for the time being we "solve" this by checking for ... casing! YAY!
