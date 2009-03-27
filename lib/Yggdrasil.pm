@@ -263,8 +263,11 @@ sub _project_root {
 sub entities {
     my $self = shift;
 
-    my $aref = $self->{storage}->fetch( 'MetaEntity', { return => 'entity' } );
+    my $roleid = $self->{auth}->_get_user_role( $self->{user} );
     
+    my $aref = $self->{storage}->_fetch( 'MetaAuthEntity', { where => [ role => $roleid ]},
+					 'MetaEntity', { where => [ id => \qq{MetaAuthEntity.entity} ],
+							 return => 'entity' });
     return map { $_->{entity} } @$aref;
 }
 
