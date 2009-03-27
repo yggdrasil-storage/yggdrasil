@@ -97,6 +97,17 @@ sub define {
     return $self;
 }
 
+sub objectify {
+    my %params = @_;
+    
+    my $obj = new Yggdrasil::Property( name      => $params{name},
+				       entity    => $params{entity},
+				       yggdrasil => $params{yggdrasil} );
+    $obj->{name} = $params{name};
+    $obj->{entity} = $params{entity};
+    return $obj;
+}
+
 sub name {
     my $self = shift;
 
