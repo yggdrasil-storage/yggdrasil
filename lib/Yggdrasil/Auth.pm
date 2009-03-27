@@ -304,7 +304,7 @@ sub _get_relation_targets {
 
 sub _get_inheritance_parent {
     my ($self, $dataref) = @_;
-    return $dataref->{fields}->{parent};
+    return ($dataref->{fields}->{parent}, $dataref->{fields}->{child});
 }
 
 sub _global_read_access {
