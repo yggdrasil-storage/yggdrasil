@@ -27,7 +27,12 @@ sub define {
 }
 
 sub get {
-    # gets a user
+    my $class = shift;
+    my $self = $class->SUPER::new( @_ );
+    my %params = @_;
+    
+    my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
+    return $meta_user->fetch( $params{'user'} );
 }
 
 sub undefine {
