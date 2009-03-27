@@ -171,7 +171,6 @@ sub can {
     return 1;
 }
 
-
 sub _setup_default_users_and_roles {
     my $self = bless {}, shift;
     my %params = @_;
@@ -198,8 +197,12 @@ sub _generate_default_roles {
 
 	if ($r eq 'admin') {
 	    $role->grant( 'UNIVERSAL', 'd' );
+	    $role->grant( 'MetaAuthUser', 'd' );
+	    $role->grant( 'MetaAuthRole', 'd' );
 	} else {
 	    $role->grant( 'UNIVERSAL', 'r' );
+	    $role->grant( 'MetaAuthUser', 'r' );
+	    $role->grant( 'MetaAuthRole', 'r' );
 	}
 	push( @roles, $role );
     }
