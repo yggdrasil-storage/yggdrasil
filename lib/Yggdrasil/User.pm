@@ -32,7 +32,8 @@ sub get {
     my %params = @_;
     
     my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
-    return $meta_user->fetch( $params{'user'} );
+    $self->{_user_obj} = $meta_user->fetch( $params{'user'} );
+    return $self;
 }
 
 sub undefine {
