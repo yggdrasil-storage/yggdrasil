@@ -276,9 +276,9 @@ sub entities {
     my $self = shift;
 
     my $roleid = $self->{auth}->_get_user_role( $self->{user} );
-    
-    my $aref = $self->{storage}->_fetch( 'MetaAuthEntity', { where => [ role => $roleid ]},
-					 'MetaEntity', { where => [ id => \qq{MetaAuthEntity.entity} ],
+
+    my $aref = $self->{storage}->_fetch( 'MetaAuthEntity', { where => [ role => $roleid, readable => 1 ]},
+					 'MetaEntity', { where => [ id => \qq{MetaAuthEntity.entity}, ],
 							 return => 'entity' });
     return map { Yggdrasil::Entity::objectify( name => $_->{entity}, yggdrasil => $self ) } @$aref;
 }
