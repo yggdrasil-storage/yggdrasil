@@ -112,10 +112,16 @@ sub login {
     my $self = shift;
     my %params = @_;
 
+    my $status = $self->get_status();
+    
+    if ($self->{user}) {
+	$status->set( 406, 'Already logged in' );
+	return undef;
+    }
+
     my $auth = new Yggdrasil::Auth( yggdrasil => $self );
     $auth->authenticate( user => $params{user}, pass => $params{password} );
 
-    my $status = $self->get_status();
     if ($status->OK()) {
 	$self->{storage}->{user} = $self->{user} = $auth->{user};
 	return $self->{user};
