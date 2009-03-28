@@ -78,13 +78,12 @@ sub get {
     my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ entity => $entity ],
 							return => 'entity' } );
     
+    my $status = $self->get_status();
     unless (defined $aref->[0]->{entity}) {
-	my $status = new Yggdrasil::Status;
 	$status->set( 404, "Entity '$entity' not found." );
 	return undef;
     } 
     
-    my $status = new Yggdrasil::Status;
     $status->set( 200 );
     return objectify( name => $entity, yggdrasil => $self->{yggdrasil} );
 }
