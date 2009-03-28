@@ -47,9 +47,10 @@ sub authenticate {
 	
 	my $sid = md5_hex(time() * $$ * rand(time() + $$));
 	$self->{session} = $sid;
+	# FIXME, needed to ensure that setting the session gets the proper user attached.
+	$self->{user} = $self->{yggdrasil}->{storage}->{user} = $user;
 	$userobject->property( 'session', $sid );
 	$status->set( 200 );
-	$self->{user} = $user;
 	return $sid;
     } elsif ($session) {
 	my @hits = $authentity->search( session => $session );
@@ -130,7 +131,11 @@ sub can {
 	}
     } elsif ($target eq 'MetaAuthEntity') { # FIXME, check parents.
 	return 1;
+    } elsif ($target eq 'MetaAuthRolemembership') {
+	@targets_to_check = qw|MetaAuthRole|;
+	$operation = 'writeable';
     } else {
+	print "Whopsie, $target\n";
 	if( $operation =~ /^c/ ) {
 	    $operation = 'createable';
 	} elsif ($operation =~ /^d/) {
