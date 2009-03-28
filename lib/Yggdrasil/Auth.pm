@@ -9,7 +9,6 @@ use base qw(Yggdrasil::Object);
 
 use Yggdrasil::Role;
 use Yggdrasil::User;
-use Yggdrasil::Status;
 use Yggdrasil::Debug qw|debug_if debug_level|;
 
 sub authenticate {
