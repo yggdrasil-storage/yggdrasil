@@ -11,29 +11,66 @@ my $ygg = new Yggdrasil( %$opts );
 status_die( "Yggdrasil", $ygg );
 
 my $connect = $ygg->connect( %$opts );
-status_die( "Connect", $connect, 1 );
+status_die( "Connect", $connect );
 
 my $login = $ygg->login( user => $opts->{yuser}, password => $opts->{ypass} );
-status_die( "Login", $login, 1 );
+status_die( "Login", $login );
 
 my $bark = $ygg->define_user( user => "bark", password => "secret" );
-status( "User", $bark, 1 );
+status( "Define bark", $bark );
 
 my $boss = $ygg->define_role( role => "Boss" );
-status( "Role", $boss, 1 );
+status( "Define Boss", $boss );
 
-exit;
+my $hoste = $ygg->define_entity( 'Host' );
+status( "Entity", $hoste );
 
-my $hoste = $ygg->get_entity( 'Host' );
-status( "Entity", $hoste, 1 );
 my $ip = $hoste->define_property( 'ip', 'type' => 'text' );
 status( "Property", $ip, 1 );
 
-$boss->grant( $hoste, "w" );
-$boss->revoke( $hoste, "w" );
+dump_permissions( $ygg );
 
-$boss->grant( $ip, "r" );
+my $barksygg = new Yggdrasil( %$opts );
+status_die( 'Barksygg', $barksygg );
 
+my $barkconnect = $barksygg->connect( %$opts );
+status_die( "Connect", $barkconnect );
+
+my $barklogin = $barksygg->login( user => 'bark', password => 'secret' );
+status( "Login", $barklogin );
+
+dump_permissions( $barksygg );
 $boss->add( $bark );
-$boss->remove( $bark );
 
+print "\nAdding 'w' to Host for Boss role\n";
+$boss->grant( $hoste, "w" );
+dump_permissions( $barksygg );
+
+print "\nRevoking 'w' from Host for Boss role\n";
+$boss->revoke( $hoste, "w" );
+dump_permissions( $barksygg );
+
+print "\nRevoking 'r' from Host for Boss role\n";
+$boss->revoke( $hoste, "r" );
+dump_permissions( $barksygg );
+
+print "\nRegranting, but removing bark from role\n";
+$boss->grant( $hoste, "w" );
+$boss->remove( $bark );
+dump_permissions( $barksygg );
+
+print "\nReadding bark to Boss and grating access to UNIVERSAL\n";
+$boss->add( $bark );
+$boss->grant( 'UNIVERSAL', "w" );
+dump_permissions( $barksygg );
+
+sub dump_permissions {
+    my $yggie = shift;
+    print "Visible entities for ", $yggie->user(), ":\n";
+    for my $e ($yggie->entities()) {
+	print " * ", $e->name(), "\n";
+	for my $p ($e->properties()) {
+	    print "  -- ", $p->name(), " (", $p->entity()->name(), ")\n";
+	}
+    }
+}
