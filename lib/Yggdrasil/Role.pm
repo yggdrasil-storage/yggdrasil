@@ -56,6 +56,9 @@ sub grant {
     my $schema = shift;
     my $grant  = shift;
 
+    # Take either the name, or an object as a parameter.
+    $schema = $schema->name() if ref $schema;
+
 #    w => r+w
 #    r => r
 #    c => r+w+c
@@ -98,6 +101,9 @@ sub revoke {
     my $schema = shift;
     my $revoke = shift;
 
+    # Take either the name, or an object as a parameter.
+    $schema = $schema->name() if ref $schema;
+    
 #    w => r+w
 #    r => r
 #    c => r+w+c
@@ -206,7 +212,7 @@ sub add {
 					  key => [ qw/role user/ ],
 					  fields => { role => $robj->{_id},
 						      user => $uobj->{_id},
-						    } );
+						    } );    
 }
 
 sub remove {
