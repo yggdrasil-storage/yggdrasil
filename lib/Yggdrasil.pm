@@ -163,9 +163,8 @@ sub define_relation {
     my $self = shift;
     my $e1 = shift;
     my $e2 = shift;
-    my $label = shift;
 
-    return Yggdrasil::Relation->define( yggdrasil => $self, entities => [$e1, $e2], label => $label, @_ );
+    return Yggdrasil::Relation->define( yggdrasil => $self, entities => [$e1, $e2], @_ );
 }
 
 sub define_property {
