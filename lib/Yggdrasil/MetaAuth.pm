@@ -21,6 +21,7 @@ sub define {
     $user->define_property( "username", type => "TEXT" );
     $user->define_property( "fullname", type => "TEXT" );
     my $role = Yggdrasil::Entity->define( yggdrasil => $self, entity => "MetaAuthRole" );
+    $role->define_property( "name", type => "TEXT" );
 
     # --- Tell Storage to create SCHEMA, noop if it exists
     $self->{storage}->define( "MetaAuthProperty",
