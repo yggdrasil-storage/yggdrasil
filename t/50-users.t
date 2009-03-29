@@ -10,7 +10,7 @@ unless( defined $ENV{YGG_ENGINE} ) {
     plan skip_all => q<Don't know how to connect to any storage engines>;
 }
 
-plan tests => 23;
+plan tests => 28;
 
 my $Y_PKG = "Yggdrasil";
 my $Y_U_PKG = "Yggdrasil::User";
@@ -80,3 +80,12 @@ is( $r, "r00t", "$Y_U_PKG->id(): return value was $r" );
 $r = $haxor->id();
 is( $r, "haxor", "$Y_U_PKG->id(): return value was $r" );
 
+# --- Get user
+$r00t = $ygg->get_user( "haxor" );
+isa_ok( $r00t, $Y_U_PKG, "$Y_PKG->get_user('haxor'): isa $Y_U_PKG" );
+is( $r00t->id(), "haxor", "$Y_U_PKG->id(): we are haxor" );
+is( $r00t->username(), "bambi", "$Y_U_PKG->username(): we are bambi" );
+
+$r00t = $ygg->get_user( "doesn't exist" );
+is( defined $r00t, '', "$Y_PKG->get_user('doesn't exist'): correctly failed to fetch non-existant user" );
+is( $s->status(), 404, "status() is 404" );
