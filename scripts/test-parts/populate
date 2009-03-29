@@ -70,9 +70,9 @@ $ipp = $nommo->set( 'ip', '129.240.222.179' );
 status( 'Set:ip', $ipp );
 
 # Define relations
-my $host_room_relation   = $ygg->define_relation( $host_entity, $room_entity, 'hr' );
+my $host_room_relation   = $ygg->define_relation( $host_entity, $room_entity, label => 'hr' );
 status( 'Host<->Room', $host_room_relation );
-my $person_room_relation = $ygg->define_relation( $person_entity, $room_entity, 'pr' );
+my $person_room_relation = $ygg->define_relation( $person_entity, $room_entity, label => 'pr' );
 status( 'Person<->Room', $person_room_relation );
 
 $host_room_relation = $ygg->get_relation( 'hr' );
