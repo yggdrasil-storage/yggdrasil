@@ -140,8 +140,9 @@ sub user {
 # Defines
 sub define_user {
     my $self = shift;
+    my $user = shift;
 
-    return Yggdrasil::User->define( yggdrasil => $self, @_ );
+    return Yggdrasil::User->define( yggdrasil => $self, user => $user, @_ );
 }
 
 sub define_role {
