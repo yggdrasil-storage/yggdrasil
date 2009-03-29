@@ -8,8 +8,11 @@ use Carp;
 sub new {
     my $class = shift;
     if( ref $class ) {
-	confess( "Attempt at blessing into $class" );
+	my $status = $class->get_status();
+	$status->set( 406, "Calling new() as an object method, you probably wanted create() instead" );
+	return undef;
     }
+    
     my $self  = bless {}, $class;
 
     if( @_ % 2 ) { 
