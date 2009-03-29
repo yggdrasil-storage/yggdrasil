@@ -86,7 +86,8 @@ sub can {
 
     my @targets_to_check;
 
-    return 1 if $target =~ /:/; # properties not implemented.
+    return 1 if $target =~ /:/; # FIX: properties not implemented.
+    return 1 if $target eq "Relations"; # FIX: auth for Relation
 
     my $roleid_of_user;
     if ($user) {
