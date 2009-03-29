@@ -107,115 +107,126 @@ status( 'Setting nommo->serial to 1', $ns );
 $ns = $nommo->property( 'serial', undef);
 status( 'Setting nommo->serial to undef', $ns );
 
-exit;
+$ipp = $baal->property( 'ip' , 'b1' );
+status( 'Setting baal->ip to b1', $ipp );
 
-$baal->property( 'ip' , 'b1' );
-$baal->property( 'ip' , 'b2' );
-$baal->property( 'serial', 'bserial');
+$ipp = $baal->property( 'ip' , 'b2' );
+status( 'Setting baal->ip to b2', $ipp );
+$ipp = $baal->property( 'serial', 'bserial');
+status( 'Setting baal->serial to bserial', $ipp );
 
-$escher->property( 'serial', 'eserial');
-$escher->property( 'ip', 'e1');
+$ipp = $escher->property( 'serial', 'eserial');
+status( 'Setting escher->serial to eserial', $ipp );
+$ipp = $escher->property( 'ip', 'e1');
+status( 'Setting escher->ip to e1', $ipp );
 
-$nommo = Ygg::Host->get( 'nommo' );
-print "------>>>> $nommo->{_id}\n";
+$nommo = $host_entity->get( 'nommo' );
+status( 'Using get() as a method by mistake', $nommo );
+$nommo = $host_entity->fetch( 'nommo2' );
+status( 'Calling fetch() instead', $nommo );
 
 # --- Define Rooms
-my $room = define Yggdrasil::Entity 'Room';
-define Ygg::Room 'use', type => 'Text';
+my $room = $ygg->define_entity( 'Room' );
+status( 'Room', $room );
+my $ruse = $room->define_property( 'use', type => 'Text' );
+status( 'Room:use', $ruse );
 
-my $b810 = Ygg::Room->new( 'B810' );
-$b810->property( "use", "Terminal room" );
+my $b810 = $room->create( 'B810' );
+status( 'Creating b810 (Room)', $b810 );
+my $b810use = $b810->property( "use", "Terminal room" );
+status( 'Setting b810:use', $b810use );
 
-my $b701 = $room->new( "B701" );
+my $b701 = $room->create( "B701" );
 $b701->property( "use", "Hang-out" );
 
-
 # --- Define Persons
-my $person = define Yggdrasil::Entity "Person";
-define Yggdrasil::Property $person => "name";
-define $person "position";
-define $person "_position";
-define $person "department";
-define $person "depart_ment";
-define $person "password", type => "PASSWORD";
-define $person "session";
-define $person "change password";
+my $person = $ygg->define_entity( "Person" );
+status( 'Defining person', $person );
 
-my $terje = $person->new( "terjekv" );
+my $prop;
+for my $p (qw|name position _position department depart_ment dep:ment password session |) {
+    if ($p eq 'password') {
+	$prop = $person->define_property( $p, type => 'password' );
+    } else {
+	$prop = $person->define_property( $p );
+    }
+    status( "Defining property 'Person:$p'", $prop );
+    
+}
+$prop = $person->define_property( 'look I have spaces in my name' );
+status( "Defining property 'Person:spacealicious'", $prop );
+
+
+my $terje = $person->create( "terjekv" );
 $terje->property( name => "Terje Kvernes" );
 $terje->property( password => "foo" );
 
-
-my $bard  = $person->new( "bard" );
+my $bard  = $person->create( "bard" );
 $bard->property( name => "Barkie" );
 $bard->property( password => "" );
 $bard->property( department => "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" );
 
 
 # --- Define Phones
-my $phone = define Yggdrasil::Entity "Telephone";
-my $ophone = $phone->new( "22 85 54 02" );
+my $phone = $ygg->define_entity( "Telephone" );
+my $ophone = $phone->create( "22 85 54 02" );
 
 
 # --- Define contractor
-my $con = define Yggdrasil::Entity "Contractor";
-my $bravida = $con->new( "Bravida" );
-
+my $con = $ygg->define_entity( "Contractor" );
+my $bravida = $con->create( "Bravida" );
+status( "Bravida", $bravida );
 
 # --- Define Relations
 # room<->phone
 # host<->room
 # person<->host
 
-my $hr = define Yggdrasil::Relation $host_entity, 'Room';
-define Yggdrasil::Relation $room, $phone;
-define Yggdrasil::Relation $person, $host_entity;
-define Yggdrasil::Relation $phone, $con;
+my $hr = $ygg->define_relation( $host_entity, $room_entity );
+my $rp = $ygg->define_relation( $room_entity, $phone );
+my $ph = $ygg->define_relation( $phone, $host_entity );
+my $pc = $ygg->define_relation( $phone, $con );
+my $pp = $ygg->define_relation( $phone, $person_entity );
 
-define Yggdrasil::Relation $person, $phone;
-
-print "Host<->Room:", $hr->{label}, ":\n";
+print "Host<->Room:", $hr->label(), ":\n";
 
 $hr->link($nommo, $b810);
 $hr->unlink( $nommo, $b810 );
-exit;
 
-$nommo->unlink( $b810 );
+$hr->unlink( $b810, $nommo );
 
-$terje->link( $nommo );
-$bard->link( $baal );
+$ph->link( $nommo, $terje );
+$ph->link( $baal, $bard );
 
-$nommo->link( $b701 );
-$b701->link( $baal );
+$hr->link( $b701, $nommo );
+$hr->link( $baal, $b701 );
 
-$b701->link( $ophone );
+$rp->link( $ophone, $b701 );
 
-$bravida->link( $ophone );
-$terje->link( $ophone );
+$pc->link( $ophone, $bravida );
+$pp->link( $ophone, $terje );
 
-for my $e (qw /Telephone Contractor Room/ ) {
+for my $e ($phone, $con, $room_entity) {
   my @res = $terje->fetch_related( $e );
 
   if (@res) {
     for my $p ( @res ) {
-      print "ZOOM * ", $terje->id(), " has $e ", $p->id(), " in ", $p->pathlength(), " steps.\n";
+      print "Query: * ", $terje->id(), " has " , $e->name() , ", " , $p->id(), " in ", $p->pathlength(), " steps.\n";
 
       my @res2 = $p->fetch_related( $person );
 
       if( @res2 ) {
 	for my $p2 ( @res2 ) {
-	  print "ZOOM * ", $p->id(), " has Person ", $p2->id(), "\n";
+	  print "  -- Reverse * ", $p->id(), " has Person ", $p2->id(), "\n";
 	  
 	}
       } else {
-	print "ZOOM * ", $p->id(), " is not related to Person.\n";
+	print " -- Reverse FAIL * ", $p->id(), " is not related to Person.\n";
       }
     }
   } else {
-    print "ZOOM * ", $terje->id(), " is not related to $e.\n";
+      # FIXME, this shouldn't happen?
+      print "MISS: ", $terje->id(), " is not related to " , $e->name(), ".\n";
   }
 }
 
-define Yggdrasil::Entity 'Person';
-define Yggdrasil::Entity 'Student', inherit => 'Person';
-define Yggdrasil::Entity 'Student', inherit => 'Person';
