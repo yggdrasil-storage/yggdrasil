@@ -94,6 +94,16 @@ sub link :method {
   my $realrval = $self->_get_real_val( 'rval', $label );
 
   my $status = $self->get_status();
+
+  unless ($lval && ref $lval && ref $lval eq 'Yggdrasil::Entity::Instance') {
+      $status->set( 406, "The first paramter to link has to be an instance object." );
+      return undef;      
+  }
+
+  unless ($rval && ref $rval && ref $rval eq 'Yggdrasil::Entity::Instance') {
+      $status->set( 406, "The second paramter to link has to be an instance object." );
+      return undef;      
+  }
   
   unless ($lval->is_a( $reallval )) {
       $status->set( 406, $lval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
