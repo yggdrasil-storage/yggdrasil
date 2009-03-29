@@ -70,7 +70,18 @@ sub define {
 # get an entity
 sub get {
     my $class = shift;
-    my $self = $class->SUPER::new(@_);
+
+    my ($self, $status);
+    # If you called this as $entity->get() you wanted fetch().
+    if (ref $class) {
+	$status = $class->get_status();
+	$status->set( 406, "Calling get() as an object method, you probably wanted fetch() to get an instance" );
+	return undef;
+    } else {
+	$self   = $class->SUPER::new(@_);
+	$status = $self->get_status();	
+    }
+    
     my %params = @_;
 
     my $entity = $params{entity};
@@ -78,7 +89,6 @@ sub get {
     my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ entity => $entity ],
 							return => 'entity' } );
     
-    my $status = $self->get_status();
     unless (defined $aref->[0]->{entity}) {
 	$status->set( 404, "Entity '$entity' not found." );
 	return undef;
