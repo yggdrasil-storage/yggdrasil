@@ -17,7 +17,7 @@ sub define {
     my %params = @_;
 
     my $meta_role = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthRole' );
-    my $ro = $meta_role->create( $params{'role'});
+    my $ro = $meta_role->create( $params{role} );
 
     $self->{_role_obj} = $ro;
 
@@ -31,11 +31,11 @@ sub get {
 
     my $id = $params{id};
 
-    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => "MetaAuthRole" );
-    my $ro = $e->fetch( $id );
-    $self->{_role_obj} = $ro;
+    my $meta_role = Yggdrasil::Entity->get( yggdrasil => $self, entity => "MetaAuthRole" );
+    $self->{_role_obj} = $meta_role->fetch( $params{role} );
 
-    return $self;
+    return $self if $self->{_role_obj};
+    return;
 }
 
 sub undefine {
@@ -46,10 +46,35 @@ sub members {
     # list all role members
 }
 
-sub name {
-    # name of role
+sub _setter_getter {
+    my $self = shift;
+    my $key  = shift;
+    my $val  = shift;
+
+    my $uo = $self->{_role_obj};
+    if( defined $val ) {
+	 $uo->set( $key => $val );
+
+	# FIX: if setting the password failed, undef should be returned -- check status
+	return $val;
+    }
+
+    return $uo->get( $key );
 }
 
+sub name {
+    my $self = shift;
+    my $value = shift;
+
+    return $self->_setter_getter( name => $value );
+}
+
+# FIX: Shouldn't this be name()?
+sub id {
+    my $self = shift;
+    
+    return $self->{_role_obj}->{visual_id};
+}
 
 sub grant {
     my $self   = shift;
