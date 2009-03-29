@@ -97,6 +97,27 @@ sub id {
     return $self->{_user_obj}->{visual_id};
 }
 
+# FIX1: couldn't we just fetch id and visual_id and make user objects
+#       without having to fetch the visual_id's? What about the
+#       instance's entity method, how does it get an entity object?
+# FIX2: this is ugly
+# FIX3: get_roles does mostly the same stuff, but as a class method
+#       and it calls _fetch (why?) - possible to consolidate the two?
+sub member_of {
+    my $self = shift;
+
+    my $uobj = $self->{_user_obj};
+
+    my $roles = $self->storage()->fetch(
+	Entities =>
+	{ return => [ qw/visual_id/ ], where => [ id => \qq<MetaAuthRolemembership.role> ] },
+	MetaAuthRolemembership =>
+	{ where => [ user => $uobj->{_id} ] } );
+
+    return unless $self->get_status()->OK();
+    return map { Yggdrasil::Role->get(yggdrasil => $self, role => $_->{visual_id}) } @$roles;
+}
+
 # This is awefully ugly.  FIXME.
 sub get_roles {
     my $class = shift;
