@@ -90,6 +90,7 @@ sub fullname {
     return $self->_setter_getter( fullname => $value );
 }
 
+# FIX: Shouldn't this be username()?
 sub id {
     my $self = shift;
 
@@ -113,7 +114,7 @@ sub get_roles {
     my $roref = $self->storage()->_fetch(Entities => { where => [ id => $idref->[0]->{role} ],
 						       return => 'visual_id' });
 
-    return Yggdrasil::Role->get( yggdrasil => $self, id => $roref->[0]->{visual_id} );
+    return Yggdrasil::Role->get( yggdrasil => $self, role => $roref->[0]->{visual_id} );
 }
 
 sub _generate_password {
