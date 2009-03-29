@@ -147,8 +147,9 @@ sub define_user {
 
 sub define_role {
     my $self = shift;
+    my $role = shift;
 
-    return Yggdrasil::Role->define( yggdrasil => $self, @_ );
+    return Yggdrasil::Role->define( yggdrasil => $self, role => $role, @_ );
 }
 
 sub define_entity {
@@ -185,8 +186,9 @@ sub get_user {
 
 sub get_role {
     my $self = shift;
+    my $role = shift;
 
-    return Yggdrasil::Role->get( yggdrasil => $self, @_ );
+    return Yggdrasil::Role->get( yggdrasil => $self, role => $role, @_ );
 }
 
 sub get_entity {
