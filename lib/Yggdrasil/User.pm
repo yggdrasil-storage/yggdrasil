@@ -18,8 +18,12 @@ sub define {
     my %params = @_;
 
     my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
-    my $uo = $meta_user->create( $params{'user'} );
-    $uo->property( password => $params{'password'} );
+    my $uo = $meta_user->create( $params{user} );
+
+    # --- Generate a password if one was not passed in
+    my $pass = defined $params{password} ? $params{password} : $self->_generate_password();
+
+    $uo->property( password => $pass );
     
     $self->{_user_obj} = $uo;
 
@@ -108,6 +112,24 @@ sub get_roles {
 						       return => 'visual_id' });
 
     return Yggdrasil::Role->get( yggdrasil => $self, id => $roref->[0]->{visual_id} );
+}
+
+sub _generate_password {
+    my $self = shift;
+    my $randomdevice = "/dev/urandom";
+    my $pwd_length = 12;
+    
+    my $password = "";
+    my $randdev;
+    open( $randdev, $randomdevice ) 
+	|| die "Unable to open random device $randdev: $!\n";
+    until( length($password) == $pwd_length ) {
+        my $byte = getc $randdev;
+        $password .= $byte if $byte =~ /[a-z0-9]/i;
+    }
+    close $randdev;
+
+    return $password;
 }
 
 1;

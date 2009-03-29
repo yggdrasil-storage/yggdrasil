@@ -223,7 +223,7 @@ sub _generate_default_users {
     my @users;
     
     for my $u ( "root", (getpwuid( $> ) || "default"), keys %requested_users ) {
-	my $user = Yggdrasil::User->define( yggdrasil => $self, user => $u, password => $requested_users{$u} || _generate_password() );
+	my $user = Yggdrasil::User->define( yggdrasil => $self, user => $u, password => $requested_users{$u} );
 
 	push( @users, $user );
     }
@@ -231,22 +231,6 @@ sub _generate_default_users {
     return @users;
 }
 
-sub _generate_password {
-    my $randomdevice = "/dev/urandom";
-    my $pwd_length = 12;
-    
-    my $password = "";
-    my $randdev;
-    open( $randdev, $randomdevice ) 
-	|| die "Unable to open random device $randdev: $!\n";
-    until( length($password) == $pwd_length ) {
-        my $byte = getc $randdev;
-        $password .= $byte if $byte =~ /[a-z0-9]/i;
-    }
-    close $randdev;
-
-    return $password;
-}
 
 sub _get_user_role {
     my $self = shift;
