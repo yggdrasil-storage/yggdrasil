@@ -32,8 +32,7 @@ sub define {
     # This catches requests on the form MetaAuthRole:password and similar constructs.
     if ($entity) {
 	if( $property =~ /:/ ) {
-	    # fatal - property contains entity information - illegal something
-	    # FIX: Set status
+	    $status->set( 406, "Unable to create properties with names containing ':'." );
 	    return;
 	}
 	$entity = $entity->{name};
