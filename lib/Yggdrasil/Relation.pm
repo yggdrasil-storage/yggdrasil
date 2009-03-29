@@ -9,6 +9,7 @@ sub define {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
     my %param   = @_;
+
     my ($lval, $rval) = @{$param{entities}};
   
     my $storage = $self->{yggdrasil}->{storage};
@@ -16,7 +17,7 @@ sub define {
     $lval = $lval->{name} if $lval->{name};
     $rval = $rval->{name} if $rval->{name};
     
-    my $label = $param{'label'} || "$lval<->$rval";
+    my $label = defined $param{label} ? $param{label} : "$lval<->$rval";
     $self->{label} = $label;
     
     $lval = $storage->fetch( 'MetaEntity', { return => 'id', where => [ entity => $lval ] } );
@@ -34,7 +35,7 @@ sub define {
     }
 
     # --- Add to MetaRelation
-    my $id = Yggdrasil::MetaRelation->add( yggdrasil => $self, lval => $lval, rval => $rval, label => $label, %param) unless $param{raw};
+    my $id = Yggdrasil::MetaRelation->add( yggdrasil => $self, lval => $lval, rval => $rval, label => $label) unless $param{raw};
     #my $id = $self->_meta_add($lval, $rval, $label, %param) unless $param{raw};
     $self->{_id} = $id;
     return $self;
@@ -64,7 +65,7 @@ sub _get_real_val {
     my $side  = shift;
     my $label = shift;
 
-    my $retref = $self->{storage}->fetch( 'MetaEntity', { return => 'entity',
+    my $retref = $self->storage()->fetch( 'MetaEntity', { return => 'entity',
 							  where  => [ id => \qq<MetaRelation.$side> ]},
 					  'MetaRelation', { where => [ label => $label ]});
     return $retref->[0]->{entity};
@@ -78,7 +79,8 @@ sub entities {
 
 sub label {
     my $self = shift;
-    # return label
+
+    return $self->{label};
 }
 
 sub link :method {
@@ -103,12 +105,12 @@ sub link :method {
       return undef;
   }
 
-  $self->{storage}->store( 'Relations',
+  $self->storage()->store( 'Relations',
 			   key => ['id', 'lval', 'rval' ],
 			   fields => {
-				      'id'   => $self->{_id},
-				      'lval' => $lval->{_id},
-				      'rval' => $rval->{_id} });
+			       'id'   => $self->{_id},
+			       'lval' => $lval->{_id},
+			       'rval' => $rval->{_id} });
 }
 
 sub unlink :method {
@@ -116,7 +118,7 @@ sub unlink :method {
   my $lval = shift;
   my $rval = shift;
 
-  $self->{storage}->expire( 'Relations', lval => $lval->{_id}, rval => $rval->{_id} );
+  $self->storage()->expire( 'Relations', lval => $lval->{_id}, rval => $rval->{_id} );
 }
 
 
