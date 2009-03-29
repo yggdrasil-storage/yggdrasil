@@ -83,6 +83,7 @@ t/70-user_and_roles.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
+t/Yggdrasil/Test/Common.pm
 www/index.cgi
 www/yggdrasil.css
 www/yggdrasil.js
