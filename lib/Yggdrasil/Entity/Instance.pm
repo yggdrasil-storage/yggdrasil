@@ -319,7 +319,7 @@ sub instances {
 }
 
 
-sub isa {
+sub is_a {
     my $self = shift;
     my $isa = shift;
     my($start, $stop) = get_times_from( @_ );

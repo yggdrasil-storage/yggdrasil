@@ -122,12 +122,12 @@ print "Properties for B: ", join(", ", $B->properties() );
 print "Properties for C: ", join(", ", $C->properties() );
 print "Properties for D: ", join(", ", $D->properties() );
 print "Properties for E: ", join(", ", $E->properties() );
-print "C inherits from: ", join(", ", $C->isa() );
-print "C->isa(A): ", $C->isa($A);
-print "C->isa(B): ", $C->isa($B);
-print "C->isa(C): ", $C->isa($C);
-print "C->isa(D): ", $C->isa($D);
-print "C->isa(E): ", $C->isa($E);
+print "C inherits from: ", join(", ", $C->is_a() );
+print "C->is_a(A): ", $C->is_a($A);
+print "C->is_a(B): ", $C->is_a($B);
+print "C->is_a(C): ", $C->is_a($C);
+print "C->is_a(D): ", $C->is_a($D);
+print "C->is_a(E): ", $C->is_a($E);
 
 print "redefine C as not inheriting";
 define Yggdrasil::Entity "C";
@@ -138,12 +138,12 @@ print "Properties for B: ", join(", ", $B->properties() );
 print "Properties for C: ", join(", ", $C->properties() );
 print "Properties for D: ", join(", ", $D->properties() );
 print "Properties for E: ", join(", ", $E->properties() );
-print "C inherits from: ", join(", ", $C->isa() );
-print "C->isa(A): ", $C->isa($A);
-print "C->isa(B): ", $C->isa($B);
-print "C->isa(C): ", $C->isa($C);
-print "C->isa(D): ", $C->isa($D);
-print "C->isa(E): ", $C->isa($E);
+print "C inherits from: ", join(", ", $C->is_a() );
+print "C->is_a(A): ", $C->is_a($A);
+print "C->is_a(B): ", $C->is_a($B);
+print "C->is_a(C): ", $C->is_a($C);
+print "C->is_a(D): ", $C->is_a($D);
+print "C->is_a(E): ", $C->is_a($E);
 
 
 

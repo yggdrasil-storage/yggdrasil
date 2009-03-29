@@ -93,12 +93,12 @@ sub link :method {
 
   my $status = $self->get_status();
   
-  unless ($lval->isa( $reallval )) {
+  unless ($lval->is_a( $reallval )) {
       $status->set( 406, $lval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
       return undef;
   }
 
-  unless ($rval->isa( $realrval )) {
+  unless ($rval->is_a( $realrval )) {
       $status->set( 406, $rval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
       return undef;
   }
