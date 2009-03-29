@@ -78,6 +78,7 @@ t/20-instance.t
 t/30-relation.t
 t/40-inheritance.t
 t/50-users.t
+t/60-roles.t
 t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
