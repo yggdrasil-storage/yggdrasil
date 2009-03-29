@@ -42,8 +42,23 @@ sub undefine {
 
 }
 
+# FIX1: couldn't we just fetch id and visual_id and make user objects
+#       without having to fetch the visual_id's? What about the
+#       instance's entity method, how does it get an entity object?
+# FIX2: this is ugly
 sub members {
-    # list all role members
+    my $self = shift;
+
+    my $robj = $self->{_role_obj};
+
+    my $users = $self->storage()->fetch( 
+	Entities =>
+	{ return => [ qw/visual_id/ ], where => [ id => \qq<MetaAuthRolemembership.user> ] },
+	MetaAuthRolemembership => 
+	{ where => [ role => $robj->{_id} ] } );
+
+    return unless $self->get_status()->OK();
+    return map { Yggdrasil::User->get(yggdrasil => $self, user => $_->{visual_id}) } @$users;
 }
 
 sub _setter_getter {
@@ -230,6 +245,8 @@ sub add {
     my $self = shift;
     my $user = shift;
 
+    # FIX: if user is an object, check that it is indeed an Y::U object
+
     my $robj = $self->{_role_obj};
     my $uobj = $user->{_user_obj};
 
@@ -237,12 +254,17 @@ sub add {
 					  key => [ qw/role user/ ],
 					  fields => { role => $robj->{_id},
 						      user => $uobj->{_id},
-						    } );    
+						    } );
+
+    return 1 if $self->get_status()->OK();
+    return;
 }
 
 sub remove {
     my $self = shift;
     my $user = shift;
+
+    # FIX: if user is an object, check that it is indeed an Y::U object
 
     my $robj = $self->{_role_obj};
     my $uobj = $user->{_user_obj};
@@ -250,6 +272,9 @@ sub remove {
     $self->{yggdrasil}->{storage}->expire( "MetaAuthRolemembership",
 					   role => $robj->{_id},
 					   user => $uobj->{_id} );
+
+    return 1 if $self->get_status()->OK();
+    return;
 }
 
 1;
