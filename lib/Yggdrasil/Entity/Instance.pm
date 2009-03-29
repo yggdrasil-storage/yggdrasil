@@ -255,7 +255,8 @@ sub property {
 			     { start => $self->{_start}, stop => $self->{_stop} } );
 
     if ($r->[0]->{value}) {
-	$status->set( 200 );
+	# Pass through return value from Storage, it'll be 200 / 202 correctly.
+	# $status->set( 200 );
     } else {
 	$status->set( 204 ) if $status->OK();
     }
