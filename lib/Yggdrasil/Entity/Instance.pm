@@ -322,7 +322,7 @@ sub instances {
 sub is_a {
     my $self = shift;
     my $isa = shift;
-    my($start, $stop) = get_times_from( @_ );
+    my($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
 
     my $entity = $self->{entity};
     my $storage = $self->{yggdrasil}->{storage};
@@ -355,14 +355,17 @@ sub fetch_related {
   my $self = shift;
   my $relative = shift;
   my($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
-  
-  $relative = Yggdrasil::_extract_entity($relative);
+
+  # FIX: relative can either be an Y::E object or the name of an Entity
+  #      for now, only objects
+
   my $source = $self->{entity};
 
-  my $source_id = $self->storage()->_get_entity( $source );
-  my $destin_id = $self->storage()->_get_entity( $relative );
+  my $source_id = $self->storage()->_get_entity( $source->name() );
+  my $destin_id = $self->storage()->_get_entity( $relative->name() );
   
   my $paths = $self->_fetch_related( $source_id, $destin_id, undef, undef, $start, $stop );
+
 
   my %result;
   foreach my $path ( @$paths ) {
@@ -404,9 +407,7 @@ sub fetch_related {
       my $res = $self->storage()->fetch( @schema, { start => $start, stop => $stop } );
 
       foreach my $r ( @$res ) {
-	  $self->{logger}->error( $r->{visual_id} );
-	  my $name = "$self->{namespace}::$relative";
-	  my $obj = $name->new( $r->{visual_id} );
+	  my $obj = $relative->fetch( $r->{visual_id} );
 	  $obj->{_pathlength} = scalar @$path - 1;
       
 	  $result{$r->{visual_id}} = $obj;
@@ -423,7 +424,7 @@ sub _fetch_related {
   my $stop = shift;
   my $path = [ @{ shift || [] } ];
   my $all = shift || [];
-  my($tstart, $tstop) = Yggdrasil::Utilities::get_times_from( @_ );
+  my($tstart, $tstop) = (shift, shift);
 
   my $storage = $self->storage();
 
