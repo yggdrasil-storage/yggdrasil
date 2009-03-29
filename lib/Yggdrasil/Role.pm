@@ -29,8 +29,6 @@ sub get {
     my $self = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $id = $params{id};
-
     my $meta_role = Yggdrasil::Entity->get( yggdrasil => $self, entity => "MetaAuthRole" );
     $self->{_role_obj} = $meta_role->fetch( $params{role} );
 
