@@ -330,7 +330,7 @@ sub is_a {
 
     return 1 if $isa eq $entity->name();
 
-    my @ancestors = ancestors($storage, $entity->name(), $start, $stop);
+    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity->name(), $start, $stop);
 
     if( defined $isa ) {
 	my $r = grep { $isa eq $_ } @ancestors;
