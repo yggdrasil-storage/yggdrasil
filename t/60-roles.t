@@ -4,59 +4,37 @@ use strict;
 use warnings;
 
 use Test::More;
-use Yggdrasil;
+use lib qw(./t);
+use Yggdrasil::Test::Common '15';
 
-unless( defined $ENV{YGG_ENGINE} ) {
-    plan skip_all => q<Don't know how to connect to any storage engines>;
-}
+my $Y    = 'Yggdrasil';
+my $Y_Ro = 'Yggdrasil::Role';
 
-plan tests => 16;
 
-my $Y_PKG = "Yggdrasil";
-my $Y_R_PKG = "Yggdrasil::Role";
-my $Y_S_PKG = "Yggdrasil::Status";
+my $tester = Yggdrasil::Test::Common->new();
 
 # --- Initialize Yggdrasil
-my $ygg = Yggdrasil->new();
-isa_ok( $ygg, $Y_PKG, "$Y_PKG->new(): returned object was of type $Y_PKG" );
-
-my $s = $ygg->get_status();
-isa_ok( $s, $Y_S_PKG, "$Y_PKG->get_status(): returned object was of type $Y_S_PKG" );
-is( $s->status(), 200, "$Y_PKG->new(): completed with status 200" );
+my $ygg = $tester->new_yggdrasil();
 
 # --- Connect to Yggdrasil
-my $c = $ygg->connect( engine    => $ENV{YGG_ENGINE},
-		       host      => $ENV{YGG_HOST},
-		       port      => $ENV{YGG_PORT},
-		       db        => $ENV{YGG_DB},
-		       user      => $ENV{YGG_USER},
-		       password  => $ENV{YGG_PASSWORD},
-    );
-
-is( $s->status(), 200, "$Y_PKG->connect(): completed with status 200" );
-is( $c, 1, "$Y_PKG->connect(): return value true" );
+$tester->connect();
 
 # --- Authenticate
-my $l = $ygg->login();
-ok( $l, "$Y_PKG->login(): Authenticated as $l" );
-is( $s->status(), 200, "$Y_PKG->login(): Logged in" );
+$tester->login();
 
 # --- Define roles
-my $br = $ygg->define_role( "bookreaders" );
-isa_ok( $br, $Y_R_PKG, "$Y_PKG->define_role(): defined roles 'bookreaders'" );
-is( $br->id(), "bookreaders", "$Y_R_PKG->id(): bookreaders are bookreaders" );
+my $br = $tester->yggdrasil_define_role( "bookreader" );
 
 # --- Set/Get name
 my $r = $br->name( "bbb" );
-is( $r, "bbb", "$Y_R_PKG->name('bbb'): return value was $r" );
-is( $br->name(), "bbb", "$Y_R_PKG->name(): roles name is bbb" );
+is( $r, "bbb", "$Y_Ro->name(): Return value was $r" );
+is( $br->name(), "bbb", "$Y_Ro->name(): Role name is bbb" );
 
-# --- Get role
+# --- Get role - existing
+$br = $tester->yggdrasil_get_role( "bookreader" );
+
+# --- Get role - non-existing
 $br = $ygg->get_role( "doesn't exist" );
-is( defined $br, '', "$Y_PKG->get_role('doesn't exist'): correctly failed to fetch non-existant role" );
-is( $s->status(), 404, "status() is 404" );
+is( defined $br, '', "$Y->get_role(): correctly failed to fetch non-existant role" );
+is( $tester->code(), 404, "$Y->get_role(): status() is 404" );
 
-$br = $ygg->get_role( "bookreaders" );
-isa_ok( $br, $Y_R_PKG, "$Y_PKG->get_role('bookreaders'): isa $Y_R_PKG" );
-is( $br->id(), "bookreaders", "$Y_R_PKG->id(): we are bookreaders" );
-is( $br->name(), "bbb", "$Y_R_PKG->name(): we are bbb" );

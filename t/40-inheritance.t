@@ -1,64 +1,45 @@
 #!perl
 
-use Test::More;
-use Yggdrasil;
-
 use strict;
 use warnings;
 
-unless( defined $ENV{YGG_ENGINE} ) {
-    plan skip_all => q<Don't know how to connect to any storage engines>;
-}
+use lib qw(./t);
+use Yggdrasil::Test::Common '51';
 
-plan tests => 6;
+my $tester = Yggdrasil::Test::Common->new();
 
 # --- Initialize Yggdrasil
-my $ygg;
-my $space = 'Ygg';
-eval {
-    $ygg = Yggdrasil->new( namespace => $space,
-			   engine    => $ENV{YGG_ENGINE},
-			   db        => $ENV{YGG_DB},
-			   user      => $ENV{YGG_USER},
-			   password  => $ENV{YGG_PASSWORD},
-			   host      => $ENV{YGG_HOST},
-			   port      => $ENV{YGG_PORT} );
-};
+my $ygg = $tester->new_yggdrasil();
 
-isa_ok( $ygg, 'Yggdrasil', 'Yggdrasil->new()' );
+# --- Connect to Yggdrasil
+$tester->connect();
+
+# --- Authenticate
+$tester->login();
 
 # --- Define Entitis 'A', 'B', 'AA', 'BB'
-my $A  = define Yggdrasil::Entity 'A';
-my $B  = define Yggdrasil::Entity 'B', inherit => 'A';
-my $AA = define Yggdrasil::Entity 'AA';
-my $BB = define Yggdrasil::Entity 'BB', inherit => 'AA';
+my $A  = $tester->yggdrasil_define_entity( "A" );
+my $B  = $tester->yggdrasil_define_entity( "B", inherit => "A" );
+my $AA = $tester->yggdrasil_define_entity( "AA" );
+my $BB = $tester->yggdrasil_define_entity( "BB", inherit => "AA" );
 
 # --- Define Property 'foo' for Entity 'A'
-my $foo = define $A 'foo';
+my $foo = $tester->entity_define_property( $A, "foo" );
 
 # --- Create Instances
-my $i_a  = $A->new( "A" );
-my $i_b  = $B->new( "B" );
-my $i_aa = $AA->new( "AA" );
-my $i_bb = $BB->new( "BB" );
+my $i_a  = $tester->create_instance( $A, "A" );
+my $i_b  = $tester->create_instance( $B, "B" );
+my $i_aa = $tester->create_instance( $AA, "AA" );
+my $i_bb = $tester->create_instance( $BB, "BB" );
 
-$i_a->property( $foo => "A.foo" );
-is( $i_a->property( $foo ), "A.foo" );
-
-$i_b->property( $foo => "B.foo" );
-is( $i_b->property( $foo ), "B.foo" );
+$tester->set_instance_property( $i_a, "foo", "A.foo" );
+$tester->set_instance_property( $i_b, "foo", "B.foo" );
 
 # -- Define Relation 'double'
-my $double = define Yggdrasil::Relation $A, $AA, label => "double";
+my $double = $tester->yggdrasil_define_relation( $A, $AA, label => "double" );
 $double->link( $i_a, $i_aa );
-my @other = $i_a->fetch_related( "AA" );
-ok( @other == 1, "Found 1 other AA" );
-isa_ok( $other[0], $AA, "Other isa $AA" );
-is( $other[0]->id(), "AA", "Other->id() == AA" );
+my @other = $tester->fetch_related( $i_a, $AA, ["AA"] );
 
 #$double->link( $i_b, $i_bb );
-#@other = $i_b->fetch_related( "BB" );
-#ok( @other == 1, "Found 1 other BB" );
-#isa_ok( $other[0], $BB, "Other isa $BB" );
-#is( $other[0]->id(), "BB", "Other->id() == BB" );
+#@other = $tester->fetch_related( $i_b, $BB, ["BB"] );
 
