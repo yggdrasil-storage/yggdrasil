@@ -182,31 +182,31 @@ status( "Bravida", $bravida );
 # host<->room
 # person<->host
 
-my $hr = $ygg->define_relation( $host_entity, $room_entity );
-my $rp = $ygg->define_relation( $room_entity, $phone );
-my $ph = $ygg->define_relation( $phone, $host_entity );
+my $hr = $ygg->define_relation( $host_entity, $room );
+my $rp = $ygg->define_relation( $room, $phone );
+my $ph = $ygg->define_relation( $person, $host_entity );
 my $pc = $ygg->define_relation( $phone, $con );
-my $pp = $ygg->define_relation( $phone, $person_entity );
+my $pp = $ygg->define_relation( $person, $phone );
 
-print "Host<->Room:", $hr->label(), ":\n";
+print "Host<->Room:", $hr->{label}, ":\n";
 
 $hr->link($nommo, $b810);
 $hr->unlink( $nommo, $b810 );
-
 $hr->unlink( $b810, $nommo );
 
-$ph->link( $nommo, $terje );
-$ph->link( $baal, $bard );
+$ph->link( $terje, $nommo );
+$ph->link( $bard, $baal );
 
-$hr->link( $b701, $nommo );
-$hr->link( $baal, $b701 );
+$hr->link( $nommo, $b701 );
+$hr->link( $b701, $baal );
 
-$rp->link( $ophone, $b701 );
+$rp->link( $b701, $ophone );
 
-$pc->link( $ophone, $bravida );
-$pp->link( $ophone, $terje );
+$pc->link( $bravida, $ophone );
 
-for my $e ($phone, $con, $room_entity) {
+$pp->link( $terje, $ophone );
+
+for my $e ($phone, $con, $room) {
   my @res = $terje->fetch_related( $e );
 
   if (@res) {
@@ -229,4 +229,3 @@ for my $e ($phone, $con, $room_entity) {
       print "MISS: ", $terje->id(), " is not related to " , $e->name(), ".\n";
   }
 }
-
