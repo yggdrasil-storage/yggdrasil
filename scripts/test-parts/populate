@@ -76,7 +76,7 @@ my $person_room_relation = $ygg->define_relation( $person_entity, $room_entity, 
 status( 'Person<->Room', $person_room_relation );
 
 $host_room_relation = $ygg->get_relation( 'hr' );
-status( 'Person<->Room (fetch)', $person_room_relation );
+status( 'Host<->Room (fetch)', $host_room_relation );
 
 my $blob = $host_entity->define_property( 'blobbie', 'type' => 'binary', null => 0 );
 status( 'Defining Host:blobbie', $blob );
