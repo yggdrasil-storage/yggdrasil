@@ -83,18 +83,35 @@ sub can {
     my $user      = $ygg->{user} || '';
 
     my $dataref   = $params{data};
-
-    my @targets_to_check;
-
+    my $targets_to_check;
+    
     return 1 if $target =~ /:/; # FIX: properties not implemented.
     return 1 if $target eq "Relations"; # FIX: auth for Relation
-
-    my $roleid_of_user;
-    if ($user) {
-	$roleid_of_user = $self->_get_user_role( $user );
-	debug_if( 4, "Roleid is $roleid_of_user." );
-    }
+    return 1 unless $user && $operation eq 'read'; # Pre-login.
     
+    my $roleid_of_user = $self->_get_user_role( $user );
+    debug_if( 4, "Roleid is $roleid_of_user." );
+
+    ($targets_to_check, $operation) =
+      $self->_get_targets_and_operation( $target, $operation, $dataref );
+
+    #	debug_if( 4, "Requested check of $operation on $target for $user..." );
+    for my $entity (@$targets_to_check) {
+	return 1 if $operation eq 'readable' && $self->_global_read_access( $entity );
+       
+	debug_if( 4, "Checking $operation on $entity for $user..." );
+	my $permission = $self->_can( $roleid_of_user, $entity, $operation );
+	return unless $permission;
+    }
+    return 1;
+}
+
+sub _get_targets_and_operation {
+    my ($self, $target, $operation, $dataref) = @_;
+    my $storage = $self->storage();
+    
+    my @targets_to_check;
+      
     # If we wish to write to MetaEntity, we have in reality asked to
     # create an entity.  To be allowed to do this we have to ask if we
     # are allowed to subclass the entity in question, which is a 'w'
@@ -124,14 +141,13 @@ sub can {
 	push @targets_to_check, $target;
 	$operation = 'writeable';
     } elsif ($target =~ '^Storage_') {
-	return 1;
+	return [];
     } elsif ($operation eq 'read') {
 	for my $t (@$target) {
-	    print "$t\n";
 	    push @targets_to_check, $t;
 	}
     } elsif ($target eq 'MetaAuthEntity') { # FIXME, check parents.
-	return 1;
+	return [];
     } elsif ($target eq 'MetaAuthRolemembership') {
 	@targets_to_check = qw|MetaAuthRole|;
 	$operation = 'writeable';
@@ -146,34 +162,11 @@ sub can {
 	} elsif ($operation =~ /^r/) {
 	    $operation = 'readable';
 	} else {
-	    return undef;
+	    print "Whopsie, $operation\n";
+	    return [];
 	}
     }
-	  
-    #	debug_if( 4, "Requested check of $operation on $target for $user..." );
-    for my $entity (@targets_to_check) {
-	return 1 if $operation eq 'readable' && $self->_global_read_access( $entity );
-       
-	debug_if( 4, "Checking $operation on $entity for $user..." );
-	my $permission = $self->_can( $roleid_of_user, $entity, $operation );
-# 	my $idfetch = $storage->fetch(
-# 				      MetaEntity => { where => [ entity    => $entity ] },
-# 				      Entities   => { where => [
-# 								visual_id => $user,
-# 								entity    => \qq{MetaEntity.id}
-# 							       ] },
-# 				      MetaAuthRolemembership => { where => [ user   => \qq{Entities.id} ] },
-# 				      MetaAuthEntity         => {
-# 								 where => [
-# 									   entity => \qq{MetaEntity.id},
-# 									   role   => \qq{MetaAuthRolemembership.role},
-# 									  ],
-# 								 return => $operation,
-# 								},
-    
-	return unless $permission;
-    }
-    return 1;
+    return (\@targets_to_check, $operation);
 }
 
 sub _setup_default_users_and_roles {
