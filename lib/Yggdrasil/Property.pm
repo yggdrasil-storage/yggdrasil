@@ -46,7 +46,7 @@ sub define {
 	# we have no entity and the property name contains no ":"
 	# This means we were called as $ygg->define_property( "foo" );
 	# that makes no sense!
-	# FIX: Set status
+	$status->set( 406, "Unable to determine correct entity for the property requested " );
 	return;
     }
     
