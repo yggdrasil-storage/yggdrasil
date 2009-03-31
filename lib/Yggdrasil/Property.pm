@@ -128,14 +128,43 @@ sub full_name {
 
 sub get {
     my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    my %params = @_;
+    my $self  = $class->SUPER::new(@_);
+    my %params = @_;    
+    
+    my $status = $self->get_status();
+    my ($entityobj, $entity, $propname);
 
-    # FIX: duh! just fix this - maybe actually ask storage about something?
-    $self->{name} = $params{property};
-    $self->{entity} = $params{entity};
+    if ($params{entity}) {
+	$propname = $params{property};
+    } else {
+	my @parts = split m/::/, $params{property};
+	my $last = pop @parts;
+	($entity, $propname) = (split m/:/, $last, 2);
+	push( @parts, $entity );
+	$params{entity} = join('::', @parts);
+    }
 
-    return $self;
+    if (ref $params{entity}) {
+	$entityobj = $params{entity}; 
+    } else {
+	$entityobj = Yggdrasil::Entity::objectify( name      => $params{entity},
+						   yggdrasil => $self );
+    }
+
+    # property_exists does not require the entity to actually exist
+    # for the test to be valid, so there's no reason to ask storage to
+    # create a proper entity object above, hence we use objectify and
+    # then call propert_exists on that object directly.
+    my $prop = $entityobj->property_exists( $propname );
+    if ($prop) {
+	$self->{name} = $params{property};
+	$self->{entity} = $params{entity};
+	$status->set( 200 );
+	return $self;
+    } else {
+	$status->set( 404 );
+	return undef;
+    }
 }
 
 sub undefine {

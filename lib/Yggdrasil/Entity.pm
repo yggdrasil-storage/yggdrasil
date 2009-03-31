@@ -209,7 +209,9 @@ sub undefine_property {
 }
 
 sub get_property {
-
+    my $self = shift;
+    my $prop = shift;
+    return Yggdrasil::Property->get( yggdrasil => $self, entity => $self, property => $prop, @_ );
 }
 
 # Handle property queries.
