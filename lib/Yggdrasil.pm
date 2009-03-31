@@ -206,8 +206,9 @@ sub get_relation {
 
 sub get_property {
     my $self = shift;
-
-    return Yggdrasil::Property->get( yggdrasil => $self, @_ );
+    my $prop = shift;
+    
+    return Yggdrasil::Property->get( yggdrasil => $self, property => $prop, @_ );
 }
 
 ###############################################################################
