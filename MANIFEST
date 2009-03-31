@@ -75,6 +75,7 @@ t/00-load.t
 t/02-bootstrap.t
 t/10-basics.t
 t/20-instance.t
+t/22-instance-in-time.t
 t/30-relation.t
 t/40-inheritance.t
 t/50-users.t

@@ -156,6 +156,25 @@ sub create_instance {
     return $i;
 }
 
+sub get_instance {
+    my $self = shift;
+    my $e = shift;
+    my $name = shift;
+    my $num = shift;
+
+    my @i = $e->fetch( $name, @_ );
+    for my $i (@i) {
+	$self->_check_instance( $i, name => $name, func => 'get' );
+    }
+
+    if( defined $num ) {
+	my $n = @i;
+	ok( @i == $num, "$Y_E_I->get(): Got $n instances" );
+    }
+
+    return @i;
+}
+
 sub set_instance_property {
     my $self = shift;
     my $i = shift;
@@ -342,7 +361,7 @@ sub _check_instance {
     my $prefix = "$Y_E->$func()";
 
     isa_ok( $i, $Y_E_I, "$prefix: Return value" );
-    ok( $self->OK(), "$prefix: Created instance '$name' with status " . $self->code() );
+    ok( $self->OK(), "$prefix: $func()'ed instance '$name' with status " . $self->code() );
 
     my $n = $i->id();
     is( $n, $name, "$prefix: Instance id is $n" );
