@@ -7,85 +7,118 @@ use Yggdrasil::Utilities;
 use strict;
 use warnings;
 
-sub new {
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
+sub create {
+    my $class  = shift;
+    my $self   = $class->SUPER::new(@_);
     my %params = @_;
-    
-    # --- do stuff
-    my $visual_id;
-    
-    $self->{visual_id} = $visual_id = $params{visual_id};
-    
-    $self->{entity}    = $params{entity};
-    
-    $self->{_start} = $params{start};
-    $self->{_stop}  = $params{stop};
-    
-    my $entity = $self->{entity};
-    
-    $self->{_id} = $self->_get_id(); 
 
-    unless ($self->{_id}) { 
-	my $idref = $self->storage()->fetch('MetaEntity', { return => 'id',
-							    where => [ entity => $entity->name() ],
-							  });
-	$self->storage()->store( 'Entities', fields => {
-							visual_id => $visual_id,
-							entity    => $idref->[0]->{id},
-						       } );
-	$self->{_id} = $self->_get_id();
+    my $vid    = $self->{visual_id} = $params{id};
+    my $entity = $self->{entity}    = $params{entity};
+
+    # Check if the instance already exists
+    my $status = $self->get_status();
+    my $ename  = $entity->name();
+
+    my $instance = __PACKAGE__->fetch( yggdrasil => $self, %params );
+    if( $instance ) {
+	$status->set( 202, "Instance '$vid' already existed for entity '$ename'." );
+	return $instance;
     }
 
+    # Create the instance
+    # FIX: Want to avoid having to query MetaEntity for the entity's
+    #      id. Couldn't Entity-objects have an ->_id() or similar
+    #      method that returns this number?
+    my $idref = $self->storage()->fetch( 
+	MetaEntity => { return => 'id', where  => [ entity => $ename ] } );
+
+    my $eid = $idref->[0]->{id};
+    # FIX: store() should return any auto_increment value (so that we
+    #      don't have to do yet another query to get the generated
+    #      instance id
+    $self->storage()->store( Entities => fields => { visual_id => $vid,
+						     entity    => $eid } );
+    $self->{_id} = $self->_get_id();
+
+    $status->set( 201, "Created instance '$vid' in entity '$ename'." );
     return $self;
+}
+
+sub fetch {
+    my $class  = shift;
+    my $self   = $class->SUPER::new(@_);
+    my %params = @_;
+
+    my $vid    = $self->{visual_id} = $params{id};
+    my $entity = $self->{entity}    = $params{entity};
+    my $time   = $params{time} || [];
+
+    my $ename = $entity->name();
+
+    my $status = $self->get_status();
+
+    # Check if instance exists
+    my $id = $self->_get_id();
+    unless( $id ) {
+	$status->set( 404, "Instance '$vid' not found in entity '$ename'." );
+	return;
+    }
+
+    if( @$time > 1 && ! wantarray && $time->[0] != $time->[1] ) {
+	$status->set( 406, "When calling fetch with a time slice specified a list will be returned" );
+	return;
+    }
+
+    # If the user only specifies one time argument, then stop should
+    # be set equal to start, meaning fetch is called for a specific
+    # moment in time.
+    push( @$time, $time->[0] ) if @$time == 1;
+
+    my @instances;
+    for my $dataref ( $self->_get_in_time($vid, @$time) ) {
+	# UGH ...
+	my $o = __PACKAGE__->new( yggdrasil => $self );
+	$o->{visual_id} = $vid;
+	$o->{_id}       = $id;
+	$o->{_start}    = $dataref->{start};
+	$o->{_stop}     = $dataref->{stop};
+	$o->{entity}    = $entity;
+
+	push( @instances, $o );
+    }
+
+    $status->set( 200 );
+    if( @$time && $time->[0] && $time->[1] && $time->[0] != $time->[1] ) {
+	return @instances;
+    } else {
+	return $instances[-1];
+    }
+}
+
+sub delete :method {
+    my $class  = shift;
+    my $self   = $class->SUPER::new(@_);
+    my %params = @_;
+
+    # FIX: write this method
+    #      expire the instance (as well as all it's property values?)
 }
 
 sub _get_id {
     my $self = shift;
     my $entity = $self->{entity};
 
-    my $idfetch = $self->storage()->fetch('MetaEntity', { 
-							 where => [ entity => $entity->name(), 
-								    id     => \qq{Entities.entity}, ],
-							},
-					  'Entities', {
-						       return => "id",
-						       where => [ 
-								 visual_id => $self->id(),
-								] } );
+    my $idfetch = $self->storage()->fetch(
+	MetaEntity => { 
+	    where => [ entity => $entity->name(), 
+		       id     => \qq{Entities.entity} ]	},
+	Entities   => {
+	    return => "id",
+	    where => [ visual_id => $self->id() ] } );
 
     return $idfetch->[0]->{id};
 }
 
-# FIXME; this is supposed to be fetch in Yggdrasil::Entity now.
-sub _get {
-  my $self = shift;
-  my $visual_id = shift;
-  my @time = @_;
-
-  my $status = $self->get_status();
-  if (@time > 1 && ! wantarray && ! $time[0] == $time[1]) {
-      $status->set( 406, "When calling get with a time slice specified, you will recieve a list" );
-      return undef;
-  }
-  
-  # If the user only specifies one time argument, then stop should be set equal to start,
-  # meaning get is called for a specific moment in time.
-  if( @time == 1 ) {
-      push( @time, $time[0] );
-  }
-  
-  my @objects;
-  for my $dataref ($self->_get_in_time( $visual_id, @time )) {
-      push @objects, $self->new( $visual_id, $dataref->{start}, $dataref->{stop} );
-  }
-
-  if (@time && $time[0] && $time[1] && $time[0] ne $time[1]) {
-      return @objects;
-  } else {
-      return $objects[-1];
-  }
-}
 
 sub _get_in_time {    
     my $self = shift;
@@ -93,6 +126,9 @@ sub _get_in_time {
     my @time = @_;
     
     my $entity = $self->{entity};
+
+    # FIX: Do we really need to perform this query?
+    #      Can't we just check $self->{_id}?
     my $idref  = $self->storage()->fetch('MetaEntity', { 
 							where => [ entity => $entity->name(), 
 								   id     => \qq{Entities.entity}, ],
@@ -111,12 +147,11 @@ sub _get_in_time {
 	}
     }
     
-    my $fetchref = $self->storage()->fetch('MetaEntity', { where => [
-								     entity => $entity->name(), 
-								     id     => \qq<MetaProperty.entity>,
-								    ]},
-					   "MetaProperty" => { return => "property" },
-					   { start => $time[0], stop => $time[1] } );
+    my $fetchref = $self->storage()->fetch(
+	MetaEntity   => { where => [ entity => $entity->name(), 
+				     id     => \qq<MetaProperty.entity> ] },
+	MetaProperty => { return => "property" },
+	{ start => $time[0], stop => $time[1] } );
     
     my @wheres;
     push( @wheres, 'Entities' => { join => "left", where => [ id => $id ] } );

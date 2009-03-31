@@ -14,13 +14,9 @@ use Yggdrasil::Property;
 
 use Yggdrasil::Utilities qw|ancestors get_times_from|;
   
-# We inherit _add_meta from MetaEntity and _add_inheritance from
-# MetaInheritance.
-#use base qw(Yggdrasil::MetaEntity Yggdrasil::MetaInheritance);
-
 sub define {
-    my $class = shift;
-    my $self  = $class->SUPER::new( @_ );
+    my $class  = shift;
+    my $self   = $class->SUPER::new( @_ );
     my %params = @_;
 
     my $name   = $params{entity};
@@ -110,66 +106,37 @@ sub undefine {
 
 }
 
-# instance, FIX so that one tests the result from YEI before setting 201.
+# create instance
 sub create {
-    my $self  = shift;
-    my $name  = shift;
+    my $self = shift;
+    my $name = shift;
 
-    my $obj = $self->_get_instance( $name );
-    
-    my $status = $self->get_status();
-
-    if ($obj) {
-	$status->set( 202, "Instance '$name' already existed for entity '$self->{name}'." );
-    } else {
-	$status->set( 201, "Created instance '$name' in entity '$self->{name}'." );
-    }
-    
-    return Yggdrasil::Entity::Instance->new( visual_id => $name,
-					     entity    => $self,
-					     yggdrasil => $self->{yggdrasil} ); 
+    return Yggdrasil::Entity::Instance->create( yggdrasil => $self,
+						entity    => $self,
+						id        => $name );
 }
 
+# fetch instance
 sub fetch {
     my $self  = shift;
     my $name  = shift;
 
-    my $obj = $self->_get_instance( $name );
-
-    my $status = $self->get_status();
-    unless ($obj) {
-	$status->set( 404, "Instance '$name' not found in entity '$self->{name}'." );
-	return undef;
-    }
-    
-    $status->set( 200 );
-    return new Yggdrasil::Entity::Instance( visual_id => $name,
-					    entity    => $self,
-					    yggdrasil => $self->{yggdrasil} );    
+    return Yggdrasil::Entity::Instance->fetch( yggdrasil => $self,
+					       entity    => $self,
+					       id        => $name, 
+					       time      => [@_] );
 }
 
+# delete instance
 sub delete :method {
-    # delete an instance
-}
-
-
-# should this be Y::E::I->get(...)?
-sub _get_instance {
     my $self = shift;
-    my $visual_id = shift;
-    
-    my $st   = $self->{yggdrasil}->{storage};
-    my $aref = $st->fetch('MetaEntity', { 
-					 where => [ entity => $self->{name}, 
-						    id     => \qq{Entities.entity}, ],
-					},
-			  'Entities', {
-				       return => "id",
-				       where => [ 
-						 visual_id => $visual_id,
-						] } );
-    return $aref->[0]->{id};
+    my $name = shift;
+
+    return Yggdrasil::Entity::Instance->delete( yggdrasil => $self,
+						entity    => $self,
+						id        => $name );
 }
+
 
 sub search {
     my ($self, $key, $value) = (shift, shift, shift);
