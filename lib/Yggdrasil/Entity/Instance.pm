@@ -210,6 +210,7 @@ sub set {
     return $self->property( @_ );
 }
 
+# FIXME, calling both property_exists and get is redundant.
 sub property {
     my $self = shift;
     my ($key, $value) = @_;
