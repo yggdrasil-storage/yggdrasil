@@ -124,7 +124,7 @@ sub _get_in_time {
     my $self = shift;
     my $visual_id = shift;
     my @time = @_;
-    
+
     my $entity = $self->{entity};
 
     # FIX: Do we really need to perform this query?
@@ -199,15 +199,16 @@ sub _define {
 # the db hits in the $dbref parameter.  
 sub _filter_start_times {
     my ($self, $start, $stop, $dbref) = @_;
-    
-    my %times;
+
     if (defined $start && defined $stop && $start == $stop && @$dbref) {
-	return {
-		start => $start,
-		stop  => $start
-	       };
+	return { $start => {
+	    start => $start,
+	    stop  => $start
+		 }
+	};
     }
     
+    my %times;
     foreach my $e ( @$dbref ) {
 	foreach my $key ( keys %$e ) {
 	    next unless $key =~ /_start$/;
