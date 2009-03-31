@@ -215,64 +215,42 @@ sub get_property {
 # Undefines
 sub undefine_user {
     my $self = shift;
+    my $user = shift;
 
-    Yggdrasil::User->undefine( yggdrasil => $self, @_ );
+    return Yggdrasil::User->undefine( yggdrasil => $self, user => $user, @_ );
 }
 
 sub undefine_role {
     my $self = shift;
+    my $role = shift;
 
-    Yggdrasil::Role->undefine( yggdrasil => $self, @_ );
+    return Yggdrasil::Role->undefine( yggdrasil => $self, role => $role, @_ );
 }
 
 sub undefine_entity {
-    my $self = shift;
+    my $self   = shift;
+    my $entity = shift;
 
-    Yggdrasil::Entity->undefine( yggdrasil => $self, @_ );
+    return Yggdrasil::Entity->undefine( yggdrasil => $self, entity => $entity, @_ );
 }
 
 sub undefine_relation {
-    my $self = shift;
+    my $self  = shift;
+    my $label = shift;
 
-    Yggdrasil::Relation->undefine( yggdrasil => $self, @_ );
+    return Yggdrasil::Relation->undefine( yggdrasil => $self, label => $label, @_ );
 }
 
 sub undefine_property {
     my $self = shift;
+    my $prop = shift;
 
-    Yggdrasil::Property->undefine( yggdrasil => $self, @_ );
+    return Yggdrasil::Property->undefine( yggdrasil => $self, property => $prop,  @_ );
 }
 
 
-
-sub _setup_logger {
-    my $self = shift;
-    
-    my $project_root = $self->_project_root() || ".";
-    my $logconfig = shift || "$project_root/etc/log4perl-debug";
-    
-    if( -e $logconfig ) {
-	Log::Log4perl->init( $logconfig );
-    } else {
-	# warn( "No working Log4perl configuration found in $logconfig." );
-    }
-
-    $self->{logger} = get_logger();
-}
-
-sub _project_root {
-    my $self = shift;
-
-    my $file = __PACKAGE__ . ".pm";
-    $file =~ s|::|/|g;
-
-    my $path = $INC{$file};
-    return unless $path;
-
-    $path = File::Spec->catdir( dirname($path), File::Spec->updir() );
-
-    return abs_path($path);
-}
+###############################################################################
+# other public methods
 
 # entities, returns all the entities known to Yggdrasil.
 sub entities {
@@ -280,10 +258,13 @@ sub entities {
 
     my $roleid = $self->{auth}->_get_user_role( $self->{user} );
 
-    my $aref = $self->{storage}->_fetch( 'MetaAuthEntity', { where => [ role => $roleid, readable => 1 ]},
-					 'MetaEntity', { where => [ id => \qq{MetaAuthEntity.entity}, ],
-							 return => 'entity' });
-    return map { Yggdrasil::Entity::objectify( name => $_->{entity}, yggdrasil => $self ) } @$aref;
+    my $aref = $self->{storage}->_fetch( 
+	MetaAuthEntity => { where => [ role => $roleid, readable => 1 ]},
+	MetaEntity     => { where => [ id => \qq{MetaAuthEntity.entity}, ],
+			    return => 'entity' });
+
+    return map { Yggdrasil::Entity::objectify( name      => $_->{entity}, 
+					       yggdrasil => $self ) } @$aref;
 }
 
 
@@ -313,6 +294,39 @@ sub exists {
     return undef unless $fetchref->[0];
     return $fetchref->[0]->{id};
 }
+
+
+###############################################################################
+# Helper functions
+sub _setup_logger {
+    my $self = shift;
+    
+    my $project_root = $self->_project_root() || ".";
+    my $logconfig = shift || "$project_root/etc/log4perl-debug";
+    
+    if( -e $logconfig ) {
+	Log::Log4perl->init( $logconfig );
+    } else {
+	# warn( "No working Log4perl configuration found in $logconfig." );
+    }
+
+    $self->{logger} = get_logger();
+}
+
+sub _project_root {
+    my $self = shift;
+
+    my $file = __PACKAGE__ . ".pm";
+    $file =~ s|::|/|g;
+
+    my $path = $INC{$file};
+    return unless $path;
+
+    $path = File::Spec->catdir( dirname($path), File::Spec->updir() );
+
+    return abs_path($path);
+}
+
 
 # Exit method if something really breaks.  It should be used over
 # "die" or "confess" throughout Yggdrasil to provide a default exit
