@@ -220,7 +220,7 @@ sub fetch {
 
     unless ($self->{bootstrap}) {
 	my %params = @_;
-	if (! $self->can( operation => 'read', data => \%params, target => \@targets )) {
+	if (! $self->can( operation => 'readable', data => \%params, target => \@targets )) {
 	    my $status = $self->get_status();
 	    $status->set( 403 );
 	    return;

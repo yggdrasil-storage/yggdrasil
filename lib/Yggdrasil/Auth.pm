@@ -87,7 +87,7 @@ sub can {
     
     return 1 if $target =~ /:/; # FIX: properties not implemented.
     return 1 if $target eq "Relations"; # FIX: auth for Relation
-    return 1 unless $user && $operation eq 'read'; # Pre-login.
+    return 1 unless $user && $operation eq 'readable'; # Pre-login.
     
     my $roleid_of_user = $self->_get_user_role( $user );
     debug_if( 4, "Roleid is $roleid_of_user." );
@@ -142,7 +142,7 @@ sub _get_targets_and_operation {
 	$operation = 'writeable';
     } elsif ($target =~ '^Storage_') {
 	return [];
-    } elsif ($operation eq 'read') {
+    } elsif ($operation eq 'readable') {
 	for my $t (@$target) {
 	    push @targets_to_check, $t;
 	}
