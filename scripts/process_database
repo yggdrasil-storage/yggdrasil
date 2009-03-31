@@ -37,6 +37,7 @@ GetOptions(
 	  );
 
 my $y = new Yggdrasil();
+my $status = $y->get_status();
 
 $y->connect( 
 	    user      => $user,
@@ -47,8 +48,10 @@ $y->connect(
 	    engine    => $engine,
 	    admin     => 1,
 	   );
+die $status->message() unless $status->OK();
 
 $y->login();
+die $status->message() unless $status->OK();
 
 my $storage = $y->{storage};
 
