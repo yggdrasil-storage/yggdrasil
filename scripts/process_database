@@ -141,7 +141,7 @@ for my $structure (@structures) {
 		    my $key = $1;
 		    if ($mapped_struct eq 'Relations') {
 			# id | <id1> | <id2>
-			if ($i == 1 || $i == 2) {
+			if ($i == 1 || $i == 3) {
 			    $c = "$c (" . $idents{$c} . ")";
 			} elsif ($i == 0) {
 			    $c = "$c (" . $relations{$c} . ")";
