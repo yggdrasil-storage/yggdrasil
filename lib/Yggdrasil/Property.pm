@@ -157,7 +157,7 @@ sub get {
     # then call propert_exists on that object directly.
     my $prop = $entityobj->property_exists( $propname );
     if ($prop) {
-	$self->{name} = $params{property};
+	$self->{name}   = $propname;
 	$self->{entity} = $params{entity};
 	$status->set( 200 );
 	return $self;
