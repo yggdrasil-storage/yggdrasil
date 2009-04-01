@@ -246,7 +246,6 @@ sub set {
     return $self->property( @_ );
 }
 
-# FIXME, calling both property_exists and get is redundant.
 sub property {
     my $self = shift;
     my ($key, $value) = @_;
@@ -256,15 +255,16 @@ sub property {
     my $entity = $self->{entity};
     my $name = join(":", $entity->name(), $key );
 
-    my $schema = $entity->property_exists( $key );
-
+    my $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity->name(), property => $key );
+    
     my $status = $self->get_status();
     
-    unless (defined $schema) {
+    unless ($p) {
 	$status->set( 404, "Unable to find property '$key' for entity '" . $entity->name() . "'" );
 	return undef;
     }
     
+    my $schema = $p->full_name();
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
 	if( defined $self->{_start} || defined $self->{_stop} ) {
@@ -273,7 +273,6 @@ sub property {
 	}
 
 	# FIXME, $self->null is void, need to get $prop->null
-	my $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity->name(), property => $key );
 
 	unless ( $p ) {
 	    $status->set( 404, "Property '$key' not defined for '" . $entity->name() . "'" );
@@ -389,6 +388,7 @@ sub pathlength {
 }
 
 
+# FIXME, set status values!
 sub fetch_related {
   my $self = shift;
   my $relative = shift;
@@ -479,6 +479,7 @@ sub _fetch_related {
 
   return $path if $start eq $stop;
 
+  # FIXME, what do we do if we get 403 returned here?
   my $other = $storage->fetch( 'MetaRelation',
 			       { return => [ qw/lval rval/ ],
 				 where => [ lval => $start,
