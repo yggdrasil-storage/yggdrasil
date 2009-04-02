@@ -263,8 +263,9 @@ sub property {
 	$status->set( 404, "Unable to find property '$key' for entity '" . $entity->name() . "'" );
 	return undef;
     }
-    
-    my $schema = $p->full_name();
+
+    # FIX: Sadly, $p->full_name doesn't deal with inheritance properly.
+    my $schema = $entity->property_exists( $key );
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
 	if( defined $self->{_start} || defined $self->{_stop} ) {

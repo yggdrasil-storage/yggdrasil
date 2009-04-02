@@ -120,6 +120,8 @@ sub entity {
     return $self->{entity};
 }
 
+# FIX, this does *NOT* take inheritance into account and is as such
+# completely broken
 sub full_name {
     my $self = shift;
 
