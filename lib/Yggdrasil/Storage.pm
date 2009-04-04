@@ -8,21 +8,23 @@ use Yggdrasil::Storage::Mapper;
 our $STORAGEMAPPER   = 'Storage_mapname';
 our $STORAGETEMPORAL = 'Storage_temporals';
 our $STORAGECONFIG   = 'Storage_config';
+our $STORAGETICKER   = 'Storage_ticker';
 our $MAPPER;
 
 our $ADMIN = undef;
 
 our %TYPES = (
-	      TEXT     => 1,
-	      VARCHAR  => 255,
-	      BOOLEAN  => 1,
-	      SET      => 1,
-	      INTEGER  => 1,
-	      FLOAT    => 1,
-	      DATE     => 1,
-	      SERIAL   => 1,
-	      BINARY   => 1,
-              PASSWORD => 1,
+    TEXT      => 1,
+    VARCHAR   => 255,
+    BOOLEAN   => 1,
+    SET       => 1,
+    INTEGER   => 1,
+    FLOAT     => 1,
+    TIMESTAMP => 1,
+    DATE      => 1,
+    SERIAL    => 1,
+    BINARY    => 1,
+    PASSWORD  => 1,
 	     );
 
 sub new {
@@ -79,9 +81,15 @@ sub new {
 	$ADMIN  = $data{admin};
 	
 	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
+
+	if( ! $storage->{bootstrap} && $storage->yggdrasil_is_empty() ) {
+	    $status->set( 503, "Yggdrasil has not been bootstrapped" );
+	    return;
+	}
 	
 	$storage->_initialize_config();
 	$storage->_initialize_mapper();
+	$storage->_initialize_ticker();
 	$storage->_initialize_temporal();
 	
 	return $storage;
@@ -136,7 +144,17 @@ sub define {
 	return;
     }
 
+    # Add commiter field
     $data{fields}->{committer} = { type => 'VARCHAR(255)', null => 0 };
+
+    # Add temporal field
+    if( $data{temporal} ) {
+	$data{fields}->{start} = { type => 'INTEGER', null => 0 };
+	$data{fields}->{stop}  = { type => 'INTEGER', null => 1 };
+	$data{hints}->{start}  = { foreign => $STORAGETICKER };
+	$data{hints}->{stop}   = { foreign => $STORAGETICKER };
+    }
+
     my $retval = $self->_define( $schema, %data );
 
    # We might create a schema with name "0", so check for a defined value.
@@ -164,9 +182,10 @@ sub store {
     my $schema = shift;
     my %params = @_;
 
+    my $status = $self->get_status();
+
     unless ($self->{bootstrap}) {
 	if (! $self->can( operation => 'store', target => $schema, data => \%params )) {
-	    my $status = $self->get_status();
 	    $status->set( 403 );
 	    return;
 	} 
@@ -178,7 +197,44 @@ sub store {
 	$params{fields}->{committer} = $self->{user};
     }
     
-    return $self->_store( $self->_get_schema_name( $schema ), %params );
+
+    # Check if we already have the value
+    my $real_schema = $self->_get_schema_name( $schema );
+    my $aref = $self->fetch( $real_schema => { where => [ %{$params{fields}} ] } );
+    if( @$aref ) {
+	$status->set( 202, "Value(s) already set" );
+	return 1;
+    }
+
+    # Tick
+    my $tick;
+    if( $self->_schema_is_temporal($real_schema) ) {
+	$tick = $self->tick();
+    }
+
+
+    # Expire the old value
+    my %keys;
+    my $key = $params{key};
+    if( $key ) {
+	if( ref $key eq 'ARRAY' ) {
+	    for my $k (@$key) {
+		$keys{$k} = $params{fields}->{$k};
+	    }
+	} else {
+	    $keys{$key} = $params{fields}->{$key};
+	}
+
+	$self->_expire( $real_schema, $tick, %keys );
+    }
+
+    return $self->_store( $real_schema, tick => $tick, %params );
+}
+
+sub tick {
+    my $self = shift;
+
+    return $self->_store( $self->_get_schema_name($STORAGETICKER) );
 }
 
 sub raw_store {
@@ -249,7 +305,13 @@ sub expire {
     my $self   = shift;
     my $schema = shift;
     
-    $self->_expire( $self->_get_schema_name( $schema ), @_ );
+    my $real_schema = $self->_get_schema_name( $schema );
+    return unless $self->_schema_is_temporal($real_schema);
+
+    # Tick
+    my $tick = $self->tick();
+
+    $self->_expire( $real_schema, $tick, @_ );
 }
 
 # exists ( schema, field, value ) 
@@ -481,6 +543,21 @@ sub _initialize_temporal {
 		     );
     }
     
+}
+
+sub _initialize_ticker {
+    my $self = shift;
+
+    unless( $self->_structure_exists($STORAGETICKER) ) {
+	$self->define( $STORAGETICKER,
+		       nomap  => 1,
+		       fields => {
+			   id    => { type => 'SERIAL' },
+			   stamp => { type => 'TIMESTAMP', 
+				      null => 0,
+				      default => "current_timestamp" },
+		       }, );
+    }
 }
 
 # Initialize the STORAGE config, this structure is required to be

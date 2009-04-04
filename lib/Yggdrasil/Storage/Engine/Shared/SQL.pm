@@ -22,17 +22,14 @@ sub _define {
     my $hints    = $data{hints};
 
     my $sql = "CREATE TABLE $schema (\n";
-    
+ 
     my (@sqlfields, @indexes, %keys);
     for my $fieldname (keys %$fields) {
 	my $field = $fields->{$fieldname};
-	my ($type, $null, $index) = ($field->{type}, $field->{null}, $field->{index});
+	my ($type, $null, $index, $default) = ($field->{type}, $field->{null}, $field->{index}, $field->{default});
 	
-	if ($null) {
-	    $null = 'NULL';
-	} else {
-	    $null = 'NOT NULL';
-	}
+	$null = $null ? 'NULL' : 'NOT NULL';
+	$default = defined $default ? "DEFAULT $default" : '';
 	
 	$keys{$fieldname}++ if $type eq 'SERIAL' && $self->_engine_requires_serial_as_key();
 
@@ -41,20 +38,12 @@ sub _define {
 
 	# FUGLY hack to ensure that id fields come first in the listings.
 	if ($fieldname eq 'id') {
-	    unshift @sqlfields, "$fieldname $type $null";
+	    unshift @sqlfields, "$fieldname $type $null $default";
 	} else {
-	    push @sqlfields, "$fieldname $type $null";
+	    push @sqlfields, "$fieldname $type $null $default";
 	}
     }
 
-    if ($temporal) {
-	my $datefield = $self->_map_type( 'DATE' );
-	push @sqlfields, "start $datefield NOT NULL";
-	push @sqlfields, "stop  $datefield NULL";
-	push @indexes, 'stop';
-	push @sqlfields, "check ( start <= stop )";
-    }
-    
     for my $fieldname (keys %$hints) {
 	my $field = $hints->{$fieldname};
 	$keys{$fieldname}++ if $field->{key};
@@ -107,6 +96,14 @@ sub _engine_requires_serial_as_key {
     return 0;
 }
 
+sub _last_insert_id {
+    my $self = shift;
+    my $table = shift;
+
+    my $dbh = $self->{dbh};
+    return $dbh->last_insert_id( undef, undef, $table, undef );
+}
+
 # Perform a prewritten statement that is not expected to return
 # anything.  An important note here is that the table name is already
 # given and assumed to be correct.  Any mapping has to be done before
@@ -134,7 +131,7 @@ sub _sql {
 	$status->set( 500, "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
 	return;
     }
-
+    
     # FIX: if we do some DDL stuff, doing a fetch later on will make
     # DBD::mysql warn about calling fetch before execute. So if we do
     # DDL stuff, just return. Don't bother to fetch anything.
@@ -316,41 +313,34 @@ sub _store {
     my %data = @_;
 
     my $key    = $data{key};
-    my $fields = $data{fields};
+    my $fields = $data{fields} || {};
+    my $tick   = $data{tick};
+
+    # If the schema is temporal, we need to insert the current tick
+    # into 'start' - so add 
+    my( @tick_key, @tick_val );
+    if( $self->_schema_is_temporal($schema) ) {
+	@tick_val = ($tick);
+	@tick_key = ('start');
+    }
+
+    # The fields we want to insert into
+    my $dbfields = join(", ", keys %$fields, @tick_key);
+
+    # how many '?' to generate
+    # need to test to avoid adding with undef
+    my $num = keys %$fields;
+    $num = $num ? $num + @tick_val : @tick_val;
+    my $placeholders = join(", ", ('?') x $num );
+
+    # Execute the SQL and fetch the generated id (if any)
+    my $sql = "INSERT INTO $schema ($dbfields) VALUES($placeholders)";
+    $self->_sql( $sql, values %$fields, @tick_val );
+    my $r = $self->_last_insert_id();
 
     my $status = $self->get_status();
-
-    # Check if we already have the value
-    my $aref = $self->fetch( $schema, { where => [ %$fields ] } );
-    if (@$aref) {
-	$status->set( 202, 'Value(s) already set' );
-	return 1;
-    }
-
-    # Expire the old value
-    my %keys;
-    if ($key) {
-	if (ref $key eq 'ARRAY') {
-	    for my $k (@$key) {
-		$keys{$k} = $fields->{$k};
-	    } 
-	} else {
-	    $keys{$key} = $fields->{$key};
-	}
-    
-	$self->_expire( $schema, %keys ); 
-    }
-
-    # Insert new value, _sql sets the status of its own work.
-    if ($self->_schema_is_temporal( $schema )) {
-	$self->_sql( "INSERT INTO $schema (start, " . join(", ", keys %$fields) . ") VALUES (NOW(), "
-		     . join(", ", ('?') x keys %$fields) . ')', values %$fields)
-    } else {
-	$self->_sql( "INSERT INTO $schema (" . join(", ", keys %$fields) . ") VALUES ( "
-		     . join(", ", ('?') x keys %$fields) . ')', values %$fields)
-    }
     $status->set( 200, "Value(s) set" );
-    return 1;
+    return $r;
 }
 
 # Store data in raw form into the structure given, the only exceptions
@@ -384,6 +374,7 @@ sub _raw_store {
 sub _expire {
     my $self   = shift;
     my $schema = shift;
+    my $tick   = shift;
     my %params = @_;
 
     return unless $self->_schema_is_temporal( $schema );
@@ -397,7 +388,7 @@ sub _expire {
     }
     my $keys = join " and ", @sets;
 
-    $self->_sql( "UPDATE $schema SET stop = NOW() WHERE stop $nullopr NULL and $keys", values %params );
+    $self->_sql( "UPDATE $schema SET stop = ? WHERE stop $nullopr NULL and $keys", $tick, values %params );
 }
 
 # Generates a field / data based where clause, ensuring that the
