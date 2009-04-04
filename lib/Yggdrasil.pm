@@ -105,6 +105,7 @@ sub connect {
 	);
 
     return unless $self->get_status()->OK();
+
     return 1;
 }
 
@@ -113,10 +114,10 @@ sub login {
     my %params = @_;
 
     my $status = $self->get_status();
-    
+
     if ($self->{user}) {
 	$status->set( 406, 'Already logged in' );
-	return undef;
+	return;
     }
 
     my $auth = new Yggdrasil::Auth( yggdrasil => $self );
@@ -124,7 +125,7 @@ sub login {
 
     if ($status->OK()) {
 	$self->{storage}->{user} = $self->{user} = $auth->{user};
-	return $self->{user};
+	return $self->user();
     }
 
     return;
