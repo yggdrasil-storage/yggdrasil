@@ -33,12 +33,10 @@ sub create {
 	MetaEntity => { return => 'id', where  => [ entity => $ename ] } );
 
     my $eid = $idref->[0]->{id};
-    # FIX: store() should return any auto_increment value (so that we
-    #      don't have to do yet another query to get the generated
-    #      instance id
-    $self->storage()->store( Entities => fields => { visual_id => $vid,
-						     entity    => $eid } );
-    $self->{_id} = $self->_get_id();
+
+    $self->{_id} = $self->storage()->store( Entities => 
+					    fields => { visual_id => $vid,
+							entity    => $eid } );
 
     $status->set( 201, "Created instance '$vid' in entity '$ename'." );
     return $self;
