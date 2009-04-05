@@ -144,15 +144,15 @@ sub define {
 	return;
     }
 
-    # Add commiter field
-    $data{fields}->{committer} = { type => 'VARCHAR(255)', null => 0 };
-
-    # Add temporal field
     if( $data{temporal} ) {
+	# Add temporal field
 	$data{fields}->{start} = { type => 'INTEGER', null => 0 };
 	$data{fields}->{stop}  = { type => 'INTEGER', null => 1 };
 	$data{hints}->{start}  = { foreign => $STORAGETICKER };
 	$data{hints}->{stop}   = { foreign => $STORAGETICKER };
+    } else {
+	# Add commiter field
+	$data{fields}->{committer} = { type => 'VARCHAR(255)', null => 0 };
     }
 
     my $retval = $self->_define( $schema, %data );
@@ -191,13 +191,6 @@ sub store {
 	} 
     }
 
-    if ($self->{bootstrap}) {
-	$params{fields}->{committer} = 'bootstrap';
-    } else {
-	$params{fields}->{committer} = $self->{user};
-    }
-    
-
     # Check if we already have the value
     my $real_schema = $self->_get_schema_name( $schema );
     my $aref = $self->fetch( $real_schema => { where => [ %{$params{fields}} ] } );
@@ -209,7 +202,14 @@ sub store {
     # Tick
     my $tick;
     if( $self->_schema_is_temporal($real_schema) ) {
-	$tick = $self->tick( committer => $params{fields}->{committer} );
+	# tick when we commit changes to temporal tables
+	$tick = $self->tick();
+    } else {
+	# don't tick, but add committer instead
+	$params{fields}->{committer} = $self->{user};
+	if ($self->{bootstrap}) {
+	    $params{fields}->{committer} = 'bootstrap';
+	}
     }
 
 
@@ -233,9 +233,11 @@ sub store {
 
 sub tick {
     my $self = shift;
-    my %data = @_;
 
-    return $self->_store( $self->_get_schema_name($STORAGETICKER), fields => \%data );
+    my $c = $self->{user};
+    $c = 'bootstrap' if $self->{bootstrap};
+
+    return $self->_store( $self->_get_schema_name($STORAGETICKER), fields => { committer => $c } );
 }
 
 sub raw_store {
@@ -309,13 +311,8 @@ sub expire {
     my $real_schema = $self->_get_schema_name( $schema );
     return unless $self->_schema_is_temporal($real_schema);
 
-    my $committer = $self->{user};
-    if( $self->{bootstrap} ) {
-	$committer = 'bootstrap';
-    } 
-
     # Tick
-    my $tick = $self->tick(committer => $committer);
+    my $tick = $self->tick();
 
     $self->_expire( $real_schema, $tick, @_ );
 }
