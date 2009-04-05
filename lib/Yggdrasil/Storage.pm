@@ -209,7 +209,7 @@ sub store {
     # Tick
     my $tick;
     if( $self->_schema_is_temporal($real_schema) ) {
-	$tick = $self->tick();
+	$tick = $self->tick( committer => $params{fields}->{committer} );
     }
 
 
@@ -233,8 +233,9 @@ sub store {
 
 sub tick {
     my $self = shift;
+    my %data = @_;
 
-    return $self->_store( $self->_get_schema_name($STORAGETICKER) );
+    return $self->_store( $self->_get_schema_name($STORAGETICKER), fields => \%data );
 }
 
 sub raw_store {
@@ -308,8 +309,13 @@ sub expire {
     my $real_schema = $self->_get_schema_name( $schema );
     return unless $self->_schema_is_temporal($real_schema);
 
+    my $committer = $self->{user};
+    if( $self->{bootstrap} ) {
+	$committer = 'bootstrap';
+    } 
+
     # Tick
-    my $tick = $self->tick();
+    my $tick = $self->tick(committer => $committer);
 
     $self->_expire( $real_schema, $tick, @_ );
 }
