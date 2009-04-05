@@ -93,21 +93,21 @@ my $realname = $human_to_machine{'Entities'} || 'Entities';
 my $tableref = $storage->_dump_structure( $realname );
 for my $rowref (@$tableref) {
     my @row = @$rowref;
-    $idents{$row[0]} = $row[4];
+    $idents{$row[0]} = $row[3];
 }
 
 $realname = $human_to_machine{'MetaEntity'} || 'MetaEntity';
 $tableref = $storage->_dump_structure( $realname );
 for my $rowref (@$tableref) {
     my @row = @$rowref;
-    $entities{$row[0]} = $row[2];
+    $entities{$row[0]} = $row[1];
 }
 
 $realname = $human_to_machine{'MetaRelation'} || 'MetaRelation';
 $tableref = $storage->_dump_structure( $realname );
 for my $rowref (@$tableref) {
     my @row = @$rowref;
-    $relations{$row[0]} = $row[8];
+    $relations{$row[0]} = $row[7];
 }
 
 
@@ -142,7 +142,7 @@ for my $structure (@structures) {
 		    my $key = $1;
 		    if ($mapped_struct eq 'Relations') {
 			# id | <id1> | <id2>
-			if ($i == 1 || $i == 4) {
+			if ($i == 1 || $i == 3) {
 			    $c = "$c (" . $idents{$c} . ")";
 			} elsif ($i == 0) {
 			    $c = "$c (" . $relations{$c} . ")";
@@ -155,23 +155,23 @@ for my $structure (@structures) {
 			$c = $c?'w':'' if $i == 2;
 			$c = $c?'d':'' if $i == 3;
 			$c = "$c (" . $entities{$c} . ")" if $i == 4;
-			$c = $c?'c':'' if $i == 6;
-			$c = "$c (" . $idents{$c} . ")" if $i == 7;
-			$c = $c?'r':'' if $i == 9;
+			$c = $c?'c':'' if $i == 5;
+			$c = "$c (" . $idents{$c} . ")" if $i == 6;
+			$c = $c?'r':'' if $i == 7;
 		    } elsif ($mapped_struct eq 'MetaAuthRolemembership') {
-			if ($i == 2 || $i == 3) {
+			if ($i == 1 || $i == 2) {
 			    $c = "$c (" . $idents{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'MetaInheritance') {
-			if ($i == 1 || $i == 3) {
+			if ($i == 0 || $i == 2) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'MetaProperty') {
-			if ($i == 3) {
+			if ($i == 2) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'Entities') {
-			if ($i == 2) {
+			if ($i == 1) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
 		    } elsif ($mapped_struct eq 'Storage_ticker') {
