@@ -21,10 +21,16 @@ sub new {
 
     my $status = $self->get_status();
 
-    $data{db} ||= 'yggdrasil';
-    $data{path} ||= '/tmp';
+    my $path;
+    unless( $data{db} && $data{path} ) {
+	$path = ":memory:";
+    } else {
+	$data{db} ||= 'yggdrasil';
+	$data{path} ||= '/tmp';
 
-    my $path = join('/', $data{path}, $data{db});
+	$path = join('/', $data{path}, $data{db});
+    }
+
     $self->{dbh} = DBI->connect( "dbi:SQLite:dbname=$path", "", "" );
 
     return $self;
