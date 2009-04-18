@@ -50,6 +50,7 @@ lib/Yggdrasil/Storage/Auth.pm
 lib/Yggdrasil/Storage/Engine/mysql.pm
 lib/Yggdrasil/Storage/Engine/Pg.pm
 lib/Yggdrasil/Storage/Engine/Shared/SQL.pm
+lib/Yggdrasil/Storage/Engine/SQLite.pm
 lib/Yggdrasil/Storage/Mapper.pm
 lib/Yggdrasil/Storage/Mapper/MD5.pm
 lib/Yggdrasil/Storage/Mapper/SHA1.pm
