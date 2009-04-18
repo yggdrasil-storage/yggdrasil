@@ -79,7 +79,7 @@ sub _null_comparison_operator {
 }
 
 sub _engine_requires_serial_as_key {
-    return 1;
+    return 0;
 }
 
 sub _convert_time {
