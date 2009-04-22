@@ -121,7 +121,7 @@ sub login {
     }
 
     my $auth = new Yggdrasil::Auth( yggdrasil => $self );
-    $auth->authenticate( user => $params{user}, pass => $params{password} );
+    $auth->authenticate( %params );
 
     if ($status->OK()) {
 	$self->{storage}->{user} = $self->{user} = $auth->{user};

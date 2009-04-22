@@ -15,7 +15,7 @@ sub authenticate {
     my $self = shift;
     my %params = @_;
     
-    my ($user, $pass, $session) = ($params{'user'}, $params{'pass'}, $params{'session'});
+    my ($user, $pass, $session) = ($params{'user'}, $params{'password'}, $params{'session'});
 
     my $status = $self->get_status();
     my $authentity = $self->{yggdrasil}->get_entity( 'MetaAuthUser' );
@@ -55,16 +55,15 @@ sub authenticate {
     } elsif ($session) {
 	my @hits = $authentity->search( session => $session );
 
+
 	if (@hits != 1) {
 	    $status->set( 403 );
 	    return;
 	}
 
 	$self->{session} = $session;
-	$self->{user} = $authentity->get( $hits[0]->id() );
-
 	$status->set( 200 );
-	$self->{user} = $user;
+	$self->{user} = $self->{yggdrasil}->{storage}->{user} = $hits[0]->id();
 	return $self->{session};	
     }
 
