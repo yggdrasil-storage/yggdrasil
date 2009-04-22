@@ -340,13 +340,16 @@ sub search {
     }
 
     my $propertytable = $self->_get_schema_name( $entity . ':' . $property );
-    my $entitytable   = 'Entities';
 
-    my ($e) = $self->fetch( $propertytable, { operator => 'LIKE',
-					      where  => [ value => $value ]},
-			    $entitytable,   { return => [ 'id', 'visual_id' ], 
-					      where  => [ id => \qq<$propertytable.id>, entity => $entity ]},
-			    { start => $start, stop => $stop });
+    my ($e) = $self->fetch( 
+	$propertytable => { operator => 'LIKE',
+			    where  => [ value => $value ]},
+	Entities       => { return => [ 'id', 'visual_id' ], 
+			    where  => [ id     => \qq<$propertytable.id> ]},
+	MetaEntity     => { where  => [ entity => $entity,
+					id     => \qq<Entities.entity> ]},
+	{ start => $start, stop => $stop });
+
     my @hits;
     for my $hitref (@$e) {
 	if ($start) {
