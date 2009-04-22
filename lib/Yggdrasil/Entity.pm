@@ -137,12 +137,34 @@ sub delete :method {
 						id        => $name );
 }
 
+# all instances
+sub instances {
+    my $self = shift;
+    
+    my $instances = $self->storage()->fetch( 
+	'MetaEntity' => { return => 'id', 
+			  where  => [ entity => $self->name() ] },
+	'Entities'   => { return => 'visual_id',
+			  where  => [ entity => \qq{MetaEntity.id} ] } );
+    
+    # FIXME, find a way to create instance objects in a nice way
+    my @i;
+    for my $i ( @$instances ) {
+	my $o = Yggdrasil::Entity::Instance->new( yggdrasil => $self );
+	$o->{visual_id} = $i->{visual_id};
+	$o->{_id}       = $i->{id};
+	$o->{entity}    = $self;
+	push(@i,$o);
+    }
+
+    return @i;
+}
 
 sub search {
     my ($self, $key, $value) = (shift, shift, shift);
     
     # Passing the possible time elements onwards as @_ to the Storage layer.
-    my ($nodes) = $self->{storage}->search( $self->{entity}, $key, $value, @_);
+    my ($nodes) = $self->storage()->search( $self->name(), $key, $value, @_);
     
     my @hits;
     for my $hit (@$nodes) {

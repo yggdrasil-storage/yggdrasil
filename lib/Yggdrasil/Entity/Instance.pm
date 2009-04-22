@@ -335,24 +335,6 @@ sub relations {
     return map { $_->{label} } @$other
 }
 
-# fetches all current instances for an Entity
-# FIX: Should this be moved to Y::Entity?
-sub instances {
-    my $self = shift;
-
-    if (ref $self) {
-	$self = $self->{entity};
-    } else {
-	$self = Yggdrasil::_extract_entity($self);
-    }
-    
-    my $instances = $self->storage()->fetch( 'MetaEntity' => { where  => [ entity => $self ] },
-					        'Entities'   => { return => 'visual_id',
-								  where => [ entity => \qq{MetaEntity.id} ] } );
-
-    # FIXME, return objects.
-    return map { $_->{visual_id} } @$instances;
-}
 
 
 sub is_a {
