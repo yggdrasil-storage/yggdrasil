@@ -21,6 +21,18 @@ sub new {
     return bless $self, $class;
 }
 
+sub param {
+    my $self = shift;
+
+    return $self->{cgi}->param(@_);
+}
+
+sub cookie {
+    my $self = shift;
+
+    return $self->{cgi}->cookie(@_);
+}
+
 sub add_header {
     my $self = shift;
     my $header = shift;
