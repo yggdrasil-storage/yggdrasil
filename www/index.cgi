@@ -80,7 +80,34 @@ unless( $mode ) {
     $www->display( title => "Instance of $ident", style => "yggdrasil.css" );
 
 } elsif( $mode eq "relation" ) {
-    
+    my $r = $y->get_relation($ident);
+    my @e = $r->entities();
+    my @p = $r->participants();
+
+    my $container = $www->add( map { $_->name() } @e );
+    $container->type( 'Entities' );
+    $container->class( 'Entities' );
+    $container->parent( $ident );
+
+    my $left  = $www->add();
+    my $right = $www->add();
+
+    foreach my $pair (@p) {
+	my( $l, $r ) = @$pair;
+	$left->add( $l->id() );
+	$right->add( $r->id() );
+    }
+
+    $left->type( 'Entity' );
+    $left->class( 'Entity' );
+    $left->parent( $e[0]->name() );
+
+    $right->type( 'Entity' );
+    $right->class( 'Entity' );
+    $right->parent( $e[1]->name() );
+
+    $www->display( title => "Related instances for relation $ident", style => "yggdrasil.css" );
+
 } elsif( $mode eq "instance" ) {
     my $e = $y->get_entity( $entity );
     my $i = $e->fetch( $ident );
