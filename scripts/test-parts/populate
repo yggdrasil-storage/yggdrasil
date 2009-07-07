@@ -212,7 +212,8 @@ $hr->link( $b701, $baal );
 
 $rp->link( $b701, $ophone );
 
-$pc->link( $bravida, $ophone );
+my $flapp = $pc->link( $ophone, $bravida );
+status( 'Bravida<->Ophone', $flapp );
 
 $pp->link( $terje, $ophone );
 
