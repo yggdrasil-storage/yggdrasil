@@ -5,7 +5,7 @@ use Yggdrasil::Interface::WWW::Container;
 use strict;
 use warnings;
 
-use CGI::Pretty;
+use CGI::Pretty qw/-debug/;
 
 sub new {
     my $class = shift;
