@@ -460,7 +460,8 @@ sub _fetch_related {
 
   return $path if $start eq $stop;
 
-  # FIXME, what do we do if we get 403 returned here?
+  # FIXME, what do we do if we get 403 returned here?  Not that we
+  # will, currently MetaRelation has _global_read_access set to true.  
   my $other = $storage->fetch( 'MetaRelation',
 			       { return => [ qw/lval rval/ ],
 				 where => [ lval => $start,
