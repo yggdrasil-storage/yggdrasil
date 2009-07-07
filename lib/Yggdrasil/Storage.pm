@@ -479,9 +479,23 @@ sub _check_valid_type {
 sub _get_relation {
     my ($self, $label) = @_;
 
-    my $ref = $self->fetch( "MetaRelation" => { return => 'id',
-						where  => [ 'label' => $label ] } );
-    return $ref->[0]->{id};
+    my $ref = $self->fetch( "MetaRelation" => { return => [qw/id lval rval/],
+						where  => [ 'label' => $label ] },
+			  );
+
+    my $s = $ref->[0];
+    return unless defined $s->{id};
+
+    my $lval = $self->fetch( "MetaEntity" => { return => ['id', 'entity'],
+					       where  => [ id => $s->{lval} ] } );
+
+    my $rval = $self->fetch( "MetaEntity" => { return => ['id', 'entity'],
+					       where  => [ id => $s->{rval} ] } );
+
+    $s->{lval} = $lval->[0];
+    $s->{rval} = $rval->[0];
+
+    return $s;
 }
 
 sub _get_entity {

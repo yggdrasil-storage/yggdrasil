@@ -20,22 +20,25 @@ sub define {
     my $label = defined $param{label} ? $param{label} : "$lval<->$rval";
     $self->{label} = $label;
     
-    $lval = $storage->fetch( 'MetaEntity', { return => 'id', where => [ entity => $lval ] } );
-    $rval = $storage->fetch( 'MetaEntity', { return => 'id', where => [ entity => $rval ] } );
-    
-    $lval = $lval->[0]->{id};
-    $rval = $rval->[0]->{id};
-    
+    $lval = Yggdrasil::Entity->get( yggdrasil => $self, entity => $lval );
+    $rval = Yggdrasil::Entity->get( yggdrasil => $self, entity => $rval );;
+
+    $self->{lval} = $lval;
+    $self->{rval} = $rval;
+
     unless( $param{raw} ) {
 	my $id = $storage->_get_relation( $label );
-	if (defined $id) {
-	    $self->{_id} = $id;
+	if ($id && defined $id->{id}) {
+	    $self->{_id} = $id->{id};
 	    return $self 
 	}
     }
 
     # --- Add to MetaRelation
-    my $id = Yggdrasil::MetaRelation->add( yggdrasil => $self, lval => $lval, rval => $rval, label => $label) unless $param{raw};
+    my $id = Yggdrasil::MetaRelation->add( yggdrasil => $self, 
+					   lval      => $lval->{_id},
+					   rval      => $rval->{_id},
+					   label     => $label) unless $param{raw};
     #my $id = $self->_meta_add($lval, $rval, $label, %param) unless $param{raw};
     $self->{_id} = $id;
     return $self;
@@ -46,12 +49,18 @@ sub get {
     my $self  = $class->SUPER::new(@_);
     my %param = @_; 
     
-    my $id = $param{yggdrasil}->{storage}->_get_relation( $param{label} );
+    my $ref = $param{yggdrasil}->{storage}->_get_relation( $param{label} );
     my $status = $param{yggdrasil}->get_status();
 
-    if (defined $id) {
+    if( $ref && defined $ref->{id} ) {
 	my $new = Yggdrasil::Relation->new( @_ );
-	$new->{_id} = $id;
+	$new->{_id} = $ref->{id};
+	
+	$new->{lval} = Yggdrasil::Entity->get( yggdrasil => $self, entity => $ref->{lval}->{entity} );
+	$new->{rval} = Yggdrasil::Entity->get( yggdrasil => $self, entity => $ref->{rval}->{entity} );
+
+	$new->{label} = $param{label};
+
 	$status->set( 200 );
 	return $new;
     } else {
@@ -71,10 +80,49 @@ sub _get_real_val {
     return $retref->[0]->{entity};
 }
 
+sub participants {
+    my $self = shift;
+    
+    my $storage = $self->storage();
+    
+    my $le = $self->{lval};
+    my $re = $self->{rval};
+
+    my $parts = $storage->fetch(
+				Relations => {
+					      return => ['id', 'lval', 'rval'],
+					      where  => [ id => $self->{_id} ] },
+			       );
+
+    my @participants;
+    foreach my $part (@$parts) {
+	my $l = $part->{lval};
+	my $r = $part->{rval};
+	my $lval = $storage->fetch( Entities => { where => [ id => $l ],
+						  return => 'visual_id' } );
+	my $rval = $storage->fetch( Entities => { where => [ id => $r ],
+						  return => 'visual_id' } );
+	
+	my $li = Yggdrasil::Entity::Instance->new( yggdrasil => $self );
+	$li->{visual_id} = $lval->[0]->{visual_id};
+	$li->{_id}       = $l;
+	$li->{entity}    = $le;
+
+	my $ri = Yggdrasil::Entity::Instance->new( yggdrasil => $self );
+	$ri->{visual_id} = $rval->[0]->{visual_id};
+	$ri->{_id}       = $r;
+	$ri->{entity}    = $re;
+
+	push( @participants, [ $li, $ri ] );
+    }
+
+    return @participants;
+}
+
 sub entities {
     my $self = shift;
 
-    # return entities making up this relation
+    return ( $self->{lval}, $self->{rval} );
 }
 
 sub label {
