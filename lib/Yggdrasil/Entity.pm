@@ -83,15 +83,15 @@ sub get {
     my $entity = $params{entity};
     
     my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ entity => $entity ],
-							return => 'entity' } );
+							return => 'id' } );
     
-    unless (defined $aref->[0]->{entity}) {
+    unless (defined $aref->[0]->{id}) {
 	$status->set( 404, "Entity '$entity' not found." );
 	return undef;
     } 
     
     $status->set( 200 );
-    return objectify( name => $entity, yggdrasil => $self->{yggdrasil} );
+    return objectify( name => $entity, id => $aref->[0]->{id}, yggdrasil => $self->{yggdrasil} );
 }
 
 sub objectify {
@@ -99,6 +99,7 @@ sub objectify {
     
     my $obj = new Yggdrasil::Entity( name => $params{name}, yggdrasil => $params{yggdrasil} );
     $obj->{name} = $params{name};
+    $obj->{_id}  = $params{id};
     return $obj;
 }
 
