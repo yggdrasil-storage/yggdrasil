@@ -122,7 +122,7 @@ sub define {
 
     unless ($self->{bootstrap}) {
 	my $parent = $self->my_parent();
-	if (! $self->can( operation => 'define', target => $parent )) {
+	if (! $self->can( operation => 'define', targets => [ $parent ] )) {
 	    $status->set( 403, "You are not permitted to create the structure '$schema' under '$parent'." );
 	    return;
 	} 
@@ -185,7 +185,7 @@ sub store {
     my $status = $self->get_status();
 
     unless ($self->{bootstrap}) {
-	if (! $self->can( operation => 'store', target => $schema, data => \%params )) {
+	if (! $self->can( operation => 'store', targets => [ $schema ], data => \%params )) {
 	    $status->set( 403 );
 	    return;
 	} 
@@ -248,8 +248,8 @@ sub raw_store {
     return $self->_raw_store( $self->_get_schema_name( $schema ), @_ );
 }
 
-# fetch ( schema1 { return => [ fieldnames ], where => [ s1field1 => s1value1, ... ], operator => operator, bind => bind-op }
-#         schema2 { return => [ fieldnames ], where => [ s2field => s2value, ... ], operator => operator, bind => bind-op }
+# fetch ( schema1, { return => [ fieldnames ], where => [ s1field1 => s1value1, ... ], operator => operator, bind => bind-op }
+#         schema2, { return => [ fieldnames ], where => [ s2field => s2value, ... ], operator => operator, bind => bind-op }
 #         { start => $start, stop => $stop } (optional)
 # We remap the schema names (the non-reference parameters) here.
 sub fetch {
@@ -279,7 +279,7 @@ sub fetch {
 
     unless ($self->{bootstrap}) {
 	my %params = @_;
-	if (! $self->can( operation => 'readable', data => \%params, target => \@targets )) {
+	if (! $self->can( operation => 'readable', data => \%params, targets => \@targets )) {
 	    my $status = $self->get_status();
 	    $status->set( 403 );
 	    return;

@@ -76,7 +76,7 @@ sub can {
     my %params = @_;
     
     my $ygg       = $self->{yggdrasil};
-    my $target    = $params{target};
+    my $target    = $params{targets};
     my $operation = $params{operation};
     my $storage   = $ygg->{storage};
     my $user      = $ygg->{user} || '';
@@ -106,63 +106,65 @@ sub can {
 }
 
 sub _get_targets_and_operation {
-    my ($self, $target, $operation, $dataref) = @_;
+    my ($self, $targets, $operation, $dataref) = @_;
     my $storage = $self->storage();
     
-    my @targets_to_check;
-      
-    # If we wish to write to MetaEntity, we have in reality asked to
-    # create an entity.  To be allowed to do this we have to ask if we
-    # are allowed to subclass the entity in question, which is a 'w'
-    # operation.  We might wish to have a "subclass" bit.
-    if ($target eq 'MetaEntity' && $operation eq 'store') {
-	for my $t ($self->_get_metaentity_store_targets( $dataref )) {
-	    push @targets_to_check, $storage->parent_of( $t );
-	}
-	$operation = 'writeable';
-    } elsif ($target eq 'MetaProperty' && $operation eq 'store') {
-	for my $t ($self->_get_metaproperty_store_targets( $dataref )) {
-	    push @targets_to_check, $storage->parent_of( $t );
-	}
-	$operation = 'writeable';
-    } elsif ($target eq 'Entities' && $operation eq 'store') {
-	for my $t ($self->_get_metaentity_store_targets( $dataref )) {
-	    push @targets_to_check, $storage->parent_of( $t );
-	}
-	$operation = 'createable';
-    } elsif ($target eq 'MetaInheritance') {
-	push @targets_to_check, $self->_get_inheritance_parent( $dataref );
-	$operation = 'writeable';
-    } elsif ($target eq 'MetaRelation') {
-	push @targets_to_check, $self->_get_relation_targets( $dataref );
-	$operation = 'writeable';
-    } elsif ($operation eq 'define') {
-	push @targets_to_check, $target;
-	$operation = 'writeable';
-    } elsif ($target =~ '^Storage_') {
-	return [];
-    } elsif ($operation eq 'readable') {
-	for my $t (@$target) {
-	    push @targets_to_check, $t;
-	}
-    } elsif ($target eq 'MetaAuthEntity') { # FIXME, check parents.
-	return [];
-    } elsif ($target eq 'MetaAuthRolemembership') {
-	@targets_to_check = qw|MetaAuthRole|;
-	$operation = 'writeable';
-    } else {
-	print "Whopsie, $target\n";
-	if( $operation =~ /^c/ ) {
-	    $operation = 'createable';
-	} elsif ($operation =~ /^d/) {
-	    $operation = 'deleteable';
-	} elsif ($operation =~ /^w/) {
+    my @targets_to_check;    
+
+    for my $target (@$targets) {
+	# If we wish to write to MetaEntity, we have in reality asked to
+	# create an entity.  To be allowed to do this we have to ask if we
+	# are allowed to subclass the entity in question, which is a 'w'
+	# operation.  We might wish to have a "subclass" bit.
+	if ($target eq 'MetaEntity' && $operation eq 'store') {
+	    for my $t ($self->_get_metaentity_store_targets( $dataref )) {
+		push @targets_to_check, $storage->parent_of( $t );
+	    }
 	    $operation = 'writeable';
-	} elsif ($operation =~ /^r/) {
-	    $operation = 'readable';
-	} else {
-	    print "Whopsie, $operation\n";
+	} elsif ($target eq 'MetaProperty' && $operation eq 'store') {
+	    for my $t ($self->_get_metaproperty_store_targets( $dataref )) {
+		push @targets_to_check, $storage->parent_of( $t );
+	    }
+	    $operation = 'writeable';
+	} elsif ($target eq 'Entities' && $operation eq 'store') {
+	    for my $t ($self->_get_metaentity_store_targets( $dataref )) {
+		push @targets_to_check, $storage->parent_of( $t );
+	    }
+	    $operation = 'createable';
+	} elsif ($target eq 'MetaInheritance') {
+	    push @targets_to_check, $self->_get_inheritance_parent( $dataref );
+	    $operation = 'writeable';
+	} elsif ($target eq 'MetaRelation') {
+	    push @targets_to_check, $self->_get_relation_targets( $dataref );
+	    $operation = 'writeable';
+	} elsif ($operation eq 'define') {
+	    push @targets_to_check, $target;
+	    $operation = 'writeable';
+	} elsif ($target =~ '^Storage_') {
 	    return [];
+	} elsif ($operation eq 'readable') {
+	    for my $t (@$target) {
+		push @targets_to_check, $t;
+	    }
+	} elsif ($target eq 'MetaAuthEntity') { # FIXME, check parents.
+	    return [];
+	} elsif ($target eq 'MetaAuthRolemembership') {
+	    @targets_to_check = qw|MetaAuthRole|;
+	    $operation = 'writeable';
+	} else {
+	    print "Whopsie, $target\n";
+	    if ( $operation =~ /^c/ ) {
+		$operation = 'createable';
+	    } elsif ($operation =~ /^d/) {
+		$operation = 'deleteable';
+	    } elsif ($operation =~ /^w/) {
+		$operation = 'writeable';
+	    } elsif ($operation =~ /^r/) {
+		$operation = 'readable';
+	    } else {
+		print "Whopsie, $operation\n";
+		return [];
+	    }
 	}
     }
     return (\@targets_to_check, $operation);
@@ -294,7 +296,7 @@ sub _get_inheritance_parent {
 sub _global_read_access {
     my ($self, $entity) = @_;
 
-    if ($entity =~ /^Storage/ || $entity =~ /Meta/ || $entity eq 'Entities') {
+    if ($entity =~ /^Storage/ || $entity =~ /^Meta/ || $entity eq 'Entities') {
 	return 1;
     } else {
 	return 0;
