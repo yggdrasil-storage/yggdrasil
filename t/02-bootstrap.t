@@ -21,7 +21,7 @@ $tester->connect( bootstrap => 1 );
 my $boot = $ygg->bootstrap( testuser => 'secret' );
 
 my $prefix = "Yggdrasil->bootstrap()";
-ok( $tester->OK(), "$prefix: Completed with status " . $tester->code() );
+ok( $tester->OK(), "$prefix: Completed with status " . $tester->code() . " " . $tester->status()->message() );
 isa_ok( $boot, 'HASH', "$prefix: Return value isa HASH" );
 ok( exists $boot->{testuser}, "$prefix: Has testuser" );
 ok( exists $boot->{root}, "$prefix: Has root user" );
