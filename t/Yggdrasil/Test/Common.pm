@@ -22,7 +22,7 @@ sub import {
     my $tests = shift;
 
     unless( defined $ENV{YGG_ENGINE} ) {
-	plan skip_all => q<Don't know how to connect to any storage engines>;
+	plan skip_all => q<Don't know how to connect to any storage engines>; #'
     }
 
     plan tests => $tests;

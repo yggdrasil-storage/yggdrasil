@@ -65,5 +65,5 @@ sub check_property_return {
     my $expected = shift;
 
     ok( $tester->OK(), "$Y_E_I->get(): Fetched property 'ip' in time with status " . $tester->code() );
-    is( $val, $expected, "$Y_E_I->get(): Return value was '$val'" );
+    is( $val, $expected, "$Y_E_I->get(): Return value was ($val)" );
 }
