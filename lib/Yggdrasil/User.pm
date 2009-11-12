@@ -38,8 +38,27 @@ sub get {
     my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
     $self->{_user_obj} = $meta_user->fetch( $params{'user'} );
 
-    return $self if $self->{_user_obj};
-    return;
+    return unless $self->{_user_obj};
+
+    $self->_load_memberships();
+
+    return $self;
+}
+
+sub get_with_session {
+    my $class = shift;
+    my $self = $class->SUPER::new( @_ );
+    my %params = @_;
+
+    my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
+    my @hits = $meta_user->search( session => $params{session} );
+    
+    return unless @hits == 1;
+
+    $self->{_user_obj} = $hits[0];
+    $self->_load_memberships();
+
+    return $self;
 }
 
 sub undefine {
@@ -97,6 +116,22 @@ sub id {
     return $self->{_user_obj}->{visual_id};
 }
 
+# FIX: since Auth->can() asks for User->member_of, which calles
+# Storage->fetch which calls Auth->can() which calles User->member_of
+# .... etc. we need to cache role membership
+sub _load_memberships {
+    my $self = shift;
+
+    my @roles = $self->member_of();
+    $self->{_roles} = \@roles;
+}
+
+sub get_cached_member_of {
+    my $self = shift;
+
+    return @{ $self->{_roles} };
+}
+
 # FIX1: couldn't we just fetch id and visual_id and make user objects
 #       without having to fetch the visual_id's? What about the
 #       instance's entity method, how does it get an entity object?
@@ -134,6 +169,8 @@ sub get_roles {
 
     my $roref = $self->storage()->_fetch(Entities => { where => [ id => $idref->[0]->{role} ],
 						       return => 'visual_id' });
+
+    print "$_\n" for caller();
 
     return Yggdrasil::Role->get( yggdrasil => $self, role => $roref->[0]->{visual_id} );
 }

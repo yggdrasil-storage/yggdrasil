@@ -119,23 +119,22 @@ sub login {
 
     my $status = $self->get_status();
 
-    if ($self->{user}) {
+    if( $self->user() ) {
 	$status->set( 406, 'Already logged in' );
 	return;
     }
 
     my $auth = new Yggdrasil::Auth( yggdrasil => $self );
-    $auth->authenticate( %params );
+    $self->{user} = $auth->authenticate( %params );
 
     if ($status->OK()) {
-	$self->{storage}->{user} = $self->{user} = $auth->{user};
+	$self->{storage}->{user} = $self->user();
 	return $self->user();
     }
 
     return;
 }
 
-# FIXME, should contain the object?
 sub user {
     my $self = shift;
     return $self->{user};
@@ -261,10 +260,11 @@ sub undefine_property {
 sub entities {
     my $self = shift;
 
-    my $roleid = $self->{auth}->_get_user_role( $self->{user} );
+    my @roles = $self->user()->member_of();
+    my @roleids = map { $_->{_role_obj}->{_id} } @roles;
 
     my $aref = $self->{storage}->_fetch( 
-	MetaAuthEntity => { where => [ role => $roleid, readable => 1 ]},
+	MetaAuthEntity => { where => [ role => \@roleids, readable => 1 ]},
 	MetaEntity     => { where => [ id => \qq{MetaAuthEntity.entity}, ],
 			    return => 'entity' });
 

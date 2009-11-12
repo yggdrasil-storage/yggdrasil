@@ -54,7 +54,7 @@ sub new {
 	$status->set( 503, "Unable to find engines under $path: $!");
       return undef;
     }
-    
+
     if( $db ) {
 	$db =~ s/\.pm//;
 	my $engine_class = join("::", __PACKAGE__, 'Engine', $db );
@@ -184,6 +184,13 @@ sub store {
 
     my $status = $self->get_status();
 
+    my $uname;
+    if( $self->{bootstrap} ) {
+	$uname = "bootstrap";
+    } else {
+	$uname = $self->{user}->id();
+    }
+
     unless ($self->{bootstrap}) {
 	if (! $self->can( operation => 'store', targets => [ $schema ], data => \%params )) {
 	    $status->set( 403 );
@@ -206,7 +213,7 @@ sub store {
 	$tick = $self->tick();
     } else {
 	# don't tick, but add committer instead
-	$params{fields}->{committer} = $self->{user};
+	$params{fields}->{committer} = $uname;
 	if ($self->{bootstrap}) {
 	    $params{fields}->{committer} = 'bootstrap';
 	}
@@ -234,9 +241,13 @@ sub store {
 sub tick {
     my $self = shift;
 
-    my $c = $self->{user};
-    $c = 'bootstrap' if $self->{bootstrap};
-
+    my $c;
+    if( $self->{bootstrap} ) {
+	$c = 'bootstrap'
+    } else {
+	$c = $self->{user}->id();
+    }
+    
     return $self->_store( $self->_get_schema_name($STORAGETICKER), fields => { committer => $c } );
 }
 
@@ -620,7 +631,6 @@ sub _initialize_config {
 		     );
 	$self->store( $STORAGECONFIG, key => "id",
 		      fields => { id => 'mapstruct', value => $STORAGEMAPPER });
-
 	$self->store( $STORAGECONFIG, key => "id",
 		      fields => { id => 'temporalstruct', value => $STORAGETEMPORAL });
 

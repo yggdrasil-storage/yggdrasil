@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use FindBin qw($Bin);
+use lib qw(/site/lib/perl);
 use lib qq($Bin/../lib);
 
 use Yggdrasil;
@@ -25,21 +26,12 @@ $y->connect( user     => "yggdrasil",
 	     db     => "yggdrasil",
 	     engine => "mysql",
     );
-
 my $u = $y->login( user => $user, password => $pass, session => $sess );
 unless( $u ) {
     $www->present_login( title => "Login", style => "yggdrasil.css", info => "(version $version / yggdrasil\@db.math.uio.no)" );
     exit;
 }
-
-if( defined $user && defined $pass ) {
-    # FIX: Yggdrasil->user() should return a user-object.
-    my $mau_e = $y->get_entity( 'MetaAuthUser' );
-    my $mau_i = $mau_e->fetch( $u );
-    my $session = $mau_i->get( "session" );
-
-    $www->set_session( $session );
-}
+$www->set_session( $u->session() );
 
 my $mode   = $www->param('_mode');
 my $ident  = $www->param('_identifier');
@@ -49,7 +41,6 @@ $mode = undef unless defined $ident;
 
 unless( $mode ) {
     my @e = $y->entities();
-
     my $c = $www->add( map { $_->name() } @e );
     $c->type( 'Entities' );
     $c->class( 'Entities' );
@@ -145,9 +136,3 @@ unless( $mode ) {
 
     $www->display( title => $title, style => "yggdrasil.css", script => 'yggdrasil.js' );
 } 
-
-
-
-
-
-

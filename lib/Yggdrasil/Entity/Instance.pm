@@ -134,6 +134,7 @@ sub _get_in_time {
 					 'Entities', {
 						      return => "id",
 						      where => [ visual_id => $visual_id ] } );
+
     my $id = $idref->[0]->{id};
     
     # Short circuit the joins if we're looking for the current object
@@ -160,7 +161,7 @@ sub _get_in_time {
     }
 
     my $ref = $self->storage()->fetch( @wheres, { start => $time[0], stop => $time[1] } );
-    
+
     # If we're within a time slice, filter out the relevant hits, sort
     # them and return.  Remember to set the start of the first hit to
     # $time[0] (the first timestamp in the request) and the end time
@@ -254,7 +255,7 @@ sub property {
     my $name = join(":", $entity->name(), $key );
 
     my $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity->name(), property => $key );
-    
+
     my $status = $self->get_status();
     
     unless ($p) {

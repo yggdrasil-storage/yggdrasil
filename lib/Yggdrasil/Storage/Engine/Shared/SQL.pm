@@ -126,7 +126,6 @@ sub _sql {
     my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);
     $self->{logger}->debug( "$sql -> Args: [$args_str]" );
     debug_if( 5, "SQL: $sql -> Args: [$args_str]" );
-
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
 	return;
@@ -224,8 +223,8 @@ sub _fetch {
 #    my ($package, $filename, $line, $subroutine, $hasargs,
 #     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
 
-#    if ($subroutine =~ /_define/) {
-#	print $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]\n";
+#    if ($subroutine =~ /_store/) {
+#	print STDERR "$sql with [" . join(", ", map { defined()?$_:"NULL" } @params) . "]\n";
 #    }  
     
     $self->{logger}->debug( $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]" );
@@ -424,6 +423,10 @@ sub _process_where {
 	    push @wheres, join " $localoperator ", $fqfn[0], 'NULL';	    
 	} elsif ( ref $value eq "SCALAR" ) {
 	    push @wheres, join " $localoperator ", $fqfn[0], $$value;
+	} elsif ( ref $value eq "ARRAY" ) {
+	    my $placeholders = join( ", ", ("?")x@$value );
+	    push @wheres, "$fqfn[0] IN (" . $placeholders . ")";
+	    push @params, @$value;
 	} else {
 	    push @wheres, join " $localoperator ", $fqfn[0], '?';
 	    push @params, $value;

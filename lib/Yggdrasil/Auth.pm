@@ -18,56 +18,47 @@ sub authenticate {
     my ($user, $pass, $session) = ($params{'user'}, $params{'password'}, $params{'session'});
 
     my $status = $self->get_status();
-    my $authentity = $self->{yggdrasil}->get_entity( 'MetaAuthUser' );
-    
-    # First, let see if we're connected to a tty without getting a
-    # username / password, at which point we're already authenticated
-    # and we don't want to touch the session.  $> is effective UID.
-    if (-t && ! defined $user && ! defined $pass) {
-	$self->{user} = (getpwuid($>))[0];
-	$status->set( 200 );
-	return 1;
-    } 
+    #my $authentity = $self->{yggdrasil}->get_entity( 'MetaAuthUser' );
 
-    # Otherwise, we got both a username and a password.
+    my $user_obj;
+
     if (defined $user && defined $pass) {
-	my $userobject = $authentity->fetch( $params{user} );
+	# Otherwise, we got both a username and a password.
+	$user_obj = Yggdrasil::User->get( yggdrasil => $self, user => $user );
 
-	unless ($userobject) {
-	    $status->set( 403 );
-	    return;
-	}
-	
-	my $realpass = $userobject->property( 'password' ) || '';
+	if( $user_obj ) {
+	    my $realpass = $user_obj->password() || '';
 
-	if (! defined $pass || $pass ne $realpass) {
-	    $status->set( 403 );
-	    return;
+	    if (! defined $pass || $pass ne $realpass) {
+		$user_obj = undef;
+	    }
 	}
-	
-	my $sid = md5_hex(time() * $$ * rand(time() + $$));
-	$self->{session} = $sid;
-	# FIXME, needed to ensure that setting the session gets the proper user attached.
-	$self->{user} = $self->{yggdrasil}->{storage}->{user} = $user;
-	$userobject->property( 'session', $sid );
-	$status->set( 200 );
-	return $sid;
+	$session = undef;
     } elsif ($session) {
-	my @hits = $authentity->search( session => $session );
-
-
-	if (@hits != 1) {
-	    $status->set( 403 );
-	    return;
-	}
-
-	$self->{session} = $session;
-	$status->set( 200 );
-	$self->{user} = $self->{yggdrasil}->{storage}->{user} = $hits[0]->id();
-	return $self->{session};	
+	# Lastly, we got a session id - see if we find a user with this session id
+	$user_obj = Yggdrasil::User->get_with_session( yggdrasil => $self, session => $session );
+    } elsif (-t && ! defined $user && ! defined $pass) {
+	# First, let see if we're connected to a tty without getting a
+	# username / password, at which point we're already authenticated
+	# and we don't want to touch the session.  $> is effective UID.
+	my $uname = (getpwuid($>))[0];
+	$user_obj = Yggdrasil::User->get( yggdrasil => $self, user => $uname );
+	$session = "invalid";
     }
 
-    return;
+    if( $user_obj ) {
+	$self->{yggdrasil}->{storage}->{user} = $user_obj;
+	unless( $session ) {
+	    $session = md5_hex(time() * $$ * rand(time() + $$));
+	    $user_obj->session( $session );
+	}
+	$self->{session} = $session;
+	$status->set( 200 );
+    } else {
+	$status->set( 403 );
+    }
+
+    return $user_obj;
 }
 
 # TODO: Sanitycheck $operator, make property-compatible.
@@ -79,17 +70,20 @@ sub can {
     my $target    = $params{targets};
     my $operation = $params{operation};
     my $storage   = $ygg->{storage};
-    my $user      = $ygg->{user} || '';
+    my $user      = $ygg->user() || '';
 
     my $dataref   = $params{data};
     my $targets_to_check;
     
-    return 1 if $target =~ /:/; # FIX: properties not implemented.
+    return 1 if grep { /:/ } @$target;  # FIX: properties not implemented.
     return 1 if $target eq "Relations"; # FIX: auth for Relation
     return 1 unless $user && $operation eq 'readable'; # Pre-login.
     
-    my $roleid_of_user = $self->_get_user_role( $user );
-    debug_if( 4, "Roleid is $roleid_of_user." );
+    # FIX: This uses get_cached_roles() instead of member_of(), since
+    # using the latter causes recursion (since fetching something
+    # calles this can() method to check if it can fetch stuff
+    my @roles = $user->get_cached_member_of();
+    debug_if( 4, "Roleids are " . join(",", map{ $_->id() } @roles) );
 
     ($targets_to_check, $operation) =
       $self->_get_targets_and_operation( $target, $operation, $dataref );
@@ -99,7 +93,7 @@ sub can {
 	return 1 if $operation eq 'readable' && $self->_global_read_access( $entity );
        
 	debug_if( 4, "Checking $operation on $entity for $user..." );
-	my $permission = $self->_can( $roleid_of_user, $entity, $operation );
+	my $permission = $self->_can( $entity, $operation, @roles );
 	return unless $permission;
     }
     return 1;
@@ -108,7 +102,6 @@ sub can {
 sub _get_targets_and_operation {
     my ($self, $targets, $operation, $dataref) = @_;
     my $storage = $self->storage();
-    
     my @targets_to_check;    
 
     for my $target (@$targets) {
@@ -227,42 +220,44 @@ sub _generate_default_users {
 }
 
 
-sub _get_user_role {
-    my $self = shift;
-    my $user = shift;
+# sub _get_user_role {
+#     my $self = shift;
+#     my $user = shift;
 
-    # To avoid recursion, call _fetch directly.  :-/
-    my $ref = $self->{yggdrasil}->{storage}->_fetch( 
-						    MetaAuthRolemembership => { where => [ user => \qq{Entities.id} ],
-										return => 'role' },
-						    Entities     => { where => [ visual_id => $user ]}
-						   );
+#     # To avoid recursion, call _fetch directly.  :-/
+#     my $ref = $self->{yggdrasil}->{storage}->_fetch( 
+# 						    MetaAuthRolemembership => { where => [ user => \qq{Entities.id} ],
+# 										return => 'role' },
+# 						    Entities     => { where => [ visual_id => $user ]}
+# 						   );
 
-    return $ref->[0]->{role};
-}
+#     return $ref->[0]->{role};
+# }
 
 sub _can {
-    my $self = shift;
-    my $role = shift;
-    my $entity = shift;
+    my $self      = shift;
+    my $entity    = shift;
     my $operation = shift;
+    my @roles     = @_;
 
     my $ref;
     if ($entity =~ /^\d+/) {
-	$ref = $self->{yggdrasil}->{storage}->_fetch( 
-						    MetaAuthEntity => { where  => [ role   => $role,
-									            entity => $entity ],
-									return => $operation },
-						   );
+	$ref = $self->{yggdrasil}->{storage}->
+	  _fetch( 
+		 MetaAuthEntity => { where  => [ role   => \@roles,
+						 entity => $entity ],
+				     return => $operation },
+		);
     } else {
-	$ref = $self->{yggdrasil}->{storage}->_fetch( 
-						    MetaAuthEntity => { where => [ role => $role ],
-									return => $operation },
-						    MetaEntity     => { where => [
-										  id => \qq{MetaAuthEntity.entity},
-										  entity => $entity,
-										 ]},
-						   );
+	$ref = $self->{yggdrasil}->{storage}->
+	  _fetch( 
+		 MetaAuthEntity => { where => [ role => \@roles ],
+				     return => $operation },
+		 MetaEntity     => { where => [
+					       id => \qq{MetaAuthEntity.entity},
+					       entity => $entity,
+					      ]},
+		);
     }
 
     return $ref->[0]->{$operation};

@@ -45,9 +45,10 @@ sub add {
 
     unless ($self->{yggdrasil}->{bootstrap}) {
 	# FIX: should we have a ->get_authenticated_user() ?
-	my $user = $self->yggdrasil()->{user};
-	my $role = Yggdrasil::User->get_roles(yggdrasil => $self, user => $user);
-	$role->grant( $name, 'd' );
+	my $user = $self->yggdrasil()->user();
+	for my $role ( $user->get_cached_member_of() ) {
+	    $role->grant( $name, 'd' );
+	}
     }
 }
 
