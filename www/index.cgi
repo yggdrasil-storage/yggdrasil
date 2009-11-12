@@ -16,18 +16,19 @@ my $pass = $www->param('pass');
 my $sess = $www->cookie('sessionID');
 
 my $y = Yggdrasil->new();
+my $version = Yggdrasil->version();
 
-$y->connect( user     => "", 
-	     password => "",
+$y->connect( user     => "yggdrasil", 
+	     password => "beY6KAAVNbhPa6SP",
 
-	     host   => "localhost",
+	     host   => "db.math.uio.no",
 	     db     => "yggdrasil",
 	     engine => "mysql",
     );
 
 my $u = $y->login( user => $user, password => $pass, session => $sess );
 unless( $u ) {
-    $www->present_login( title => "Login", style => "yggdrasil.css" );
+    $www->present_login( title => "Login", style => "yggdrasil.css", info => "(version $version / yggdrasil\@db.math.uio.no)" );
     exit;
 }
 

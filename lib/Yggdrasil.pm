@@ -36,6 +36,10 @@ sub yggdrasil {
     return $self;
 }
 
+sub version {
+    return $VERSION;
+}
+
 sub new {
     my $class = shift;
     my $self  = bless {}, $class;
