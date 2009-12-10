@@ -18,7 +18,6 @@ sub define {
     my $user = Yggdrasil::Entity->define( yggdrasil => $self, entity => "MetaAuthUser" );
     $user->define_property( "password", type => "PASSWORD" );
     $user->define_property( "session", type => "TEXT" );
-    $user->define_property( "username", type => "TEXT" );
     $user->define_property( "fullname", type => "TEXT" );
     my $role = Yggdrasil::Entity->define( yggdrasil => $self, entity => "MetaAuthRole" );
     $role->define_property( "name", type => "TEXT" );

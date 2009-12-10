@@ -97,9 +97,8 @@ sub session {
 
 sub username {
     my $self = shift;
-    my $value = shift;
 
-    return $self->_setter_getter( username => $value );
+    return $self->id();
 }
 
 sub fullname {
@@ -109,7 +108,6 @@ sub fullname {
     return $self->_setter_getter( fullname => $value );
 }
 
-# FIX: Shouldn't this be username()?
 sub id {
     my $self = shift;
 
