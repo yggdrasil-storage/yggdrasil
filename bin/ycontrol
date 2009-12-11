@@ -1,0 +1,199 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Yggdrasil;
+
+my ($dbuser, $password, $host, $port, $db, $engine) =
+  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE});
+
+my $y = new Yggdrasil();
+my $status = $y->get_status();
+
+$y->connect( 
+	    user      => $dbuser,
+	    password  => $password,
+	    host      => $host,
+	    port      => $port,
+	    db        => $db,
+	    engine    => $engine,
+	   );
+
+die $status->message() unless $status->OK();
+
+my $iam = $y->login();
+my @roles = $iam->get_cached_member_of();
+
+die $status->message() unless $status->OK();
+
+# print $iam->username() . " -> " . join(', ', map { $_->name() } @roles) . " <$dbuser\@$host ($db / $engine)>\n";
+
+&init( $0, @ARGV );
+
+# Initial call, gets a command if needed, dispatches to proper
+# commands.
+sub init {
+    my $scriptname = shift;
+    my @arguments  = @_;
+    $scriptname =~ s|.*/||;
+
+    my $command;
+    if ($scriptname ne 'ycontrol') {
+	$command = $scriptname;
+    } else {
+	$command = shift @arguments;
+    }
+
+    $command = &get_line( 'Command' ) unless $command;
+
+    if ($command eq 'user') {
+	&do_user( @arguments );
+    } elsif ($command eq 'role') {
+	&do_roles( @arguments );
+    } else {
+	print "Unknown command '$command'.\n";
+	exit 1;
+    }
+}
+
+# Get a line from STDIN.  Some real input handling should go here at
+# some point.
+sub get_line {
+    my $prompt = shift;
+    print "$prompt > "; 
+    my $retval = <STDIN>;
+    chomp $retval;
+    return $retval;
+}
+
+
+# User blocks, special entity type, handled as such.
+sub do_user {
+    my $subcommand = shift;
+    my @arguments  = @_;
+
+    $subcommand = &get_line( 'User' ) unless $subcommand;
+
+    if ($subcommand eq 'list') {
+	&do_user_list();
+    } elsif ($subcommand eq 'info') {
+	&do_user_info( @arguments );
+    } elsif ($subcommand eq 'edit') {
+	&do_user_edit( @arguments );
+    } elsif ($subcommand eq 'add') {
+	&do_user_add( @arguments );
+    } elsif ($subcommand eq 'remove') {
+	&do_user_remove( @arguments );
+    } else {
+	print "Unknown user subcommand '$subcommand'.\n";
+	exit 2;
+    }
+    
+}
+
+# TODO, add filter.
+sub do_user_list {
+    my $entity = $y->get_entity( 'MetaAuthUser' );
+    my @users  = $entity->instances();
+    
+    printf "%-20s | %-20s | %-20s | %-20s | %s\n", 'Id', 'Full name', 'Password', 'Roles', 'Session';
+    for my $user (@users) {
+	# Why do we have to cast this object to the User class?
+	# Removing this cast breaks stuff.
+	$user = $y->get_user( $user->id() );
+	printf "%-20s | %-20s | %-20s | %-20s | %s\n", $user->id(),
+	  $user->fullname() || '', $user->password() || '',
+	    join (', ', map { $_->name() } $user->get_cached_member_of()),
+	      $user->session() || '';
+    }    
+}
+
+sub do_user_info {
+    my $userid = shift || &get_line( 'User identification' );
+    my $userobject = $y->get_user( $userid ) if $userid;
+    
+    if ($userobject) {
+	printf "%-12s -> %s\n", 'Username',  $userobject->username() || '';
+	printf "%-12s -> %s\n", 'Full name', $userobject->fullname() || '';
+	printf "%-12s -> %s\n", 'Session',   $userobject->session() || '';
+	printf "%-12s -> %s\n", 'Password',  $userobject->password() || '';
+
+	printf "%-12s -> %s\n", 'Roles',     join (', ', map { $_->name() } $userobject->get_cached_member_of());
+	
+    } else {
+	print "No user '$userid'.\n";
+    }
+    return $userobject;
+}
+
+sub do_user_edit {
+    my $userid = shift || &get_line( 'User identification' );
+    my $userobject = $y->get_user( $userid );
+    return unless $userobject;
+    
+    my $field = shift || lc &get_line( 'User field' );
+    $field =~ s/ //g;
+
+    if ($field eq 'fullname') {
+	my $fn = join( ' ', @_ );
+	$userobject->fullname( $fn || &get_line( 'Full name' ) );
+    } elsif ($field eq 'password') {
+	$userobject->password( shift || &get_line( 'Password' ) );	
+    } elsif ($field eq 'role') {
+	my $operation = shift || lc &get_line( 'Role operation' );
+	if ($operation eq 'add') {
+	    &do_user_role_add( $userobject, @_);
+	} elsif ($operation eq 'remove') {
+	    &do_user_role_remove( $userobject, @_);	    
+	} else {
+	    print "Unknown role operation '$operation'.\n";
+	}
+    } else {
+	print "Unknown field, '$field'.\n";
+    }    
+    # &do_user_info( $userid );
+}
+
+sub do_user_role_add {
+    my $userobject = shift;
+    my @roles = @_;
+    @roles = split /\W+/, lc &get_line( "Role(s) to add to " . $userobject->username() ) unless @roles;
+    
+    for my $role (@roles) {
+	my $roleobject = $y->get_role( $role );
+	if (! $roleobject) {
+	    print "No role '$role'\n";
+	} else {
+	    if ($roleobject->add( $userobject )) {
+		print "'", $userobject->username(), "' added to the role '$role'.\n";
+	    } else {
+		print "Unable to add '", $userobject->username(), "' to the role '$role'.\n";
+	    }
+	}
+    }    
+}
+
+sub do_user_role_remove {
+    my $userobject = shift;
+    my @roles = @_;
+    @roles = split /\W+/, lc &get_line( "Role(s) to remove from " . $userobject->username() ) unless @roles;
+    
+    for my $role (@roles) {
+	my $roleobject = $y->get_role( $role );
+	if (! $roleobject) {
+	    print "No role '$role'\n";
+	} else {
+	    if ($roleobject->remove( $userobject )) {
+		print "'", $userobject->username(), "' removed from the role '$role'.\n";
+	    } else {
+		print "Unable to remove '", $userobject->username(), "' from the role '$role'.\n";
+	    }
+	}
+    }    
+}
