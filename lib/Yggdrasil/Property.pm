@@ -66,6 +66,8 @@ sub define {
 	$status->set( 400, "Unknown entity '$entity' requested for property '$property'." );
 	return;
     }
+
+    # FIXME, we can get here without a value TYPE, that'll brake stuff.
     
     # --- Create Property table
     $storage->define( $name,
