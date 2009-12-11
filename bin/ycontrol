@@ -220,8 +220,7 @@ sub do_entity {
     } else {
 	print "Unknown entity subcommand '$subcommand'.\n";
 	exit 2;
-    }    
-    
+    }        
 }
 
 # TODO, add filter.
@@ -235,18 +234,14 @@ sub do_entity_list {
 	if (! @instances) {
 	    printf "%-20s | %3d\n", $e->name(), scalar @instances;
 	} elsif (@instances > 5) {
-	    printf "%-20s | %3d ; %s ...\n", $e->name(), scalar @instances, &_map_field_and_join( 'id', @instances[ 0 .. 5 ]);
+	    printf "%-20s | %3d ; %s ...\n", $e->name(), scalar @instances,
+	      &_map_field_and_join( 'id', @instances[ 0 .. 5 ]);
 	} else {
-	    printf "%-20s | %3d ; %s\n", $e->name(), scalar @instances, &_map_field_and_join( 'id', @instances);
+	    printf "%-20s | %3d ; %s\n", $e->name(), scalar @instances,
+	      &_map_field_and_join( 'id', @instances);
 	    
 	}
     }    
-}
-
-sub _map_field_and_join {
-    my $field = shift;
-    my @list = @_;
-    return join(", ", sort map { $_->$field() } @list );
 }
 
 sub do_entity_info {
@@ -262,3 +257,68 @@ sub do_entity_info {
 	return;
     }
 }
+
+# Add / remove / edit properties for the entity, property value is
+# done via instance lookups.
+sub do_entity_edit {
+    my $entityid = shift || &get_line( 'Entity identification' );
+    my $object = $y->get_entity( $entityid );
+
+    my $task = shift || &get_line( 'Entity command' );
+    
+    if ($task eq 'add') {
+	my $property = shift || &get_line( 'Property identification' );
+
+	if ($object->property_exists( $property) ) {
+	    print "'$entityid' already has a property named '$property'.\n";
+	    return;
+	}
+
+	my $cannull = shift || &get_line( 'Can have null value' );
+	if ($cannull && $cannull =~ /^[yY]/) {
+	    $cannull = 1; 
+	} else {
+	    $cannull = 0;
+	}
+	
+	my $type = uc ( shift || &get_line( 'Field type' ));
+	my %valid_types = $y->get_property_types();
+	
+	unless ($valid_types{$type}) {
+	    print "Invalid property type '$type'.\n";
+	    return;
+	}
+	
+	$object->define_property( $property, nullp => $cannull, type => $type);
+
+	if (! $status->OK()) {
+	    print $status->message(), "\n";
+	} else {
+	    print "Added property '$property' to '$entityid'.\n";
+	}
+    } elsif ($task eq 'remove') {
+	print "Removing properties not implemented.\n";
+    }
+}
+
+
+# FIXME
+# sub do_instance_edit {
+#     return unless $object;
+    
+#     my $property = $object->get_property( shift || lc &get_line( 'Property' ) );
+    
+#     if ($property) {
+# 	$object->set( $property->name(), shift || &get_line( 'New value' ) );
+#     } else {
+# 	print "No property '$property' in entity '$entityid'.\n";
+#     }
+# }
+
+
+sub _map_field_and_join {
+    my $field = shift;
+    my @list = @_;
+    return join(", ", sort map { $_->$field() } @list );
+}
+
