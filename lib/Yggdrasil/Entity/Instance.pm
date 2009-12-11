@@ -42,6 +42,12 @@ sub create {
     return $self;
 }
 
+sub entity {
+    my $self = shift;
+    
+    return $self->{entity};
+}
+
 sub fetch {
     my $class  = shift;
     my $self   = $class->SUPER::new(@_);
