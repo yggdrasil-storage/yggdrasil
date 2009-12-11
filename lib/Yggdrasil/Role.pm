@@ -75,14 +75,19 @@ sub _setter_getter {
     return $uo->get( $key );
 }
 
-sub name {
+sub description {
     my $self = shift;
     my $value = shift;
 
-    return $self->_setter_getter( name => $value );
+    return $self->_setter_getter( description => $value );
 }
 
-# FIX: Shouldn't this be name()?
+sub name {
+    my $self = shift;
+    
+    return $self->id();    
+}
+
 sub id {
     my $self = shift;
     
