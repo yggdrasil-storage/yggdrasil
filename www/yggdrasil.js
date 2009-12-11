@@ -1,21 +1,19 @@
-function getstyle(ident) {
-  var elem;
-  if( document.getElementById ) // this is the way the standards work
-    elem = document.getElementById( ident );
-  else if( document.all ) // this is the way old msie versions work
-      elem = document.all[ident];
-  else if( document.layers ) // this is the way nn4 works
-    elem = document.layers[ident];
-  return elem.style;
+function flipper(one, two) {
+    var id_one = "#" + one;
+    var id_two = "#" + two;
+
+    var one = $(id_one).css("display");
+    var two = $(id_two).css("display");
+    
+    $(id_one).css( "display", one == '' || one == 'block' ? 'none' : 'block' );
+    $(id_two).css( "display", two == '' || two == 'block' ? 'none' : 'block' );
 }
 
-function flipper(one, two) {
-    var ones, twos;
 
-    ones = getstyle(one);
-    twos = getstyle(two);
+function doSecret() {
+    var cb = function(data) {
+	$("#secret").html( data["happy"] + ". " + data["joy"] );
+    }
 
-    ones.display = (ones.display==''||ones.display=='block')?'none':'block';
-    twos.display = (twos.display==''||twos.display=='block')?'none':'block';
-
+    $.post( "ajax/foo.cgi", {}, cb, "json" );
 }

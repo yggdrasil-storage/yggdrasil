@@ -14,8 +14,17 @@ sub new {
 		elements => [],
 		headers  => {},
 		cgi      => CGI::Pretty->new(),
-		script   => 'yggdrasil.js',
-		style    => 'yggdrasil.css',
+		script   => [ 
+			     {
+			      language => 'javascript',
+			      src      => 'yggdrasil.js',
+			     },
+			     {
+			      language => 'javascript',
+			      src      => 'http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js',
+			     }
+			    ],
+		style    => [ { src => 'yggdrasil.css', }, ],
     };
 
     return bless $self, $class;
@@ -76,11 +85,8 @@ sub display {
 
     print $cgi->header( %{ $self->{headers} } );
     print $cgi->start_html( -title  => $title,
-			    -style  => { src => $sheet },
-			    -script => {
-					language => 'javascript',
-					src      => $script,
-				       },
+			    -style  => $sheet,
+			    -script => $script,
 			    
 	);
 
@@ -103,12 +109,9 @@ sub present_login {
 
     print $cgi->header();
     print $cgi->start_html( -title  => $title,
-			    -style  => { src => $sheet },
-			    -script => {
-					language => 'javascript',
-					src      => $script,
-				       },
-	);
+			    -style  => $sheet,
+			    -script => $script,
+			  );
     
     print $cgi->start_form( -method => "POST" );
     print $cgi->table( {class=>"login"}, 
