@@ -56,6 +56,10 @@ sub init {
 	&do_user( @arguments );
     } elsif ($command eq 'role') {
 	&do_roles( @arguments );
+    } elsif ($command eq 'entity') {
+	&do_entity( @arguments );
+    } elsif ($command eq 'instance') {
+	&do_instance( @arguments );
     } else {
 	print "Unknown command '$command'.\n";
 	exit 1;
@@ -93,8 +97,7 @@ sub do_user {
     } else {
 	print "Unknown user subcommand '$subcommand'.\n";
 	exit 2;
-    }
-    
+    }    
 }
 
 # TODO, add filter.
@@ -196,4 +199,66 @@ sub do_user_role_remove {
 	    }
 	}
     }    
+}
+
+sub do_entity {
+    my $subcommand = shift;
+    my @arguments  = @_;
+
+    $subcommand = &get_line( 'Entity command' ) unless $subcommand;
+
+    if ($subcommand eq 'list') {
+	&do_entity_list();
+    } elsif ($subcommand eq 'info') {
+	&do_entity_info( @arguments );
+    } elsif ($subcommand eq 'edit') {
+	&do_entity_edit( @arguments );
+    } elsif ($subcommand eq 'add') {
+	&do_entity_add( @arguments );
+    } elsif ($subcommand eq 'remove') {
+	&do_entity_remove( @arguments );
+    } else {
+	print "Unknown entity subcommand '$subcommand'.\n";
+	exit 2;
+    }    
+    
+}
+
+# TODO, add filter.
+sub do_entity_list {    
+    my $entity = $y->entities();
+    
+    printf "%-20s | %s\n", 'Id', 'Instances';
+    for my $e ($y->entities()) {
+	my @instances = $e->instances();
+
+	if (! @instances) {
+	    printf "%-20s | %3d\n", $e->name(), scalar @instances;
+	} elsif (@instances > 5) {
+	    printf "%-20s | %3d ; %s ...\n", $e->name(), scalar @instances, &_map_field_and_join( 'id', @instances[ 0 .. 5 ]);
+	} else {
+	    printf "%-20s | %3d ; %s\n", $e->name(), scalar @instances, &_map_field_and_join( 'id', @instances);
+	    
+	}
+    }    
+}
+
+sub _map_field_and_join {
+    my $field = shift;
+    my @list = @_;
+    return join(", ", sort map { $_->$field() } @list );
+}
+
+sub do_entity_info {
+    my $ename = shift || &get_line( 'Entity identifier' );
+    my $entity = $y->get_entity( $ename );
+    
+    if ($entity) {
+	# TODO, limit rate / numbers.
+	printf "%-12s -> %s\n", 'Properties', &_map_field_and_join( 'name', $entity->properties() );
+	printf "%-12s -> %s\n", 'Instances', &_map_field_and_join( 'id', $entity->instances() );
+    } else {
+	print "No entity '$ename'.\n";
+	return;
+    }
 }
