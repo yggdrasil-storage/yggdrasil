@@ -4,10 +4,11 @@ use strict;
 use warnings;
 
 use FindBin qw($Bin);
-use lib qw(/site/lib/perl);
 use lib qq($Bin/../lib);
 
 use Yggdrasil;
+use Yggdrasil::User;
+use Yggdrasil::Role;
 use Yggdrasil::Interface::WWW;
 
 my $www = Yggdrasil::Interface::WWW->new();
@@ -28,7 +29,7 @@ $y->connect( user     => "yggdrasil",
     );
 my $u = $y->login( user => $user, password => $pass, session => $sess );
 unless( $u ) {
-    $www->present_login( title => "Login", style => "yggdrasil.css", info => "(version $version / yggdrasil\@db.math.uio.no)" );
+    $www->present_login( title => "Login", info => "(version $version / yggdrasil\@db.math.uio.no)" );
     exit;
 }
 $www->set_session( $u->session() );
@@ -58,7 +59,7 @@ unless( $mode ) {
 #    $container2->add(@r);
 #    $www->add( $container2 );
     
-    $www->display( title => "Yggdrasil", style => "yggdrasil.css" );
+    $www->display( title => "Yggdrasil" );
 
 } elsif( $mode eq "entity" ) {
     my $e = $y->get_entity($ident);
@@ -69,7 +70,7 @@ unless( $mode ) {
     $container->class( 'Entity' );
     $container->parent( $ident );
 
-    $www->display( title => "Instance of $ident", style => "yggdrasil.css" );
+    $www->display( title => "Instance of $ident" );
 
 } elsif( $mode eq "relation" ) {
     my $r = $y->get_relation($ident);
@@ -98,7 +99,7 @@ unless( $mode ) {
     $right->class( 'Entity' );
     $right->parent( $e[1]->name() );
 
-    $www->display( title => "Related instances for relation $ident", style => "yggdrasil.css" );
+    $www->display( title => "Related instances for relation $ident" );
 
 } elsif( $mode eq "instance" ) {
     my $e = $y->get_entity( $entity );
@@ -124,8 +125,26 @@ unless( $mode ) {
     my $title = "${entity}::$ident";
     $container->parent( $title );
 
-    
+    # This will no longer be when user<->roles becomes a relation!
+    my @extra_objects;
+    my $other_parent;
+    if( $entity eq "MetaAuthUser" ) {
+	my $u = $y->get_user( $i->id() );
+	@extra_objects = map { $_->{_role_obj} } $u->member_of();
+	$other_parent = "MetaAuthRole";
+    } elsif( $entity eq "MetaAuthRole" ) {
+	my $r = $y->get_role( $i->id() );
+	@extra_objects = map { $_->{_user_obj} } $r->members();
+	$other_parent = "MetaAuthUser";
+    }
 
+    if( @extra_objects ) {
+	my $extra = $www->add( map { $_->id() } @extra_objects );
+
+	$extra->type( 'Entity' );
+	$extra->class( 'Entity' );
+	$extra->parent( $other_parent );
+    }
 
     #my @r = $plugin->related( $entity, $ident );
     #$container = $www->add(@r );
@@ -134,5 +153,5 @@ unless( $mode ) {
     #$container->parent( "Relations" );
 
 
-    $www->display( title => $title, style => "yggdrasil.css", script => 'yggdrasil.js' );
+    $www->display( title => $title );
 } 
