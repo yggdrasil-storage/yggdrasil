@@ -143,9 +143,8 @@ sub instances {
     my $self = shift;
     
     my $instances = $self->storage()->fetch( 
-	'MetaEntity' => { return => 'id', 
-			  where  => [ entity => $self->name() ] },
-	'Entities'   => { return => 'visual_id',
+	'MetaEntity' => { where  => [ entity => $self->name() ] },
+	'Entities'   => { return => [ 'visual_id', 'id' ],
 			  where  => [ entity => \qq{MetaEntity.id} ] } );
     
     # FIXME, find a way to create instance objects in a nice way
