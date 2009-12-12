@@ -32,7 +32,8 @@ my @roles = $iam->get_cached_member_of();
 
 die $status->message() unless $status->OK();
 
-# print $iam->username() . " -> " . join(', ', map { $_->name() } @roles) . " <$dbuser\@$host ($db / $engine)>\n";
+# print $iam->username() . " -> " . join(', ', map { $_->name() }
+# @roles) . " <$dbuser\@$host ($db / $engine)>\n";
 
 &init( $0, @ARGV );
 
@@ -201,6 +202,7 @@ sub do_user_role_remove {
     }    
 }
 
+# Entity parsing.
 sub do_entity {
     my $subcommand = shift;
     my @arguments  = @_;
@@ -302,18 +304,95 @@ sub do_entity_edit {
 }
 
 
-# FIXME
-# sub do_instance_edit {
-#     return unless $object;
+sub do_instance {
+    my ($subcommand, $entity) = (shift, shift);
+    my @arguments = @_;
+
+    $subcommand = &get_line( 'Instance command' ) unless $subcommand;
+    $entity = &get_line( 'Entity' ) unless $entity;
+
+    if ($subcommand eq 'list') {
+	&do_instance_list( $entity );
+    } elsif ($subcommand eq 'info') {
+	&do_instance_info( $entity, @arguments );
+    } elsif ($subcommand eq 'edit') {
+	&do_instance_edit( $entity, @arguments );
+    } elsif ($subcommand eq 'add') {
+	&do_instance_add( $entity, @arguments );
+    } elsif ($subcommand eq 'remove') {
+	&do_instance_remove( $entity, @arguments );
+    } else {
+	print "Unknown instance subcommand '$subcommand'.\n";
+	exit 2;
+    }        
+}
+
+sub do_instance_list {
+    my $entityid = shift;
+    my $entity   = $y->get_entity( $entityid );
+
+    if ($entity) {
+	my @props = sort $entity->properties();
+
+	my @header;
+	printf "%20s : ", 'Identificator';
+	for my $p (@props) {
+	    push @header, sprintf( "%12s", $p->name() );
+	}
+	printf join " | ", @header;	
+	print "\n";
+	
+	for my $instance ($entity->instances()) {
+	    printf "%20s : ", $instance->id();
+	    my @display_prop;
+	    for my $p (@props) {
+		push @display_prop, sprintf( "%12s", $instance->get( $p ) || '');
+	    }
+	    printf join " | ", @display_prop;
+	    print "\n";
+	}
+	
+    } else {
+	print "Unknown entity '$entityid'.\n";
+	exit 2;
+	
+    }
+}
+
+sub do_instance_info {
+    my $entityid = shift;
+    my $objectid = shift;
+    my $entity   = $y->get_entity( $entityid );
+    my $object   = $entity->fetch( $objectid );
     
-#     my $property = $object->get_property( shift || lc &get_line( 'Property' ) );
+    if (!$object) {
+	print "No instance of '$objectid' found in '$entityid'.\n";
+    } else {
+	for my $p (sort $entity->properties()) {
+	    printf "%20s : %s\n", $p->name(), $object->get( $p ) || '';
+	}
+    }
+}
+
+
+sub do_instance_edit {
+    my $entityid = shift;
+    my $objectid = shift;
+    my $entity   = $y->get_entity( $entityid );
+    my $object   = $entity->fetch( $objectid );
     
-#     if ($property) {
-# 	$object->set( $property->name(), shift || &get_line( 'New value' ) );
-#     } else {
-# 	print "No property '$property' in entity '$entityid'.\n";
-#     }
-# }
+    if (!$object) {
+	print "No instance of '$objectid' found in '$entityid'.\n";
+    } else {
+	my $property = $entity->get_property( shift || lc &get_line( 'Property' ) );
+	
+	if ($property) {
+	    $object->set( $property->name(), shift || &get_line( 'New value' ) );
+	} else {
+	    print "No property '$property' in entity '$entityid'.\n";
+	}
+    }
+}
 
 
 sub _map_field_and_join {
