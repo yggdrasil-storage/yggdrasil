@@ -257,10 +257,17 @@ sub property {
     my $p;
     
     # We might be passed a property object and not its name as the
-    # key.
+    # key.  Also verify that it's of the correct class.
+    my $status = $self->get_status();
     if (ref $key) {
-	$p = $key;
-	$key = $p->name();
+	if (ref $key eq 'Yggdrasil::Property') {
+	    $p = $key;
+	    $key = $p->name();
+	} else {
+	    my $ref = ref $key;
+	    $status->set( 406, "$ref isn't acceptable as a property reference." );
+	    return undef;
+	}
     }
 
     my $storage = $self->storage();
@@ -270,8 +277,6 @@ sub property {
 
     $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity->name(), property => $key )
       unless $p;
-
-    my $status = $self->get_status();
     
     unless ($p) {
 	$status->set( 404, "Unable to find property '$key' for entity '" . $entity->name() . "'" );
