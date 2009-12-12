@@ -63,6 +63,25 @@ sub connect {
 
 }
 
+sub bootstrap {
+    my $self = shift;
+
+    my $r = $self->{ygg}->bootstrap( @_ );
+
+    my $prefix = "$Y->bootstrap()";
+    if( $self->code() == 406 ) {
+	is( $self->code(), 406, "$prefix: Has already been completed" );
+	is( $r, undef, "$prefix: Return value ok (undef)" );
+	ok( 1, "$prefix: dummy test" );
+    } else {
+	ok( $self->OK(), "$prefix: Completed with status " . $self->code() );
+	isa_ok( $r, 'HASH', "$prefix: Return value isa HASH" );
+	ok( exists $r->{root}, "$prefix: Has root user" );
+
+	return $r;
+    }
+}
+
 sub login {
     my $self = shift;
 

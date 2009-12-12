@@ -7,7 +7,7 @@ use warnings;
 
 use Test::More;
 use lib qw(./t);
-use Yggdrasil::Test::Common '12';
+use Yggdrasil::Test::Common '13';
 
 my $tester = Yggdrasil::Test::Common->new();
 
@@ -18,16 +18,16 @@ my $ygg = $tester->new_yggdrasil();
 $tester->connect( bootstrap => 1 );
 
 # --- Bootstrap Yggdrasil
-my $boot = $ygg->bootstrap( testuser => 'secret' );
+my $boot = $tester->bootstrap( testuser => 'secret' );
 
 my $prefix = "Yggdrasil->bootstrap()";
-ok( $tester->OK(), "$prefix: Completed with status " . $tester->code() . " " . $tester->status()->message() );
-isa_ok( $boot, 'HASH', "$prefix: Return value isa HASH" );
-ok( exists $boot->{testuser}, "$prefix: Has testuser" );
-ok( exists $boot->{root}, "$prefix: Has root user" );
-is( $boot->{testuser}, "secret", "$prefix: testusers password was secret" );
+if( $tester->OK() ) {
+    ok( exists $boot->{testuser}, "$prefix: Has testuser" );
+    is( $boot->{testuser}, "secret", "$prefix: testusers password was secret" );
+} else {
+    ok( 1, "$prefix: dummy test" );
+    ok( 1, "$prefix: dummy test" );
+}
 
 # --- Bootstrap Yggdrasil again
-$boot = $ygg->bootstrap( me => 'even more secret' );
-is( $tester->code(), 406, '$prefix: Has already been completed' );
-is( $boot, undef, "$prefix: Return value ok" );
+$tester->bootstrap( me => 'even more secret' );

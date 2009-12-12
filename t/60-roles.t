@@ -5,7 +5,7 @@ use warnings;
 
 use Test::More;
 use lib qw(./t);
-use Yggdrasil::Test::Common '15';
+use Yggdrasil::Test::Common '14';
 
 my $Y    = 'Yggdrasil';
 my $Y_Ro = 'Yggdrasil::Role';
@@ -25,10 +25,8 @@ $tester->login();
 # --- Define roles
 my $br = $tester->yggdrasil_define_role( "bookreader" );
 
-# --- Set/Get name
-my $r = $br->name( "bbb" );
-is( $r, "bbb", "$Y_Ro->name(): Return value was $r" );
-is( $br->name(), "bbb", "$Y_Ro->name(): Role name is bbb" );
+# --- Get name
+is( $br->name(), "bookreader", "$Y_Ro->name(): Role name is bookreader" );
 
 # --- Get role - existing
 $br = $tester->yggdrasil_get_role( "bookreader" );

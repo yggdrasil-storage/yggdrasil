@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 
 use lib qw(./t);
-use Yggdrasil::Test::Common '31';
+use Yggdrasil::Test::Common '30';
 
 my $Y   = 'Yggdrasil';
 my $Y_U = 'Yggdrasil::User';
@@ -45,10 +45,8 @@ is( $r, "zxzx", "$Y_U->session(): return value was $r" );
 
 is( $haxor->session(), "zxzx", "$Y_U->session(): can set/get haxor's session" );
 
-# --- Set/Get username
-$r = $haxor->username( "bambi" );
-is( $r, "bambi", "$Y_U->username(): return value was $r" );
-is( $haxor->username(), "bambi", "$Y_U->username(): can set/get haxor's username" );
+# --- Get username
+is( $haxor->username(), "haxor", "$Y_U->username(): can set/get haxor's username" );
 
 # --- Get id
 $r = $r00t->id();
@@ -61,7 +59,7 @@ $r00t = $tester->yggdrasil_get_user( "haxor" );
 #$r00t = $ygg->get_user( "haxor" );
 #isa_ok( $r00t, $Y_U_PKG, "$Y->get_user(): Return value" );
 #is( $r00t->id(), "haxor", "$Y_U->id(): we are haxor" );
-is( $r00t->username(), "bambi", "$Y_U->username(): we are bambi" );
+is( $r00t->username(), "haxor", "$Y_U->username(): we are haxor" );
 
 # --- Get user - non-existing
 $r00t = $ygg->get_user( "doesn't exist" );
