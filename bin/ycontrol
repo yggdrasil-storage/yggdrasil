@@ -354,8 +354,7 @@ sub do_instance_list {
 	
     } else {
 	print "Unknown entity '$entityid'.\n";
-	exit 2;
-	
+	exit 2;	
     }
 }
 
@@ -365,11 +364,25 @@ sub do_instance_info {
     my $entity   = $y->get_entity( $entityid );
     my $object   = $entity->fetch( $objectid );
     
+    printf "%20s\n", "Instance data";
     if (!$object) {
 	print "No instance of '$objectid' found in '$entityid'.\n";
     } else {
 	for my $p (sort $entity->properties()) {
 	    printf "%20s : %s\n", $p->name(), $object->get( $p ) || '';
+	}
+
+	my @rels;
+	for my $e ( $y->entities() ) {
+	    my @hits = $object->fetch_related( $e );
+	    if (@hits) {
+		push @rels, sprintf "%20s : %s\n", $e->name(), join(", ", map { $_->id() } @hits);
+	    }
+	}
+	
+	if (@rels) {
+	    printf "%20s\n", "Relations";
+	    print $_ for @rels;
 	}
     }
 }
