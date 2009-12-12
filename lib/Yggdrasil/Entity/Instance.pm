@@ -254,13 +254,22 @@ sub set {
 sub property {
     my $self = shift;
     my ($key, $value) = @_;
+    my $p;
+    
+    # We might be passed a property object and not its name as the
+    # key.
+    if (ref $key) {
+	$p = $key;
+	$key = $p->name();
+    }
 
     my $storage = $self->storage();
 
     my $entity = $self->{entity};
     my $name = join(":", $entity->name(), $key );
 
-    my $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity->name(), property => $key );
+    $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity->name(), property => $key )
+      unless $p;
 
     my $status = $self->get_status();
     
