@@ -387,22 +387,59 @@ sub do_instance_info {
     }
 }
 
-
 sub do_instance_edit {
-    my $entityid = shift;
-    my $objectid = shift;
+    my $entity_or_property = shift || lc &get_line( 'Property / Relation' );
+    my $entityid = shift || lc &get_line( 'Entityid' );
+    my $objectid = shift || lc &get_line( 'Instanceid' );
     my $entity   = $y->get_entity( $entityid );
+
+    if (!$entity) {
+	print "Unknown entity '$entityid'.\n";
+	return;
+    }
+    
     my $object   = $entity->fetch( $objectid );
     
     if (!$object) {
 	print "No instance of '$objectid' found in '$entityid'.\n";
     } else {
-	my $property = $entity->get_property( shift || lc &get_line( 'Property' ) );
+	if ($entity_or_property =~ /^[Rr]/) {
+	    print "Not implemented.\n";	    
+	} elsif ($entity_or_property =~ /^[Pp]/) {
+	    my $propertyid = shift || lc &get_line( 'Property' );
+	    my $property = $entity->get_property( $propertyid );
 	
-	if ($property) {
-	    $object->set( $property->name(), shift || &get_line( 'New value' ) );
+	    if ($property) {
+		$object->set( $property->name(), shift ||
+			      &get_line( 'New value (' . $object->get( $property ) . ')' ) );
+	    } else {
+		print "No property '$propertyid' in entity '$entityid'.\n";
+	    }
+	    
 	} else {
-	    print "No property '$property' in entity '$entityid'.\n";
+	    print "Unknown edit type '$entity_or_property'\n";
+	}
+    }
+}
+
+sub do_instance_add {
+    my $entityid = shift;
+    my $objectid = shift || &get_line( 'Identification' );
+    my $entity   = $y->get_entity( $entityid );
+
+    if (!$entity) {
+	print "Unknown entity '$entityid'.\n";
+	return;
+    }
+    
+    my $object   = $entity->fetch( $objectid );
+    
+    if ($object) {
+	print "'$objectid' already exists in '$entityid'.\n";
+    } else {
+	$object = $entity->create( $objectid );
+	for my $p (sort $entity->properties()) {
+	    $object->set( $p, &get_line( $p->name() ) );
 	}
     }
 }
