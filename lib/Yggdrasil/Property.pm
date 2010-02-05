@@ -175,6 +175,7 @@ sub undefine {
 
 }
 
+# FIXME, null / type do not work atm
 sub null {
     my ($self) = (shift, shift);
     return $self->_get_meta( 'null', @_ );
