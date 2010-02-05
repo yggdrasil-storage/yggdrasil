@@ -8,6 +8,11 @@ use Getopt::Long;
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
 
+use Term::ReadLine;
+use Text::ParseWords;
+
+use Crypt::GeneratePassword;
+
 use Yggdrasil;
 
 my ($dbuser, $password, $host, $port, $db, $engine) =
@@ -32,422 +37,285 @@ my @roles = $iam->get_cached_member_of();
 
 die $status->message() unless $status->OK();
 
-# print $iam->username() . " -> " . join(', ', map { $_->name() }
-# @roles) . " <$dbuser\@$host ($db / $engine)>\n";
+my $term = new Term::ReadLine 'ycontrol';
+my $attribs = $term->Attribs;
+my $OUT = $term->OUT || \*STDOUT;
+$attribs->{attempted_completion_function} = \&attempt_completion;
 
-&init( $0, @ARGV );
+my %cmd = (
+	   help => {},
+	   user => {		    
+		    info  => {
+			      _user => \&user_info,
+			     },
+		    password => {
+				 _user => \&user_password,
+				},
+		    name => {
+			     _user => \&user_fullname,
+			    },
+		    create   => 1,
+		    delete   => {
+				 _user => \&user_delete,
+				},
+		    role => {
+			     add    => {
+					_user => {
+						  _role => \&user_role_add,
+						 },
+				       },
+			     remove => {
+					_user => {
+						  _role => \&user_role_remove,
+						 },
+					
+				       },
+			    },
+		   },
 
-# Initial call, gets a command if needed, dispatches to proper
-# commands.
-sub init {
-    my $scriptname = shift;
-    my @arguments  = @_;
-    $scriptname =~ s|.*/||;
+	   role => {
+		    info => {
+			     _role => \&role_info,
+			    }
+		   },
 
-    my $command;
-    if ($scriptname ne 'ycontrol') {
-	$command = $scriptname;
-    } else {
-	$command = shift @arguments;
-    }
+	   entity => {
+		      info => {
+			       _entity => \&entity_info,
+			      },
+		     },
 
-    $command = &get_line( 'Command' ) unless $command;
+	   instance => {
+			info => {
+				 _entity => {
+					     _instance => \&instance_info,
+					    },
+				},
+		       },
 
-    if ($command eq 'user') {
-	&do_user( @arguments );
-    } elsif ($command eq 'role') {
-	&do_roles( @arguments );
-    } elsif ($command eq 'entity') {
-	&do_entity( @arguments );
-    } elsif ($command eq 'instance') {
-	&do_instance( @arguments );
-    } else {
-	print "Unknown command '$command'.\n";
-	exit 1;
-    }
-}
+	   relation => {
+		       },
+	  );
 
-# Get a line from STDIN.  Some real input handling should go here at
-# some point.
-sub get_line {
-    my $prompt = shift;
-    print "$prompt > "; 
-    my $retval = <STDIN>;
-    chomp $retval;
-    return $retval;
-}
+my %cmd_handler = (
+		   _user => \&expand_user,
+		   _role => \&expand_role,
 
+		   _entity   => \&expand_entity,
+		   _property => \&expand_property,
+		   _instance => \&expand_instance,
+		  );
 
-# User blocks, special entity type, handled as such.
-sub do_user {
-    my $subcommand = shift;
-    my @arguments  = @_;
+my ($input, $context) = ('', \%cmd);
+while ( defined ($input = $term->readline(' > ')) ) {
+    chomp $input;
+    next unless $input =~ /\S/;
+    my $original = $input;
 
-    $subcommand = &get_line( 'User' ) unless $subcommand;
-
-    if ($subcommand eq 'list') {
-	&do_user_list();
-    } elsif ($subcommand eq 'info') {
-	&do_user_info( @arguments );
-    } elsif ($subcommand eq 'edit') {
-	&do_user_edit( @arguments );
-    } elsif ($subcommand eq 'add') {
-	&do_user_add( @arguments );
-    } elsif ($subcommand eq 'remove') {
-	&do_user_remove( @arguments );
-    } else {
-	print "Unknown user subcommand '$subcommand'.\n";
-	exit 2;
-    }    
-}
-
-# TODO, add filter.
-sub do_user_list {
-    my $entity = $y->get_entity( 'MetaAuthUser' );
-    my @users  = $entity->instances();
-    
-    printf "%-20s | %-20s | %-20s | %-20s | %s\n", 'Id', 'Full name', 'Password', 'Roles', 'Session';
-    for my $user (@users) {
-	# Why do we have to cast this object to the User class?
-	# Removing this cast breaks stuff.
-	$user = $y->get_user( $user->id() );
-	printf "%-20s | %-20s | %-20s | %-20s | %s\n", $user->id(),
-	  $user->fullname() || '', $user->password() || '',
-	    join (', ', map { $_->name() } $user->get_cached_member_of()),
-	      $user->session() || '';
-    }    
-}
-
-sub do_user_info {
-    my $userid = shift || &get_line( 'User identification' );
-    my $userobject = $y->get_user( $userid ) if $userid;
-    
-    if ($userobject) {
-	printf "%-12s -> %s\n", 'Username',  $userobject->username() || '';
-	printf "%-12s -> %s\n", 'Full name', $userobject->fullname() || '';
-	printf "%-12s -> %s\n", 'Session',   $userobject->session() || '';
-	printf "%-12s -> %s\n", 'Password',  $userobject->password() || '';
-
-	printf "%-12s -> %s\n", 'Roles',     join (', ', map { $_->name() } $userobject->get_cached_member_of());
-	
-    } else {
-	print "No user '$userid'.\n";
-    }
-    return $userobject;
-}
-
-sub do_user_edit {
-    my $userid = shift || &get_line( 'User identification' );
-    my $userobject = $y->get_user( $userid );
-    return unless $userobject;
-    
-    my $field = shift || lc &get_line( 'User field' );
-    $field =~ s/ //g;
-
-    if ($field eq 'fullname') {
-	my $fn = join( ' ', @_ );
-	$userobject->fullname( $fn || &get_line( 'Full name' ) );
-    } elsif ($field eq 'password') {
-	$userobject->password( shift || &get_line( 'Password' ) );	
-    } elsif ($field eq 'role') {
-	my $operation = shift || lc &get_line( 'Role operation' );
-	if ($operation eq 'add') {
-	    &do_user_role_add( $userobject, @_);
-	} elsif ($operation eq 'remove') {
-	    &do_user_role_remove( $userobject, @_);	    
+    my @path;
+    for my $key (shellwords( $input )) {
+	if (exists $context->{$key}) {
+	    $context = $context->{$key};
+	    push( @path, $key );
 	} else {
-	    print "Unknown role operation '$operation'.\n";
+	    my @magicshit = grep { /^_/ } keys %$context;
+	    if (@magicshit) {
+		$context = $context->{$magicshit[0]};
+		push( @path, $key );
+	    }
 	}
-    } else {
-	print "Unknown field, '$field'.\n";
-    }    
-    # &do_user_info( $userid );
+    }
+
+    if (ref $context eq 'CODE') {
+	$context->( @path );
+	$context = \%cmd;	
+    }
+    
+    $term->set_prompt( join(" ", @path) );
+    $term->addhistory($original);
 }
 
-sub do_user_role_add {
-    my $userobject = shift;
-    my @roles = @_;
-    @roles = split /\W+/, lc &get_line( "Role(s) to add to " . $userobject->username() ) unless @roles;
+# Commands
+sub user_info {
+    my ($user_command, $info_command, $username) = @_;
+
+    my $user = $y->get_user( $username );
+    print "'$username', no such user.\n" and return unless $user;
+
+    printf "%20s - %s\n", 'Username', $username;
+    printf "%20s - %s\n", 'Full name', $user->fullname() || '';
+    printf "%20s - %s\n", 'Session', $user->session() || '';
+    printf "%20s - %s\n", 'Password', $user->password() || '';
+    printf "%20s - %s\n", 'Roles', join ", ", map { $_->name() } $user->member_of();
+}
+
+sub user_password {
+    my ($user_command, $info_command, $username) = @_;
+
+    my $user = $y->get_user( $username );
+    print "'$username', no such user.\n" and return unless $user;
+
+    my $pass = Crypt::GeneratePassword::word( 6, 10 );
+    $user->password( $pass );
+    print "New password for '$username' is '$pass'.\n";
+}
+
+sub user_fullname {
+    my ($user_command, $info_command, $username) = @_;
+
+    my $user = $y->get_user( $username );
+    print "'$username', no such user.\n" and return unless $user;
+
+    $context = {};
+    my $name = $term->readline(" New full name for '$username' > ");
+    print "'$name' is invalid.\n" and return unless defined $name;
+
+    $user->fullname( $name );
+    print "New full name for '$username' is '$name'.\n";
+}
+
+
+sub entity_info {
+    my ($entity_command, $info_command, $entity) = @_;
+    my $eobj = $y->get_entity( $entity );
+
+    print "'$entity', no such entity.\n" and return unless $eobj;
     
-    for my $role (@roles) {
-	my $roleobject = $y->get_role( $role );
-	if (! $roleobject) {
-	    print "No role '$role'\n";
-	} else {
-	    if ($roleobject->add( $userobject )) {
-		print "'", $userobject->username(), "' added to the role '$role'.\n";
+    printf "%15s - %s\n", 'Name', $entity;
+
+    # Add multiline support.
+    print "Instances:\n";
+    printf "  %s\n", join ", ", map { $_->id() } $eobj->instances();
+
+    print "Properties:\n";
+    printf "  %-13s - %5s - %s\n", 'Name', 'Null?', 'Type';
+    for my $prop ($eobj->properties()) {
+#	printf "  %13s - %5s - %s\n",  $prop->name(), $prop->null?'TRUE':'FALSE', $prop->type();
+	printf "  %-13s - %5s - %s\n",  $prop->name(), '?', '?';
+    }
+
+}
+
+sub instance_info {
+    my ($instance_command, $info_command, $entity, $instance) = @_;
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+    
+    my $iobj = $eobj->fetch( $instance );
+    print "'$instance', no such instance in $entity.\n" and return unless $iobj;
+
+    print "$entity / $instance:\n";
+    
+    my @props = $eobj->properties();
+    printf "%-15s - %s\n", 'Property', 'Value' if @props;
+    for my $prop (@props) {
+	printf "%-15s - %s\n", $prop->name(), $iobj->get( $prop ) || '';
+    }    
+}
+
+sub role_info {
+    my ($role_command, $info_command, $rolename) = @_;
+    my $robj = $y->get_role( $rolename );
+    print "'$rolename', no such role.\n" and return unless $robj;
+    
+    print "${rolename}:\n";
+    printf "%20s - %s\n", 'Description', $robj->description() || '';
+    printf "%20s - %s\n", 'Members', join ", ", map { $_->id() } $robj->members();
+
+}
+
+# Yggdrasil expand interface.
+sub expand_user {
+    my $eobj = $y->get_entity( 'MetaAuthUser' );
+    return map { $_->id() } $eobj->instances();
+}
+
+sub expand_role {
+    my $eobj = $y->get_entity( 'MetaAuthRole' );
+    return map { $_->id() } $eobj->instances();
+}
+
+
+sub expand_entity {
+    return map { $_->name() } $y->entities();   
+}
+
+sub expand_property {
+    my $entity = shift;
+    my $eobj = $y->get_entity( $entity );
+    
+    return unless $eobj;
+    return map { $_->name() } $eobj->properties();    
+}
+
+sub expand_instance {
+    my $entity = shift;
+    my $eobj = $y->get_entity( $entity );
+    
+    return unless $eobj;
+    return map { $_->id() } $eobj->instances();    
+}
+
+
+# Don't go here.
+my ($i, @m, @commands);
+sub attempt_completion {
+    my $word = shift;
+    my $line = shift;
+    my $start = shift;
+    my $stop  = shift;
+
+    # All "words" before the one we are writing 'now'
+    @commands = shellwords( substr( $line, 0, $start ) );
+    
+    return $term->completion_matches( $word, \&expand_start );
+}
+
+sub expand_start {
+    my $word = shift;
+    my $state = shift;
+    
+    #    print " * @commands\n";
+    #    print "\n ** $word: $state\n";
+    unless( $state ) {
+	my $top = $context;
+	for my $c (@commands) {
+	    if (ref $top eq 'CODE') {
+		return;
+	    } elsif (exists $top->{$c}) {
+		$top = $top->{$c};
 	    } else {
-		print "Unable to add '", $userobject->username(), "' to the role '$role'.\n";
+		my @magicshit = grep { /^_/ } keys %$top;
+		if (@magicshit) {
+		    $top = $top->{$magicshit[0]};
+		}
 	    }
 	}
-    }    
-}
-
-sub do_user_role_remove {
-    my $userobject = shift;
-    my @roles = @_;
-    @roles = split /\W+/, lc &get_line( "Role(s) to remove from " . $userobject->username() ) unless @roles;
-    
-    for my $role (@roles) {
-	my $roleobject = $y->get_role( $role );
-	if (! $roleobject) {
-	    print "No role '$role'\n";
-	} else {
-	    if ($roleobject->remove( $userobject )) {
-		print "'", $userobject->username(), "' removed from the role '$role'.\n";
+	@m = map {
+	    if ($cmd_handler{$_}) {		
+		# Grab command handlers
+		$cmd_handler{$_}->( reverse @commands );
+	    } elsif ($_ =~ /^_/) {
+		# Strip _-commands, like _desc as well.
 	    } else {
-		print "Unable to remove '", $userobject->username(), "' from the role '$role'.\n";
+		# Otherwise, return the key raw.
+		$_;
 	    }
-	}
-    }    
+	} keys %$top if ref $top eq 'HASH';
+    } else { $i++; }
+
+    return expand($word, \@m);
 }
 
-# Entity parsing.
-sub do_entity {
-    my $subcommand = shift;
-    my @arguments  = @_;
-
-    $subcommand = &get_line( 'Entity command' ) unless $subcommand;
-
-    if ($subcommand eq 'list') {
-	&do_entity_list();
-    } elsif ($subcommand eq 'info') {
-	&do_entity_info( @arguments );
-    } elsif ($subcommand eq 'edit') {
-	&do_entity_edit( @arguments );
-    } elsif ($subcommand eq 'add') {
-	&do_entity_add( @arguments );
-    } elsif ($subcommand eq 'remove') {
-	&do_entity_remove( @arguments );
-    } else {
-	print "Unknown entity subcommand '$subcommand'.\n";
-	exit 2;
-    }        
-}
-
-# TODO, add filter.
-sub do_entity_list {    
-    my $entity = $y->entities();
+sub expand {
+    my $word = shift;
+    my @m    = @{$_[0]};
     
-    printf "%-20s | %s\n", 'Id', 'Instances';
-    for my $e ($y->entities()) {
-	my @instances = $e->instances();
-
-	if (! @instances) {
-	    printf "%-20s | %3d\n", $e->name(), scalar @instances;
-	} elsif (@instances > 5) {
-	    printf "%-20s | %3d ; %s ...\n", $e->name(), scalar @instances,
-	      &_map_field_and_join( 'id', @instances[ 0 .. 5 ]);
-	} else {
-	    printf "%-20s | %3d ; %s\n", $e->name(), scalar @instances,
-	      &_map_field_and_join( 'id', @instances);
-	    
-	}
-    }    
-}
-
-sub do_entity_info {
-    my $ename = shift || &get_line( 'Entity identifier' );
-    my $entity = $y->get_entity( $ename );
-    
-    if ($entity) {
-	# TODO, limit rate / numbers.
-	printf "%-12s -> %s\n", 'Properties', &_map_field_and_join( 'name', $entity->properties() );
-	printf "%-12s -> %s\n", 'Instances', &_map_field_and_join( 'id', $entity->instances() );
-    } else {
-	print "No entity '$ename'.\n";
-	return;
+    for($i||=0 ; $i<@m; $i++ ) {
+	return $m[$i] unless length($word);
+	return $m[$i] if $m[$i] =~ /^\Q$word/;
     }
+
+    $i = 0;
+    return;
 }
-
-# Add / remove / edit properties for the entity, property value is
-# done via instance lookups.
-sub do_entity_edit {
-    my $entityid = shift || &get_line( 'Entity identification' );
-    my $object = $y->get_entity( $entityid );
-
-    my $task = shift || &get_line( 'Entity command' );
-    
-    if ($task eq 'add') {
-	my $property = shift || &get_line( 'Property identification' );
-
-	if ($object->property_exists( $property) ) {
-	    print "'$entityid' already has a property named '$property'.\n";
-	    return;
-	}
-
-	my $cannull = shift || &get_line( 'Can have null value' );
-	if ($cannull && $cannull =~ /^[yY]/) {
-	    $cannull = 1; 
-	} else {
-	    $cannull = 0;
-	}
-	
-	my $type = uc ( shift || &get_line( 'Field type' ));
-	my %valid_types = $y->get_property_types();
-	
-	unless ($valid_types{$type}) {
-	    print "Invalid property type '$type'.\n";
-	    return;
-	}
-	
-	$object->define_property( $property, nullp => $cannull, type => $type);
-
-	if (! $status->OK()) {
-	    print $status->message(), "\n";
-	} else {
-	    print "Added property '$property' to '$entityid'.\n";
-	}
-    } elsif ($task eq 'remove') {
-	print "Removing properties not implemented.\n";
-    }
-}
-
-
-sub do_instance {
-    my ($subcommand, $entity) = (shift, shift);
-    my @arguments = @_;
-
-    $subcommand = &get_line( 'Instance command' ) unless $subcommand;
-    $entity = &get_line( 'Entity' ) unless $entity;
-
-    if ($subcommand eq 'list') {
-	&do_instance_list( $entity );
-    } elsif ($subcommand eq 'info') {
-	&do_instance_info( $entity, @arguments );
-    } elsif ($subcommand eq 'edit') {
-	&do_instance_edit( $entity, @arguments );
-    } elsif ($subcommand eq 'add') {
-	&do_instance_add( $entity, @arguments );
-    } elsif ($subcommand eq 'remove') {
-	&do_instance_remove( $entity, @arguments );
-    } else {
-	print "Unknown instance subcommand '$subcommand'.\n";
-	exit 2;
-    }        
-}
-
-sub do_instance_list {
-    my $entityid = shift;
-    my $entity   = $y->get_entity( $entityid );
-
-    if ($entity) {
-	my @props = sort $entity->properties();
-
-	my @header;
-	printf "%20s : ", 'Identificator';
-	for my $p (@props) {
-	    push @header, sprintf( "%12s", $p->name() );
-	}
-	printf join " | ", @header;	
-	print "\n";
-	
-	for my $instance ($entity->instances()) {
-	    printf "%20s : ", $instance->id();
-	    my @display_prop;
-	    for my $p (@props) {
-		push @display_prop, sprintf( "%12s", $instance->get( $p ) || '');
-	    }
-	    printf join " | ", @display_prop;
-	    print "\n";
-	}
-	
-    } else {
-	print "Unknown entity '$entityid'.\n";
-	exit 2;	
-    }
-}
-
-sub do_instance_info {
-    my $entityid = shift;
-    my $objectid = shift;
-    my $entity   = $y->get_entity( $entityid );
-    my $object   = $entity->fetch( $objectid );
-    
-    printf "%20s\n", "Instance data";
-    if (!$object) {
-	print "No instance of '$objectid' found in '$entityid'.\n";
-    } else {
-	for my $p (sort $entity->properties()) {
-	    printf "%20s : %s\n", $p->name(), $object->get( $p ) || '';
-	}
-
-	my @rels;
-	for my $e ( $y->entities() ) {
-	    my @hits = $object->fetch_related( $e );
-	    if (@hits) {
-		push @rels, sprintf "%20s : %s\n", $e->name(), join(", ", map { $_->id() } @hits);
-	    }
-	}
-	
-	if (@rels) {
-	    printf "%20s\n", "Relations";
-	    print $_ for @rels;
-	}
-    }
-}
-
-sub do_instance_edit {
-    my $entity_or_property = shift || lc &get_line( 'Property / Relation' );
-    my $entityid = shift || lc &get_line( 'Entityid' );
-    my $objectid = shift || lc &get_line( 'Instanceid' );
-    my $entity   = $y->get_entity( $entityid );
-
-    if (!$entity) {
-	print "Unknown entity '$entityid'.\n";
-	return;
-    }
-    
-    my $object   = $entity->fetch( $objectid );
-    
-    if (!$object) {
-	print "No instance of '$objectid' found in '$entityid'.\n";
-    } else {
-	if ($entity_or_property =~ /^[Rr]/) {
-	    print "Not implemented.\n";	    
-	} elsif ($entity_or_property =~ /^[Pp]/) {
-	    my $propertyid = shift || lc &get_line( 'Property' );
-	    my $property = $entity->get_property( $propertyid );
-	
-	    if ($property) {
-		$object->set( $property->name(), shift ||
-			      &get_line( 'New value (' . $object->get( $property ) . ')' ) );
-	    } else {
-		print "No property '$propertyid' in entity '$entityid'.\n";
-	    }
-	    
-	} else {
-	    print "Unknown edit type '$entity_or_property'\n";
-	}
-    }
-}
-
-sub do_instance_add {
-    my $entityid = shift;
-    my $objectid = shift || &get_line( 'Identification' );
-    my $entity   = $y->get_entity( $entityid );
-
-    if (!$entity) {
-	print "Unknown entity '$entityid'.\n";
-	return;
-    }
-    
-    my $object   = $entity->fetch( $objectid );
-    
-    if ($object) {
-	print "'$objectid' already exists in '$entityid'.\n";
-    } else {
-	$object = $entity->create( $objectid );
-	for my $p (sort $entity->properties()) {
-	    $object->set( $p, &get_line( $p->name() ) );
-	}
-    }
-}
-
-
-sub _map_field_and_join {
-    my $field = shift;
-    my @list = @_;
-    return join(", ", sort map { $_->$field() } @list );
-}
-
