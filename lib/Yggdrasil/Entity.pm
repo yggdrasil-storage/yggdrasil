@@ -260,7 +260,7 @@ sub properties {
 	}
     }
 
-    return values %properties;
+    return sort values %properties;
 }
 
 
