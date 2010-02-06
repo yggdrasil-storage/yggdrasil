@@ -91,6 +91,18 @@ my %cmd = (
 					     _instance => \&instance_info,
 					    },
 				},
+			set => {
+				_entity => {
+					    _instance => {
+							  _property => \&instance_edit,
+							 },
+					   },
+				},
+			history => {
+				    _entity => {
+						_instance => \&instance_history,
+					       },
+				   },
 		       },
 
 	   relation => {
@@ -257,6 +269,83 @@ sub instance_info {
     }    
 }
 
+# Instance interface
+sub instance_edit {
+    my ($instance_command, $info_command, $entity, $instance, $property) = @_;
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+    
+    my $iobj = $eobj->fetch( $instance );
+    print "'$instance', no such instance in $entity.\n" and return unless $iobj;
+
+    my $pobj = $eobj->property_exists( $property );
+    print "'$property', no such property in $entity.\n" and return unless $pobj;
+
+    my $old_value = $iobj->property( $property );
+    my $new_value = $term->readline(" New value for '$property' ($old_value) > ");
+    my $retval = $iobj->property( $property, $new_value );
+
+    if (! $status->OK() || ! defined $retval) {
+	print "Setting the value of '$property' in '$instance' failed: " . 
+	  $status->message() . "\n";
+    }
+}
+
+
+# This doesn't work, we only get one item back from fetch(), we
+# probably need to look at _get_in_time in Instance.pm.
+sub instance_history {
+    my ($instance_command, $info_command, $entity, $instance) = @_;
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+
+    my $now = time;
+    my @iobjs = $eobj->fetch( $instance, 0, $now );
+    print "'$instance', no such instance in $entity.\n" and return unless @iobjs;
+    
+    print "$entity / $instance (full history):\n";
+    
+    my @props = $eobj->properties( 0, $now );
+    my (@lines, %currentline);
+
+    my %maxwidth;
+    $maxwidth{start} = $maxwidth{stop} = 6; # default, will be overwritten if length is longer.
+    for my $iobj (@iobjs) {
+	%currentline = ();
+	for my $prop ('start', 'stop', @props) {
+	    my $propname = ref $prop?$prop->name():$prop;
+	    my $value    = $iobj->get( $prop );
+	    next unless $value;
+            my $length = length $value;
+            $maxwidth{$propname} ||= 0;
+            $maxwidth{$propname} = $length if $length > $maxwidth{$propname};
+	    $currentline{$propname} = $value;
+	}
+	push @lines, \%currentline;
+    }
+
+    my @maxwidth;
+    my @header;
+    for my $prop ('start', 'stop', @props) {
+	my $propname = ref $prop?$prop->name():$prop;
+	my $w = $maxwidth{$propname};
+	push @header, sprintf "%-${w}s", $propname;
+    }
+    print join( ' | ', @header ), "\n";
+    
+    for my $l (@lines) {
+	my @l;
+	for my $prop ('start', 'stop', @props) {
+	    my $propname = ref $prop?$prop->name():$prop;
+	    my $w = $maxwidth{$propname};
+	    push @l, sprintf "%-${w}s", $l->{$propname} || '';
+	}
+	print join( ' | ', @l ), "\n";
+    }
+    
+}
+
+
 # Role interface
 sub role_info {
     my ($role_command, $info_command, $rolename) = @_;
@@ -288,7 +377,12 @@ sub expand_entity {
 }
 
 sub expand_property {
-    my $entity = shift;
+    my ($entity);
+    if ($_[3] eq 'instance' && $_[2] eq 'set') {
+	$entity = $_[1];
+    } else {
+	$entity = $_[0];
+    }
     my $eobj = $y->get_entity( $entity );
     
     return unless $eobj;
