@@ -55,7 +55,11 @@ sub members {
 	MetaAuthRolemembership => 
 	{ where => [ role => $robj->{_id} ] } );
 
-    return unless $self->get_status()->OK();
+    # FIXME, fetch does *not* return status code in a sane way.  This
+    # needs to be solved at the SQL layer upon completing a
+    # transaction.
+    # return unless $self->get_status()->OK();
+    
     return map { Yggdrasil::User->get(yggdrasil => $self, user => $_->{visual_id}) } @$users;
 }
 
