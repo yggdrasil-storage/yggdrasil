@@ -54,7 +54,7 @@ my %cmd = (
 		    name => {
 			     _user => \&user_fullname,
 			    },
-		    create   => 1,
+		    create   => \&user_create,
 		    delete   => {
 				 _user => \&user_delete,
 				},
@@ -95,6 +95,8 @@ my %cmd = (
 
 	   relation => {
 		       },
+	   quit     => sub { exit },
+	   exit     => sub { exit },
 	  );
 
 my %cmd_handler = (
@@ -136,6 +138,7 @@ while ( defined ($input = $term->readline(' > ')) ) {
 }
 
 # Commands
+# User interface.
 sub user_info {
     my ($user_command, $info_command, $username) = @_;
 
@@ -174,7 +177,47 @@ sub user_fullname {
     print "New full name for '$username' is '$name'.\n";
 }
 
+sub user_role_add {
+    my ($user_command, $role_word, $role_add, $username, $rolename) = @_;
+    my $user = $y->get_user( $username );
+    print "'$username', no such user.\n" and return unless $user;
+    
+    my $role = $y->get_role( $rolename );
+    print "'$rolename', no such role.\n" and return unless $role;
 
+    $role->add( $user );
+    print "Added the user '$username' to the role '$rolename'.\n";   
+}
+
+sub user_role_remove {
+    my ($user_command, $role_word, $role_add, $username, $rolename) = @_;
+    my $user = $y->get_user( $username );
+    print "'$username', no such user.\n" and return unless $user;
+    
+    my $role = $y->get_role( $rolename );
+    print "'$rolename', no such role.\n" and return unless $role;
+
+    $role->remove( $user );
+    print "Removed the user '$username' from the role '$rolename'.\n";   
+}
+
+sub user_create {
+    my ($user_command, $create_command) = @_;
+
+    my $uname = $term->readline(" Username > ");
+    print "'$uname', already taken.\n" and return if $y->get_user( $uname );
+
+    my $uobj = $y->define_user( $uname );
+    
+    my $name = $term->readline(" Full name > ");
+    print "'$name' is invalid.\n" and return unless defined $name;
+    $uobj->fullname( $name );
+    my $pass = Crypt::GeneratePassword::word( 6, 10 );
+    $uobj->password( $pass );
+    print "'$uname' created with password '$pass'.\n";
+}
+
+# Entity interface
 sub entity_info {
     my ($entity_command, $info_command, $entity) = @_;
     my $eobj = $y->get_entity( $entity );
@@ -196,6 +239,7 @@ sub entity_info {
 
 }
 
+# Instance interface
 sub instance_info {
     my ($instance_command, $info_command, $entity, $instance) = @_;
     my $eobj = $y->get_entity( $entity );
@@ -213,6 +257,7 @@ sub instance_info {
     }    
 }
 
+# Role interface
 sub role_info {
     my ($role_command, $info_command, $rolename) = @_;
     my $robj = $y->get_role( $rolename );
@@ -223,6 +268,8 @@ sub role_info {
     printf "%20s - %s\n", 'Members', join ", ", map { $_->id() } $robj->members();
 
 }
+
+
 
 # Yggdrasil expand interface.
 sub expand_user {
