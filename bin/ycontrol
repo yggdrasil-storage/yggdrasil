@@ -99,6 +99,11 @@ my %cmd;
 	    _role => \&role_info,
 	},
 	
+	description => {
+	    _help => "Change role description",
+	    _role => \&role_description,
+	},
+
 	grant => {
 	    _help => "Grant role privileges for an entity",
 
@@ -518,6 +523,19 @@ sub role_info {
     print "${rolename}:\n";
     printf "%20s - %s\n", 'Description', $robj->description() || '';
     printf "%20s - %s\n", 'Members', join ", ", map { $_->id() } $robj->members();
+}
+
+sub role_description {
+    my($role_command, $desc_command, $role) = @_;
+    
+    my $robj = $y->get_role( $role );
+    print "'$role', no such role.\n" and return unless $robj;
+
+    my $desc = $term->readline(" New description for role '$role' > ");
+    print "'$desc' is invalid.\n" and return unless defined $desc;
+
+    $robj->description( $desc );
+    print "New description for '$role' is '$desc'.\n";
 }
 
 sub role_grant {
