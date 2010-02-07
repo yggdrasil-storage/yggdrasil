@@ -305,6 +305,13 @@ sub exists {
     return $fetchref->[0]->{id};
 }
 
+# to access defined storage types
+sub property_types {
+    my $self = shift;
+
+    return $self->{storage}->get_defined_types();
+}
+
 
 ###############################################################################
 # Helper functions

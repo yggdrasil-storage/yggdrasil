@@ -184,6 +184,19 @@ my %cmd;
 	},
     },
 
+    property => {
+	_help => "Property tools",
+	
+	create => {
+	    _help   => "Create a property",
+	    _entity => {
+		_entity_property => {
+		    _property_type => \&property_create,
+		},
+	    },
+	},
+    },
+
     instance => {
 	_help => "Instance tools",
 
@@ -197,7 +210,7 @@ my %cmd;
 	    _help   => "Edit the property of an instance",
 	    _entity => {
 		_instance => {
-		    _property => \&instance_edit,
+		    _instance_property => \&instance_edit,
 		},
 	    },
 	},
@@ -218,13 +231,17 @@ my %cmd;
 
 
 my %cmd_handler = (
-		   _user => \&expand_user,
-		   _role => \&expand_role,
+    _user => \&expand_user,
+    _role => \&expand_role,
+    
+    _entity   => \&expand_entity,
+    _instance => \&expand_instance,
 
-		   _entity   => \&expand_entity,
-		   _property => \&expand_property,
-		   _instance => \&expand_instance,
-		  );
+    _instance_property => \&expand_instance_property,
+    _entity_property   => \&expand_entity_property,
+    
+    _property_type => \&expand_property_type,
+    );
 
 
 my $prompt = " > ";
@@ -419,6 +436,26 @@ sub entity_create {
     print "'$entity' created.\n";
 }
 
+
+# Property interface
+sub property_create {
+    my($property_command, $create_command, $entity, $property, $type) = @_;
+
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+
+    my $pobj = $eobj->get_property( $property );
+    print "'$property' already exists.\n" and return if $pobj;
+
+    $y->define_property( $property, entity => $eobj, type => $type );
+    
+    if( $y->get_status()->OK() ) {
+	print "'$property' created as $type\n";
+    } else {
+	print "Failed to create property '$property' as $type.\n";
+    }
+}
+
 # Instance interface
 sub instance_info {
     my ($instance_command, $info_command, $entity, $instance) = @_;
@@ -437,7 +474,6 @@ sub instance_info {
     }    
 }
 
-# Instance interface
 sub instance_edit {
     my ($instance_command, $info_command, $entity, $instance, $property) = @_;
     my $eobj = $y->get_entity( $entity );
@@ -597,15 +633,6 @@ sub expand_entity {
     return map { $_->name() } $y->entities();
 }
 
-sub expand_property {
-    my( $prop, $instance, $entity ) = @_;
-
-    my $eobj = $y->get_entity( $entity );
-    return unless $eobj;
-
-    return map { $_->name() } $eobj->properties();    
-}
-
 sub expand_instance {
     my( $instance, $entity ) = @_;
 
@@ -613,6 +640,27 @@ sub expand_instance {
     return unless $eobj;
 
     return map { $_->id() } $eobj->instances();    
+}
+
+sub expand_entity_property {
+    my( $prop, $entity ) = @_;
+
+
+    my $eobj = $y->get_entity( $entity );
+    return unless $eobj;
+
+    return map { $_->name() } $eobj->properties();    
+}
+
+sub expand_instance_property {
+    my( $prop, $instance, $entity ) = @_;
+
+    return expand_entity_property( $prop, $entity );
+}
+
+
+sub expand_property_type {
+    return $y->property_types();
 }
 
 

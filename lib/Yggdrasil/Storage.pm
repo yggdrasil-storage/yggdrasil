@@ -458,6 +458,10 @@ sub _get_schema_name {
     return $self->{_mapcacheh2m}->{$schema} || $schema;
 }
 
+sub get_defined_types {
+    return keys %TYPES;
+}
+
 # Checks and verifies a type, doesn't handle SET yet.  Returns the
 # default of 'TEXT' if the type is undefined.
 sub _check_valid_type {
