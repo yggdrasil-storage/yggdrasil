@@ -228,7 +228,11 @@ $attribs->{completion_function} = sub { completion(@_, \%cmd, \@cmd_path) };
 
 while ( defined (my $input = $term->readline($prompt)) ) {
     chomp $input;
-    next unless $input =~ /\S/;
+
+    if( $input !~ /\S/ ) {
+	@cmd_path = ();
+	next;
+    }
     
     # Add to line what has previously been written
     $input = join(" ", @cmd_path, $input);
@@ -264,6 +268,7 @@ while ( defined (my $input = $term->readline($prompt)) ) {
 	@cmd_path = ();
     }
     
+} continue {
     # Set prompt
     $prompt = join(" ", @cmd_path) . " > ";
 }
@@ -273,7 +278,7 @@ sub help {
     my $path = shift;
 
     if( ref $top ne "HASH" ) {
-	print "No help for '", join(" ", @cmd_path), "'\n";
+	print "No help for '", join(" ", @$path), "'\n";
 	return;
     }
 
