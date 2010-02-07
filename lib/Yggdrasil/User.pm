@@ -146,8 +146,10 @@ sub member_of {
 	{ return => [ qw/visual_id/ ], where => [ id => \qq<MetaAuthRolemembership.role> ] },
 	MetaAuthRolemembership =>
 	{ where => [ user => $uobj->{_id} ] } );
-
-    return unless $self->get_status()->OK();
+    # FIX fetch does *not* return status code in a sane way.  This
+    # needs to be solved at the SQL layer upon completing a
+    # transaction.
+    # return unless $self->get_status()->OK();
     return map { Yggdrasil::Role->get(yggdrasil => $self, role => $_->{visual_id}) } @$roles;
 }
 
