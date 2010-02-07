@@ -47,6 +47,7 @@ my %cmd;
 
     user => {
 	_help => "User tools",
+
 	info  => {
 	    _help => "Show information about a user",
 	    _user => \&user_info,
@@ -62,7 +63,10 @@ my %cmd;
 	    _user => \&user_fullname,
 	},
 
-	create   => \&user_create,
+	create => {
+	    _help => "Create new user",
+	    _user => \&user_create,
+	},
 
 	delete   => {
 	    _help => "Delete a user",
@@ -89,22 +93,95 @@ my %cmd;
     
     role => {
 	_help => "Role tools",
+
 	info  => {
 	    _help => "Show information about a role",
 	    _role => \&role_info,
+	},
+	
+	grant => {
+	    _help => "Grant role privileges for an entity",
+
+	    read   => {
+		_help => "Grant role read privileges for an entity",
+		_role => {
+		    _entity => \&role_grant,
+		}
+	    },
+
+	    write  => {
+		_help => "Grant role write privileges for an entity",
+		_role => {
+		    _entity => \&role_grant,
+		},
+	    },
+
+	    create => {
+		_help => "Grant role create privileges for an entity",
+		_role => {
+		    _entity => \&role_grant,
+		},
+	    },
+
+	    delete => {
+		_help => "Grant role delete privileges for an entity",
+		_role => {
+		    _entity => \&role_grant,
+		},
+	    },
+	},
+
+	revoke => {
+	    _help => "Revoke role privileges for an entity",
+
+	    read   => {
+		_help => "Revoke role read privileges for an entity",
+		_role => {
+		    _entity => \&role_revoke,
+		}
+	    },
+
+	    write  => {
+		_help => "Revoke role write privileges for an entity",
+		_role => {
+		    _entity => \&role_revoke,
+		},
+	    },
+
+	    create => {
+		_help => "Revoke role create privileges for an entity",
+		_role => {
+		    _entity => \&role_revoke,
+		},
+	    },
+
+	    delete => {
+		_help => "Revoke role delete privileges for an entity",
+		_role => {
+		    _entity => \&role_revoke,
+		},
+	    },
+
 	}
     },
     
     entity => {
 	_help => "Entity tools",
+
 	info  => {
 	    _help   => "Show information about an entity",
 	    _entity => \&entity_info,
+	},
+
+	create => {
+	    _help   => "Create new entity",
+	    _entity => \&entity_create,
 	},
     },
     
     instance => {
 	_help => "Instance tools",
+
 	info  => {
 	    _help   => "Show information about an instance",
 	    _entity => {
@@ -132,7 +209,8 @@ my %cmd;
     },
     quit     => sub { exit },
     exit     => sub { exit },
-    );
+);
+
 
 my %cmd_handler = (
 		   _user => \&expand_user,
@@ -145,9 +223,8 @@ my %cmd_handler = (
 
 
 my $prompt = " > ";
-my $context = \%cmd;
 my @cmd_path = ();
-$attribs->{completion_function} = sub { completion(@_, \@cmd_path) };
+$attribs->{completion_function} = sub { completion(@_, \%cmd, \@cmd_path) };
 
 while ( defined (my $input = $term->readline($prompt)) ) {
     chomp $input;
@@ -157,18 +234,18 @@ while ( defined (my $input = $term->readline($prompt)) ) {
     $input = join(" ", @cmd_path, $input);
 
     my @this_path;
-    my $top = $context;
+    my $context = \%cmd;
     for my $key ( shellwords($input) ) {
-	if (exists $top->{$key}) {
+	if (exists $context->{$key}) {
 	    # static command part
 	    # "user", "info" etc.
-	    $top = $top->{$key};
+	    $context = $context->{$key};
 	    push( @this_path, $key );
 	} else {
 	    # dynamic command part
-	    my( $expander ) = grep { $_ !~ /_help/ } grep { /^_/ } keys %$top;
+	    my( $expander ) = grep { $_ !~ /_help/ } grep { /^_/ } keys %$context;
 	    if ( $expander ) {
-		$top = $top->{$expander};
+		$context = $context->{$expander};
 		push( @this_path, $key );
 	    }
 	}
@@ -179,11 +256,11 @@ while ( defined (my $input = $term->readline($prompt)) ) {
     if( @cmd_path && $cmd_path[0] eq "help" ) {
 	# display help
 	shift @cmd_path while @cmd_path && $cmd_path[0] eq "help";
-	help( $top, \@cmd_path );
+	help( $context, \@cmd_path );
 	@cmd_path = ();
-    } elsif (ref $top eq 'CODE') {
+    } elsif (ref $context eq 'CODE') {
 	# Reached end of command line
-	$top->( @cmd_path );
+	$context->( @cmd_path );
 	@cmd_path = ();
     }
     
@@ -247,7 +324,6 @@ sub user_fullname {
     my $user = $y->get_user( $username );
     print "'$username', no such user.\n" and return unless $user;
 
-    $context = {};
     my $name = $term->readline(" New full name for '$username' > ");
     print "'$name' is invalid.\n" and return unless defined $name;
 
@@ -280,9 +356,8 @@ sub user_role_remove {
 }
 
 sub user_create {
-    my ($user_command, $create_command) = @_;
+    my ($user_command, $create_command, $uname) = @_;
 
-    my $uname = $term->readline(" Username > ");
     print "'$uname', already taken.\n" and return if $y->get_user( $uname );
 
     my $uobj = $y->define_user( $uname );
@@ -293,6 +368,15 @@ sub user_create {
     my $pass = Crypt::GeneratePassword::word( 6, 10 );
     $uobj->password( $pass );
     print "'$uname' created with password '$pass'.\n";
+}
+
+sub user_delete {
+    my($user_command, $delete_command, $uname) = @_;
+
+    my $uobj = $y->get_user( $uname );
+    print "'$uname' does not exist.\n" and return unless $uobj;
+
+    print "Not implemented\n";
 }
 
 # Entity interface
@@ -314,7 +398,15 @@ sub entity_info {
 #	printf "  %13s - %5s - %s\n",  $prop->name(), $prop->null?'TRUE':'FALSE', $prop->type();
 	printf "  %-13s - %5s - %s\n",  $prop->name(), '?', '?';
     }
+}
 
+sub entity_create {
+    my($entity_command, $create_command, $entity) = @_;
+
+    print "'$entity' already exists.\n" and return if $y->get_entity( $entity );
+
+    my $eobj = $y->define_entity( $entity );
+    print "'$entity' created.\n";
 }
 
 # Instance interface
@@ -421,9 +513,49 @@ sub role_info {
     print "${rolename}:\n";
     printf "%20s - %s\n", 'Description', $robj->description() || '';
     printf "%20s - %s\n", 'Members', join ", ", map { $_->id() } $robj->members();
-
 }
 
+sub role_grant {
+    my($role_command, $grant_command, $privilege, $role, $entity) = @_;
+
+    grant_revoke( $grant_command, $privilege, $role, $entity );
+}
+
+sub role_revoke {
+    my($role_command, $revoke_command, $privilege, $role, $entity) = @_;
+    
+    grant_revoke( $revoke_command, $privilege, $role, $entity );
+}
+
+sub grant_revoke {
+    my( $type, $privilege, $role, $entity ) = @_;
+
+    my $robj = $y->get_role( $role );
+    print "'$role', no such role.\n" and return unless $robj;
+
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+
+    my %tag = (
+	read   => 'r',
+	write  => 'w',
+	create => 'c',
+	delete => 'd',
+    );
+    print "'$privilege', no such privilege.\n" and return unless $tag{$privilege};
+
+    if( $type eq "grant" ) {
+	$robj->grant( $eobj, $tag{$privilege} );
+	print "Granted role '$role' $privilege privileges to $entity\n"; 
+    } elsif( $type eq "revoke" ) {
+	$robj->revoke( $eobj, $tag{$privilege} );
+	print "Revoked role '$role' $privilege privileges to $entity\n"; 
+    } else {
+	print "'$type', no such type.\n";
+	return;
+    }
+
+}
 
 
 # Yggdrasil expand interface.
@@ -465,6 +597,7 @@ sub completion {
     my $word  = shift;
     my $line  = shift;
     my $start = shift;
+    my $top   = shift;
     my $path  = shift;
 
     # Add to line what has previously been written
@@ -476,7 +609,6 @@ sub completion {
     # add the word we are about to write now (if it's empty)
     push( @commands, $word ) if $word !~ /\S/;
 
-    my $top = $context;
     for( my $i=0; $i<@commands; $i++ ) {
 	my $c = $commands[$i];
 
