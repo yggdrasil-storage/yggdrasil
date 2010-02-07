@@ -40,76 +40,79 @@ die $status->message() unless $status->OK();
 my $term = new Term::ReadLine 'ycontrol';
 my $attribs = $term->Attribs;
 my $OUT = $term->OUT || \*STDOUT;
-$attribs->{attempted_completion_function} = \&attempt_completion;
 
-my %cmd = (
-	   help => {},
-	   user => {		    
-		    info  => {
-			      _user => \&user_info,
-			     },
-		    password => {
-				 _user => \&user_password,
-				},
-		    name => {
-			     _user => \&user_fullname,
-			    },
-		    create   => \&user_create,
-		    delete   => {
-				 _user => \&user_delete,
-				},
-		    role => {
-			     add    => {
-					_user => {
-						  _role => \&user_role_add,
-						 },
-				       },
-			     remove => {
-					_user => {
-						  _role => \&user_role_remove,
-						 },
-					
-				       },
-			    },
-		   },
+my %cmd;
+%cmd = (
+    user => {
+	info  => {
+	    _user => \&user_info,
+	},
 
-	   role => {
-		    info => {
-			     _role => \&role_info,
-			    }
-		   },
+	password => {
+	    _user => \&user_password,
+	},
 
-	   entity => {
-		      info => {
-			       _entity => \&entity_info,
-			      },
-		     },
+	name => {
+	    _user => \&user_fullname,
+	},
 
-	   instance => {
-			info => {
-				 _entity => {
-					     _instance => \&instance_info,
-					    },
-				},
-			set => {
-				_entity => {
-					    _instance => {
-							  _property => \&instance_edit,
-							 },
-					   },
-				},
-			history => {
-				    _entity => {
-						_instance => \&instance_history,
-					       },
-				   },
-		       },
+	create   => \&user_create,
 
-	   relation => {
-		       },
-	   quit     => sub { exit },
-	   exit     => sub { exit },
-	  );
+	delete   => {
+	    _user => \&user_delete,
+	},
+
+	role => {
+	    add => {
+		_user => {
+		    _role => \&user_role_add,
+		},
+	    },
+	    remove => {
+		_user => {
+		    _role => \&user_role_remove,
+		},
+		
+	    },
+	},
+    },
+    
+    role => {
+	info => {
+	    _role => \&role_info,
+	}
+    },
+    
+    entity => {
+	info => {
+	    _entity => \&entity_info,
+	},
+    },
+    
+    instance => {
+	info => {
+	    _entity => {
+		_instance => \&instance_info,
+	    },
+	},
+	set => {
+	    _entity => {
+		_instance => {
+		    _property => \&instance_edit,
+		},
+	    },
+	},
+	history => {
+	    _entity => {
+		_instance => \&instance_history,
+	    },
+	},
+    },
+    
+    relation => { },
+    quit     => sub { exit },
+    exit     => sub { exit },
+    );
 
 my %cmd_handler = (
 		   _user => \&expand_user,
@@ -120,33 +123,47 @@ my %cmd_handler = (
 		   _instance => \&expand_instance,
 		  );
 
-my ($input, $context) = ('', \%cmd);
-while ( defined ($input = $term->readline(' > ')) ) {
+
+my $prompt = " > ";
+my $context = \%cmd;
+my @cmd_path = ();
+$attribs->{completion_function} = sub { completion(@_, \@cmd_path) };
+
+while ( defined (my $input = $term->readline($prompt)) ) {
     chomp $input;
     next unless $input =~ /\S/;
-    my $original = $input;
+    
+    # Add to line what has previously been written
+    $input = join(" ", @cmd_path, $input);
 
-    my @path;
-    for my $key (shellwords( $input )) {
-	if (exists $context->{$key}) {
-	    $context = $context->{$key};
-	    push( @path, $key );
+    my @this_path;
+    my $top = $context;
+    for my $key ( shellwords($input) ) {
+	if (exists $top->{$key}) {
+	    # static command part
+	    # "user", "info" etc.
+	    $top = $top->{$key};
+	    push( @this_path, $key );
 	} else {
-	    my @magicshit = grep { /^_/ } keys %$context;
-	    if (@magicshit) {
-		$context = $context->{$magicshit[0]};
-		push( @path, $key );
+	    # dynamic command part
+	    my( $expander ) = grep { /^_/ } keys %$top;
+	    if ( $expander ) {
+		$top = $top->{$expander};
+		push( @this_path, $key );
 	    }
 	}
     }
 
-    if (ref $context eq 'CODE') {
-	$context->( @path );
-	$context = \%cmd;	
+    @cmd_path = @this_path;
+
+    if (ref $top eq 'CODE') {
+	# Reached end of command line
+	$top->( @cmd_path );
+	@cmd_path = ();
     }
     
-    $term->set_prompt( join(" ", @path) );
-    $term->addhistory($original);
+    # Set prompt
+    $prompt = join(" ", @cmd_path) . " > ";
 }
 
 # Commands
@@ -281,7 +298,7 @@ sub instance_edit {
     my $pobj = $eobj->property_exists( $property );
     print "'$property', no such property in $entity.\n" and return unless $pobj;
 
-    my $old_value = $iobj->property( $property );
+    my $old_value = $iobj->property( $property ) || '';
     my $new_value = $term->readline(" New value for '$property' ($old_value) > ");
     my $retval = $iobj->property( $property, $new_value );
 
@@ -373,67 +390,66 @@ sub expand_role {
 
 
 sub expand_entity {
-    return map { $_->name() } $y->entities();   
+    return map { $_->name() } $y->entities();
 }
 
 sub expand_property {
-    my ($entity);
-    if ($_[3] eq 'instance' && $_[2] eq 'set') {
-	$entity = $_[1];
-    } else {
-	$entity = $_[0];
-    }
+    my( $prop, $instance, $entity ) = @_;
+
     my $eobj = $y->get_entity( $entity );
-    
     return unless $eobj;
+
     return map { $_->name() } $eobj->properties();    
 }
 
 sub expand_instance {
-    my $entity = shift;
+    my( $instance, $entity ) = @_;
+
     my $eobj = $y->get_entity( $entity );
-    
     return unless $eobj;
+
     return map { $_->id() } $eobj->instances();    
 }
 
 
-# Don't go here.
-my ($i, @m, @commands);
-sub attempt_completion {
-    my $word = shift;
-    my $line = shift;
+sub completion {
+    my $word  = shift;
+    my $line  = shift;
     my $start = shift;
-    my $stop  = shift;
+    my $path  = shift;
+
+    # Add to line what has previously been written
+    $line = join(" ", @$path, $line);
 
     # All "words" before the one we are writing 'now'
-    @commands = shellwords( substr( $line, 0, $start ) );
-    
-    return $term->completion_matches( $word, \&expand_start );
-}
+    my @commands = shellwords( $line );
 
-sub expand_start {
-    my $word = shift;
-    my $state = shift;
-    
-    #    print " * @commands\n";
-    #    print "\n ** $word: $state\n";
-    unless( $state ) {
-	my $top = $context;
-	for my $c (@commands) {
-	    if (ref $top eq 'CODE') {
-		return;
-	    } elsif (exists $top->{$c}) {
-		$top = $top->{$c};
-	    } else {
-		my @magicshit = grep { /^_/ } keys %$top;
-		if (@magicshit) {
-		    $top = $top->{$magicshit[0]};
-		}
-	    }
+    # add the word we are about to write now (if it's empty)
+    push( @commands, $word ) if $word !~ /\S/;
+
+    my $top = $context;
+    for( my $i=0; $i<@commands; $i++ ) {
+	my $c = $commands[$i];
+
+	# reached end of command line
+	return if ref $top eq 'CODE';
+
+	if (exists $top->{$c}) {
+	    # static command part
+	    # "user", "info" etc.
+	    $top = $top->{$c};
+	} elsif ( $i < $#commands ) {
+	    # dynamic command part
+	    # only go to next level if a whole word has been written
+	    # and we are currently writing the next one
+	    my( $expander ) = grep { /^_/ } keys %$top;
+	    $top = $top->{$expander} if $expander;
 	}
-	@m = map {
-	    if ($cmd_handler{$_}) {		
+    } 
+
+    return 
+	map {
+	    if ($cmd_handler{$_}) {
 		# Grab command handlers
 		$cmd_handler{$_}->( reverse @commands );
 	    } elsif ($_ =~ /^_/) {
@@ -443,20 +459,6 @@ sub expand_start {
 		$_;
 	    }
 	} keys %$top if ref $top eq 'HASH';
-    } else { $i++; }
-
-    return expand($word, \@m);
-}
-
-sub expand {
-    my $word = shift;
-    my @m    = @{$_[0]};
     
-    for($i||=0 ; $i<@m; $i++ ) {
-	return $m[$i] unless length($word);
-	return $m[$i] if $m[$i] =~ /^\Q$word/;
-    }
-
-    $i = 0;
     return;
 }

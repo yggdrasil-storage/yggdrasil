@@ -1,3 +1,4 @@
+bin/ycontrol
 bin/ydump
 bin/yggdrasil-daemon
 bin/yrestore
@@ -86,6 +87,7 @@ t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
 t/Yggdrasil/Test/Common.pm
+www/ajax/foo.cgi
 www/index.cgi
 www/yggdrasil.css
 www/yggdrasil.js
