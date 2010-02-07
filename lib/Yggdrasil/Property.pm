@@ -206,14 +206,15 @@ sub _get_meta {
 
     my $entity = $self->{entity};
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = ancestors($storage, $entity, $start, $stop);
+    my @ancestors = ancestors($storage, $entity->name(), $start, $stop);
 
     foreach my $e ( $self, @ancestors ) {
-	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e->{entity} ]},
+	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e->{entity}->name() ]},
 				  'MetaProperty',{ return => $meta,
-						    where  => [ entity   => \qq{MetaEntity.id},
-								property => $property ]},
-				   { start => $start, stop => $stop });
+						   where  => [ entity   => \qq{MetaEntity.id},
+							       property => $property ]},
+				  { start => $start, stop => $stop });
+	
 	next unless @$ret;
 	return $ret->[0]->{$meta};
     }

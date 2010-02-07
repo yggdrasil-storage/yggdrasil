@@ -183,7 +183,7 @@ my %cmd;
 	    _entity => \&entity_create,
 	},
     },
-    
+
     instance => {
 	_help => "Instance tools",
 
@@ -405,8 +405,8 @@ sub entity_info {
     print "Properties:\n";
     printf "  %-13s - %5s - %s\n", 'Name', 'Null?', 'Type';
     for my $prop ($eobj->properties()) {
-#	printf "  %13s - %5s - %s\n",  $prop->name(), $prop->null?'TRUE':'FALSE', $prop->type();
-	printf "  %-13s - %5s - %s\n",  $prop->name(), '?', '?';
+	my $type = $prop->type();
+	printf "  %-13s - %5s - %s\n",  $prop->name(), $prop->null()?'TRUE':'FALSE', $prop->type();
     }
 }
 
