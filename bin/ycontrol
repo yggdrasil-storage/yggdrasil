@@ -43,32 +43,42 @@ my $OUT = $term->OUT || \*STDOUT;
 
 my %cmd;
 %cmd = (
+    help => \%cmd,
+
     user => {
+	_help => "User tools",
 	info  => {
+	    _help => "Show information about a user",
 	    _user => \&user_info,
 	},
 
 	password => {
+	    _help => "Change user password",
 	    _user => \&user_password,
 	},
 
 	name => {
+	    _help => "Change user full name",
 	    _user => \&user_fullname,
 	},
 
 	create   => \&user_create,
 
 	delete   => {
+	    _help => "Delete a user",
 	    _user => \&user_delete,
 	},
 
 	role => {
-	    add => {
+	    _help => "User role membership tools", 
+	    add   => {
+		_help => "Add user to role",
 		_user => {
 		    _role => \&user_role_add,
 		},
 	    },
 	    remove => {
+		_help => "Remove user from role",
 		_user => {
 		    _role => \&user_role_remove,
 		},
@@ -78,24 +88,31 @@ my %cmd;
     },
     
     role => {
-	info => {
+	_help => "Role tools",
+	info  => {
+	    _help => "Show information about a role",
 	    _role => \&role_info,
 	}
     },
     
     entity => {
-	info => {
+	_help => "Entity tools",
+	info  => {
+	    _help   => "Show information about an entity",
 	    _entity => \&entity_info,
 	},
     },
     
     instance => {
-	info => {
+	_help => "Instance tools",
+	info  => {
+	    _help   => "Show information about an instance",
 	    _entity => {
 		_instance => \&instance_info,
 	    },
 	},
 	set => {
+	    _help   => "Edit the property of an instance",
 	    _entity => {
 		_instance => {
 		    _property => \&instance_edit,
@@ -103,13 +120,16 @@ my %cmd;
 	    },
 	},
 	history => {
+	    _help   => "Instance history",
 	    _entity => {
 		_instance => \&instance_history,
 	    },
 	},
     },
     
-    relation => { },
+    relation => {
+	_help => "Relation tools",
+    },
     quit     => sub { exit },
     exit     => sub { exit },
     );
@@ -146,7 +166,7 @@ while ( defined (my $input = $term->readline($prompt)) ) {
 	    push( @this_path, $key );
 	} else {
 	    # dynamic command part
-	    my( $expander ) = grep { /^_/ } keys %$top;
+	    my( $expander ) = grep { $_ !~ /_help/ } grep { /^_/ } keys %$top;
 	    if ( $expander ) {
 		$top = $top->{$expander};
 		push( @this_path, $key );
@@ -156,7 +176,12 @@ while ( defined (my $input = $term->readline($prompt)) ) {
 
     @cmd_path = @this_path;
 
-    if (ref $top eq 'CODE') {
+    if( @cmd_path && $cmd_path[0] eq "help" ) {
+	# display help
+	shift @cmd_path while @cmd_path && $cmd_path[0] eq "help";
+	help( $top, \@cmd_path );
+	@cmd_path = ();
+    } elsif (ref $top eq 'CODE') {
 	# Reached end of command line
 	$top->( @cmd_path );
 	@cmd_path = ();
@@ -164,6 +189,30 @@ while ( defined (my $input = $term->readline($prompt)) ) {
     
     # Set prompt
     $prompt = join(" ", @cmd_path) . " > ";
+}
+
+sub help {
+    my $top  = shift;
+    my $path = shift;
+
+    if( ref $top ne "HASH" ) {
+	print "No help for '", join(" ", @cmd_path), "'\n";
+	return;
+    }
+
+    my $prefix = join(" ", @$path);
+    for my $key ( sort keys %$top ) {
+	if( $key =~ /^_help$/ ) {
+	    printf( "%-25s - %s\n", $prefix, $top->{$key} );
+	}
+
+	next if $key =~ /^_/;
+
+	my $help = ref $top->{$key} eq "HASH" && exists $top->{$key}->{_help};
+	$help = $help ? $top->{$key}->{_help} : '';
+
+	printf( "%-25s - %s\n", join(" ", $prefix, $key), $help );
+    }
 }
 
 # Commands
@@ -442,7 +491,7 @@ sub completion {
 	    # dynamic command part
 	    # only go to next level if a whole word has been written
 	    # and we are currently writing the next one
-	    my( $expander ) = grep { /^_/ } keys %$top;
+	    my( $expander ) = grep { $_ !~ /^_help$/ } grep { /^_/ } keys %$top;
 	    $top = $top->{$expander} if $expander;
 	}
     } 
