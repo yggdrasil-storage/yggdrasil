@@ -190,7 +190,9 @@ my %cmd;
 	create => {
 	    _help   => "Create a property",
 	    _entity => {
-		_entity_property => {
+		# This is just a noop, but it works better than letting
+		# an existing property be expanded.
+		_INPUT_ => {
 		    _property_type => \&property_create,
 		},
 	    },
