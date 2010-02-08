@@ -353,7 +353,7 @@ sub relations {
 					    } );
 
 
-    return map { $_->{label} } @$other
+    return map { $_->{label} } @$other;
 }
 
 
