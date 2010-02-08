@@ -275,7 +275,7 @@ sub property {
     my $entity = $self->{entity};
     my $name = join(":", $entity->name(), $key );
 
-    $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity->name(), property => $key )
+    $p = Yggdrasil::Property->get( yggdrasil => $self, entity => $entity, property => $key )
       unless $p;
     
     unless ($p) {
