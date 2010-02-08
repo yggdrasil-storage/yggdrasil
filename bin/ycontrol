@@ -192,7 +192,7 @@ my %cmd;
 	    _entity => {
 		# This is just a noop, but it works better than letting
 		# an existing property be expanded.
-		_INPUT_ => {
+		_PROPERTYNAME_ => {
 		    _property_type => \&property_create,
 		},
 	    },
@@ -222,11 +222,18 @@ my %cmd;
 		_instance => \&instance_history,
 	    },
 	},
+	create => {
+	    _entity => {
+	        _INSTANCENAME_ => \&instance_create,
+	    },
+	},
     },
     
     relation => {
 	_help => "Relation tools",
     },
+
+    whoami   => \&whoami,
     quit     => sub { exit },
     exit     => sub { exit },
 );
@@ -319,6 +326,10 @@ sub help {
 
 	printf( "%-25s - %s\n", join(" ", $prefix, $key), $help );
     }
+}
+
+sub whoami {
+    print $y->user->id(), ", connected to ", $y->info(), "\n";
 }
 
 # Commands
@@ -472,7 +483,12 @@ sub instance_info {
     my @props = $eobj->properties();
     printf "%-15s - %s\n", 'Property', 'Value' if @props;
     for my $prop (@props) {
-	printf "%-15s - %s\n", $prop->name(), $iobj->get( $prop ) || '';
+	my $value = $iobj->get( $prop ) || '';
+	if (length $value > 65) {
+	    $value = substr( $value, 0, 60 ) . '[ ... ]';
+	}
+	
+	printf "%-15s - %s\n", $prop->name(), $value ;
     }    
 }
 
@@ -497,6 +513,23 @@ sub instance_edit {
     }
 }
 
+sub instance_create {
+    my ($instance_command, $create_command, $entity, $instance_name) = @_;
+
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+
+    my $iobj = $eobj->fetch( $instance_name );
+    print "'$instance_name' already exists in $entity.\n" and return if $iobj;
+    
+    $iobj = $eobj->create( $instance_name );
+
+    if (! $status->OK()) {
+	print $status->message(), "\n";
+    } else {
+	print "'$instance_name' created in '$entity'.\n";
+    }
+}
 
 # This doesn't work, we only get one item back from fetch(), we
 # probably need to look at _get_in_time in Instance.pm.
