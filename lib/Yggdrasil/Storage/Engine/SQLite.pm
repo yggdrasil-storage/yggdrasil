@@ -36,6 +36,10 @@ sub new {
     return $self;
 }
 
+sub info {
+    return "in-memory dataset only";
+}
+
 sub yggdrasil_is_empty {
     my $self = shift;
 

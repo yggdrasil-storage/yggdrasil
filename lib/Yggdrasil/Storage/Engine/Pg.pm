@@ -24,7 +24,18 @@ sub new {
 
   $self->{dbh}->{Warn} = 0;
 
+  $self->{port} = $data{port};
+  $self->{host} = $data{host};
+  $self->{dbuser} = $data{user};
+  $self->{db} = $data{db};
+
   return $self;
+}
+
+sub info {
+    my $self = shift;
+
+    return sprintf "%s:%s (as %s@%s)", $self->{host}, $self->{port}, $self->{dbuser}, $self->{db};
 }
 
 sub yggdrasil_is_empty {
