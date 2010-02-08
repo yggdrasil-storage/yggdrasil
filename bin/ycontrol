@@ -452,7 +452,7 @@ sub property_create {
     if( $y->get_status()->OK() ) {
 	print "'$property' created as $type\n";
     } else {
-	print "Failed to create property '$property' as $type.\n";
+	print $y->get_status()->message, "\n";
     }
 }
 
