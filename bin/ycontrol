@@ -231,6 +231,22 @@ my %cmd;
     
     relation => {
 	_help => "Relation tools",
+	info => {
+            _relationlabel => \&relation_info,
+	},
+        list => \&relation_list,
+	create => {
+	   _entity => {
+	        _entity => \&relation_entities,
+                },
+	   },
+	bind => {
+	   _relationlabel => {
+	       _instance_left => {
+	           _instance_right => \&relation_instances,
+                },
+	   },
+        },
     },
 
     whoami   => \&whoami,
@@ -246,12 +262,16 @@ my %cmd_handler = (
     _entity   => \&expand_entity,
     _instance => \&expand_instance,
 
+    _instance_left  => \&expand_instance_relation_left,
+    _instance_right => \&expand_instance_relation_right,
+
     _instance_property => \&expand_instance_property,
     _entity_property   => \&expand_entity_property,
     
     _property_type => \&expand_property_type,
-    );
 
+    _relationlabel => \&expand_label,
+    );
 
 my $prompt = " > ";
 my @cmd_path = ();
@@ -442,8 +462,10 @@ sub entity_info {
 
 sub entity_create {
     my($entity_command, $create_command, $entity) = @_;
-
-    print "'$entity' already exists.\n" and return if $y->get_entity( $entity );
+    
+    my $e = $y->get_entity( $entity );
+    
+    print "'$entity' already exists ($e).\n" and return if $e;
 
     my $eobj = $y->define_entity( $entity );
     print "'$entity' created.\n";
@@ -584,6 +606,62 @@ sub instance_history {
     
 }
 
+# Relations
+sub relation_entities {
+    my ($relation_command, $create_command, $entity1, $entity2) = @_;
+    
+    return "Identical entities, aborting.\n" if $entity1 eq $entity2;
+
+    my $e1 = $y->get_entity( $entity1 );
+    print "Unable to find entity '$e1'\n" and return unless $e1;
+
+    my $e2 = $y->get_entity( $entity2 );
+    print "Unable to find entity '$e2'\n" and return unless $e2;
+    
+    my $r = $y->define_relation( $e1, $e2 );
+    if (! $status->OK()) {
+	print $status->message(), "\n";
+    } else {
+	my $lab = $r->label();
+	print "Entities '$entity1' and '$entity2' related, with the label '$lab'.\n";
+    }
+}
+
+sub relation_instances {
+    my ($relation_command, $create_command, $label, $i1, $i2) = @_;
+    
+    my $rel = $y->get_relation( $label );
+    print $status->message(), "\n" and return unless $status->OK();
+
+    my ($e1o, $e2o) = $rel->entities();
+    
+    my $i1o = $e1o->fetch( $i1 );
+    print $status->message(), "\n" and return unless $i1o;
+    
+    my $i2o = $e2o->fetch( $i2 );
+    print $status->message(), "\n" and return unless $i2o;
+
+    my $link = $rel->link( $i1o, $i2o );
+    print $status->message(), "\n" and return unless $status->OK();
+    print "'$i1' is bound to '$i2' via '$label'\n";
+}
+
+sub relation_list {
+    my ($relation_command, $list_command) = @_;
+    print join ", ", $y->relations();
+    print "\n";
+}
+
+sub relation_info {
+    my ($relation_command, $info_command, $label) = @_;
+
+    my $rel = $y->get_relation( $label );
+    print $status->message(), "\n" and return unless $status->OK();
+
+    my ($e1o, $e2o) = $rel->entities();
+    
+    print $label, ": ", $e1o->name(), ", ", $e2o->name(), "\n";    
+}
 
 # Role interface
 sub role_info {
@@ -653,6 +731,11 @@ sub grant_revoke {
 
 
 # Yggdrasil expand interface.
+# WARNING, Yggdrasil is returning labels, not objects here!
+sub expand_label {
+    return $y->relations();
+}
+
 sub expand_user {
     my $eobj = $y->get_entity( 'MetaAuthUser' );
     return map { $_->id() } $eobj->instances();
@@ -662,7 +745,6 @@ sub expand_role {
     my $eobj = $y->get_entity( 'MetaAuthRole' );
     return map { $_->id() } $eobj->instances();
 }
-
 
 sub expand_entity {
     return map { $_->name() } $y->entities();
@@ -677,9 +759,32 @@ sub expand_instance {
     return map { $_->id() } $eobj->instances();    
 }
 
+sub expand_instance_relation {
+    my( $side, $instance, $relation ) = @_;
+
+    my $rel = $y->get_relation( $relation );
+    my ($left, $right) = $rel->entities();
+
+    if ($side eq 'l') {
+	return map { $_->id() } $left->instances();	
+    } else {
+	return map { $_->id() } $right->instances();
+    }
+}
+
+sub expand_instance_relation_left {
+    my( $left, $relation ) = @_;
+    return expand_instance_relation( 'l', $left, $relation );
+}
+
+sub expand_instance_relation_right {
+    my( $right, $left, $relation ) = @_;
+    return expand_instance_relation( 'r', $right, $relation );
+}
+
+
 sub expand_entity_property {
     my( $prop, $entity ) = @_;
-
 
     my $eobj = $y->get_entity( $entity );
     return unless $eobj;
