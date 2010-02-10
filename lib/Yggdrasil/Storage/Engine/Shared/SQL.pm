@@ -408,9 +408,16 @@ sub _process_where {
     my $where    = shift || [];
     my $operator = shift;
 
+    my $opcount = 0;
     my( @requested_fields, @wheres, @params );
     for( my $i=0; $i < @$where; $i += 2 ) {
-	my $localoperator = $operator;
+	my $localoperator;
+
+	if (ref $operator eq 'ARRAY') {
+	    $localoperator = $$operator[$opcount++];
+	} else {
+	    $localoperator = $operator;
+	}
 
 	my $fieldname = $where->[$i];
 	my $value = $where->[$i+1];
