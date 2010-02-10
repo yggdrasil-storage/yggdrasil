@@ -244,9 +244,16 @@ my %cmd;
 	   _relationlabel => {
 	       _instance_left => {
 	           _instance_right => \&relation_instances,
-                },
+               },
 	   },
-        },
+        },    
+    },
+
+    tick => {
+	_help => "Tick related commands",
+	info  => {
+	    _TICK => \&tick_info,
+	    },
     },
 
     whoami   => \&whoami,
@@ -271,6 +278,8 @@ my %cmd_handler = (
     _property_type => \&expand_property_type,
 
     _relationlabel => \&expand_label,
+
+    _tickstamp => \&expand_tick,
     );
 
 my $prompt = " > ";
@@ -561,21 +570,35 @@ sub instance_history {
     print "'$entity', no such entity.\n" and return unless $eobj;
 
     my $now = time;
-    my @iobjs = $eobj->fetch( $instance, 0, $now );
+    # FIXME, fetch breaks if no properties have any values set,
+    # ever, for the instance.  Incidently, this also means we always
+    # get two entries (one for creating the instance, one for the
+    # first property set).
+    my @iobjs = $eobj->fetch( $instance, 0, time );
     print "'$instance', no such instance in $entity.\n" and return unless @iobjs;
+    my $entries = scalar @iobjs || 0;
     
-    print "$entity / $instance (full history):\n";
+    print "$entity / $instance (full history, $entries ", $entries > 1?'entries':'entry', "):\n";
     
-    my @props = $eobj->properties( 0, $now );
-    my (@lines, %currentline);
-
+    my @props = $eobj->properties( 0, time );
+    my (@lines);
+    
     my %maxwidth;
     $maxwidth{start} = $maxwidth{stop} = 6; # default, will be overwritten if length is longer.
     for my $iobj (@iobjs) {
-	%currentline = ();
+	my %currentline;
 	for my $prop ('start', 'stop', @props) {
 	    my $propname = ref $prop?$prop->name():$prop;
-	    my $value    = $iobj->get( $prop );
+	    my $value;
+
+	    if ($prop eq 'start') {
+		$value = $iobj->start() || '0';
+	    } elsif ($prop eq 'stop') {
+		$value = $iobj->stop();
+	    } else {
+		$value = $iobj->get( $prop );
+	    }
+
 	    next unless $value;
             my $length = length $value;
             $maxwidth{$propname} ||= 0;
@@ -662,6 +685,31 @@ sub relation_info {
     
     print $label, ": ", $e1o->name(), ", ", $e2o->name(), "\n";    
 }
+
+# Tick interface
+sub tick_info {
+    my ($tick_command, $info_command, $tick) = @_;
+    my ($timestamp, $committer, $eventref) = $y->get_tick( $tick );
+    print "'$tick', no such tick.\n" and return unless $timestamp;
+    
+    print "Tick $tick:\n";
+    printf "%20s - %s\n", 'Timestamp', $timestamp;
+    printf "%20s - %s\n", 'Committer', $committer;
+
+    if (ref $eventref eq 'ARRAY') {
+	print "Events:\n";
+	for my $e (@$eventref) {
+	    printf " - " . $e->{string};
+	    if ($e->{stop}) {
+		print " (expired tick " . $e->{stop} . ")\n";
+	    } else {
+		print " (still valid)\n";
+	    }
+	}
+    }
+}
+
+
 
 # Role interface
 sub role_info {
@@ -782,7 +830,6 @@ sub expand_instance_relation_right {
     return expand_instance_relation( 'r', $right, $relation );
 }
 
-
 sub expand_entity_property {
     my( $prop, $entity ) = @_;
 
@@ -802,7 +849,6 @@ sub expand_instance_property {
 sub expand_property_type {
     return $y->property_types();
 }
-
 
 sub completion {
     my $word  = shift;
