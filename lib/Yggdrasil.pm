@@ -7,6 +7,7 @@ use v5.006;
 use Cwd qw(abs_path);
 use File::Basename;
 use File::Spec;
+use Time::Local;
 use Log::Log4perl qw(get_logger :levels :nowarn);
 use Carp;
 
@@ -322,6 +323,58 @@ sub property_types {
     return $self->{storage}->get_defined_types();
 }
 
+# How to enter time formats... Best suggestions so far are:
+#  * epoch (duh)
+#  * YYYY-MM-DD HH:MM:SS
+#
+# The full format can also be intepreted from right to left with
+# increasing detail, so you could enter "04:22" and get 22 seconds
+# past 04 in the morning, with todays date information added by
+# default.  Just typing 22 means on the 22nd second of the current
+# minute, which is an interesting request.  If you'd want to give a
+# time slice of five minutes after 5pm, you'd have to enter 17:00:00
+# and 17:05:00 (although 0 and 00 would be equally valid). This might
+# be a bit cumbersome but at least it's well-defined.
+
+sub get_ticks_by_time {
+    my $self = shift;
+    my $from = $self->_get_epoch_from_input( shift );
+    my $to   = $self->_get_epoch_from_input( shift );
+
+    return unless $from;
+
+    # We need to feed the backend something it can use, and they like
+    # working with all sorts of weird stuff, but we'll delegate that
+    # to the storage layer.
+    
+    return $self->{storage}->get_ticks_from_time( $from, $to );
+}
+
+# We're only doing resolution down to a second, so we can use epoch
+# internally, which is oddly enough what _get_epoch_from_input as
+# given us.  This'll need fixing by 2038...
+sub _get_epoch_from_input {
+    my $self = shift;
+    my $time = shift;
+    return unless $time;
+
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    if ($time =~ /^\d{2}$/) {
+	$sec = $time;
+	# We're given two digits only, so this is seconds.
+    } elsif ($time =~ /^(\d+):(\d+)$/) {
+	($min, $sec) = ($1, $2);
+    } elsif ($time =~ /^(\d+):(\d+):(\d+)$/) {
+	($hour, $min, $sec) = ($1, $2, $3);	
+    } elsif ($time =~ /^(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)$/) {
+	($year, $mon, $mday, $hour, $min, $sec) = ($1, $2 - 1, $3, $4, $5, $6);
+    } else {
+	return;
+    }
+    
+    return timelocal( $sec, $min, $hour, $mday, $mon, $year );
+}
+
 sub get_tick {
     my $self   = shift;
     my $tickid = shift;
@@ -341,7 +394,8 @@ sub get_tick {
 	# property, a relation or an instance.  We'll have to check
 	# them all.
 
-	my @hits; # Hash, contains 'type', 'id', 'start', 'stop';
+	my @hits; # Hash, contains 'start', 'stop' and 'string' which
+                  # explains what happened. 
 
 	push @hits, $self->_get_instances_at_tick( $tickid );
 	
@@ -353,7 +407,9 @@ sub get_tick {
 
 # Get all the instances that were created or expired on a given tick.
 # Beware, asking for temporal stuff with times set will clobber start
-# and stop between the tables, use 'as' or proceed with caution.
+# and stop between the tables, use 'as' or proceed with caution.  Oh,
+# and we're using q<> constructs to insert the value literally, since
+# a lot of db systems don't evaluate functions if they're added via ?.
 sub _get_instances_at_tick {
     my ($self, $tickid) = @_;
     my @hits;
