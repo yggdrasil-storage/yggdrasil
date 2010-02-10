@@ -254,7 +254,6 @@ sub tick {
 # At this point we should be getting epochs to work with.
 sub get_ticks_from_time {
     my ($self, $from, $to) = @_;
-    print " ** ", scalar localtime $from, "\n";
 
     $from = $self->_convert_time( $from );
     my $fetchref;

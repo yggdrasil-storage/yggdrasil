@@ -361,7 +361,6 @@ sub _get_epoch_from_input {
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
     if ($time =~ /^\d{2}$/) {
 	$sec = $time;
-	# We're given two digits only, so this is seconds.
     } elsif ($time =~ /^(\d+):(\d+)$/) {
 	($min, $sec) = ($1, $2);
     } elsif ($time =~ /^(\d+):(\d+):(\d+)$/) {
