@@ -92,7 +92,10 @@ sub fetch {
     }
 
     $status->set( 200 );
-    if( @$time && $time->[0] && $time->[1] && $time->[0] != $time->[1] ) {
+    # WARNING, setting $time->[0] to 0 will break the second test
+    # hard, adding a 'defined' fixes that problem, but we might wish
+    # to define semantics here.
+    if( @$time && defined $time->[0] && $time->[1] && $time->[0] != $time->[1] ) {
 	return @instances;
     } else {
 	return $instances[-1];
@@ -233,12 +236,21 @@ sub _filter_start_times {
 	    }
 	    
 	    if( $good ) {
-		# print "GOOD VAL = $val\n";
 		$times{$val} = { start => $val };
 	    }
 	}
     }
     return \%times;
+}
+
+sub start {
+    my $self = shift;
+    return $self->{_start};
+}
+
+sub stop {
+    my $self = shift;
+    return $self->{_stop};
 }
 
 sub get {
