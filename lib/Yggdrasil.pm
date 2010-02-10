@@ -322,6 +322,61 @@ sub property_types {
     return $self->{storage}->get_defined_types();
 }
 
+sub get_tick {
+    my $self   = shift;
+    my $tickid = shift;
+    
+    my $fetchref = $self->{storage}->fetch( 'Storage_ticker', { return => [ 'stamp', 'committer' ],
+								where  => [ 'id' => $tickid ] } );
+
+    my ($timestamp, $committer) = ($fetchref->[0]->{stamp}, $fetchref->[0]->{committer});
+    if (! $timestamp) {
+	$self->{status}->set( 400, 'Timestamp not found' );
+	return undef;
+    }
+    
+    if (wantarray) {
+	# Let's ask if anyone has seen the tick in question. The
+	# possible options are: that it's seen in an entity, a
+	# property, a relation or an instance.  We'll have to check
+	# them all.
+
+	my @hits; # Hash, contains 'type', 'id', 'start', 'stop';
+
+	push @hits, $self->_get_instances_at_tick( $tickid );
+	
+	return ($timestamp, $committer, \@hits)
+    } else {
+	return $timestamp;
+    }
+}
+
+# Get all the instances that were created or expired on a given tick.
+# Beware, asking for temporal stuff with times set will clobber start
+# and stop between the tables, use 'as' or proceed with caution.
+sub _get_instances_at_tick {
+    my ($self, $tickid) = @_;
+    my @hits;
+    
+    my $fetchref = $self->{storage}->fetch( 'Entities', { return => [ 'visual_id', 'start', 'stop' ],
+							  where  => [ 'start' => $tickid, 'stop' => $tickid ],
+							  bind   => 'or',
+							  as     => 1,
+							},
+					    'MetaEntity', { return => [ 'entity' ],
+							    where  => [ 'id' => \qq{Entities.entity} ],
+							  },
+					    { start => 0, stop => time },
+					  );
+    for my $h (@$fetchref) {
+	my $etext = 'Created';
+	$etext = 'Expired' if $h->{Entities_stop};
+	push @hits, { start => $h->{Entities_start}, stop => $h->{Entities_stop},
+		      string => "$etext the instance '" . $h->{visual_id} . "' in '" . $h->{entity} . "'",
+		    };
+    }
+    return @hits;
+}
 
 ###############################################################################
 # Helper functions
