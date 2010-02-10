@@ -136,8 +136,12 @@ sub _get_targets_and_operation {
 	} elsif ($target =~ '^Storage_') {
 	    return [];
 	} elsif ($operation eq 'readable') {
-	    for my $t (@$target) {
-		push @targets_to_check, $t;
+	    if (ref $target eq 'ARRAY') {
+		for my $t (@$target) {
+		    push @targets_to_check, $t;
+		}		
+	    } else {
+		push @targets_to_check, $target;
 	    }
 	} elsif ($target eq 'MetaAuthEntity') { # FIXME, check parents.
 	    return [];
