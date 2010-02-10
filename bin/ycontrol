@@ -254,6 +254,9 @@ my %cmd;
 	info  => {
 	    _TICK => \&tick_info,
 	    },
+	intime => {
+	    _DATE => \&ticks_in_time,
+            },
     },
 
     whoami   => \&whoami,
@@ -709,7 +712,20 @@ sub tick_info {
     }
 }
 
+sub ticks_in_time {
+    my ($tick_command, $info_command, $time) = @_;
+    my ($to, $from) = split / to /, $time;
 
+    my @ticks = $y->get_ticks_by_time( $to, $from );
+    
+    print "No ticks for the given time.\n" and return unless @ticks;
+
+    printf "%10s - %20s - %s\n", 'Tick', 'Timestamp', 'Committer';
+    for my $tick (@ticks) {
+	printf "%10d - %20s - %s\n", $tick->{id}, $tick->{stamp}, $tick->{committer};
+    }
+    
+}
 
 # Role interface
 sub role_info {
