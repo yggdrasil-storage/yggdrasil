@@ -251,6 +251,36 @@ sub tick {
     return $self->_store( $self->_get_schema_name($STORAGETICKER), fields => { committer => $c } );
 }
 
+# At this point we should be getting epochs to work with.
+sub get_ticks_from_time {
+    my ($self, $from, $to) = @_;
+    print " ** ", scalar localtime $from, "\n";
+
+    $from = $self->_convert_time( $from );
+    my $fetchref;
+    if ($to) {
+	$to = $self->_convert_time( $to );
+
+	$fetchref = $self->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
+						      where  => [ 'stamp' => \qq<$from>, stamp => \qq<$to> ],
+						      operator => [ '>=', '<='],
+						      bind   => 'and',
+						    } );
+
+    } else {
+	$fetchref = $self->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
+						      where  => [ 'stamp' => \qq<$from> ],
+						      operator => '=',
+						    } );
+    }
+
+    my @hits;
+    for my $tick (@$fetchref) {
+	push @hits, $tick;
+    }
+    return @hits;
+}
+
 sub raw_store {
     my $self = shift;
     my $schema = shift;
