@@ -275,9 +275,10 @@ sub fetch {
     }
 
     # Convert the given timeformat to the engines preferred format
-    foreach my $key ( keys %$time ) {
-	$time->{$key} = $self->_convert_time( $time->{$key} );
-    }
+    # Turned off for ticks.
+#    foreach my $key ( keys %$time ) {
+#	$time->{$key} = $self->_convert_time( $time->{$key} );
+#    }
 
     # Add "as" parameter that can be used later to prefix returned values from the query
     # (to ensure unique return values, eg. Foo_stop, Bar_stop, ... )

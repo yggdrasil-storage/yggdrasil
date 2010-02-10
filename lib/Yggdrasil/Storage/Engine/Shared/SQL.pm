@@ -161,8 +161,11 @@ sub _fetch {
 	    return undef;
 	}
 
-	($start,$stop) = ( $self->_convert_time($time->{start}),
-			   $self->_convert_time($time->{stop}) );
+# Removed, we're working with ticks.	
+#	($start,$stop) = ( $self->_convert_time($time->{start}),
+#			   $self->_convert_time($time->{stop}) );
+
+	($start,$stop) = ( $time->{start}, $time->{stop} );
     }
 
     # FIXME: This is not beautiful
@@ -243,9 +246,9 @@ sub _raw_fetch {
 
     my @fieldlist;
     for my $field ($self->_fields_in_structure( $schema )) {
-	if ($field eq 'start' || $field eq 'stop') {
-	    $field = $self->_time_as_epoch( $field ) . " as $field";
-	}
+#	if ($field eq 'start' || $field eq 'stop') {
+#	    $field = $self->_time_as_epoch( $field ) . " as $field";
+#	}
 	push @fieldlist, $field;
     } 
     
@@ -356,8 +359,12 @@ sub _raw_store {
     my $fields = $data{fields};
 
     if ($fields->{start} || $fields->{stop}) {
-	my ($sstart, $sstop) = ($self->_convert_time( delete $fields->{start} || 'NULL'), 
-				$self->_convert_time( delete $fields->{stop}  || 'NULL'));
+#	my ($sstart, $sstop) = ($self->_convert_time( delete $fields->{start} || 'NULL'), 
+#				$self->_convert_time( delete $fields->{stop}  || 'NULL'));
+
+	my ($sstart, $sstop) = (delete $fields->{start} || 'NULL',
+				delete $fields->{stop}  || 'NULL');
+
 	
 	$self->_sql( "INSERT INTO $schema (start,stop," . join(", ", keys %$fields) . ") VALUES ($sstart,$sstop, "
 		     . join(", ", ('?') x keys %$fields) . ')', values %$fields);	
@@ -466,8 +473,10 @@ sub _process_temporal {
     }
     
     if( defined $start || defined $stop ) {
-	my ($startt, $stopt) = ($self->_time_as_epoch( $qstart ),
-				$self->_time_as_epoch( $qstop ));
+#	my ($startt, $stopt) = ($self->_time_as_epoch( $qstart ),
+#				$self->_time_as_epoch( $qstop ));
+
+	my ($startt, $stopt) = ($qstart, $qstop);
 	if( $as ) {
 	    push( @temporal_returns, qq<$startt as "${as}_start">, qq<$stopt as "${as}_stop"> );
 	} else {
