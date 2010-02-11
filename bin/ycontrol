@@ -523,7 +523,13 @@ sub instance_info {
 	}
 	
 	printf "%-15s - %s\n", $prop->name(), $value ;
-    }    
+    }
+
+    my $tickid = $iobj->start();
+    my @tick = $y->get_tick( $tickid );
+    printf "%-15s - %s (%d)\n", 'Created', $tick[0], $tickid;
+    printf "%-15s - %s\n", 'Committer', $tick[1];
+
 }
 
 sub instance_edit {
