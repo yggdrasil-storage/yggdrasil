@@ -141,7 +141,7 @@ sub _get_in_time {
 								   id     => \qq{Entities.entity}, ],
 						       },
 					 'Entities', {
-						      return => "id",
+						      return => [ "id", 'start', 'stop' ],
 						      where => [ visual_id => $visual_id ] } );
 
     my $id = $idref->[0]->{id};
@@ -149,7 +149,7 @@ sub _get_in_time {
     # Short circuit the joins if we're looking for the current object
     unless (@time) {
 	if ($id) {
-	    return { id => $id };
+	    return { id => $id, 'start' => $idref->[0]->{start}, 'stop' => $idref->[0]->{stop} };
 	} else {
 	    return;
 	}
@@ -299,7 +299,7 @@ sub property {
     my $schema = $entity->property_exists( $key );
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
-	if( defined $self->{_start} || defined $self->{_stop} ) {
+	if( defined $self->{_stop} ) {
 	    $status->set( 406, "Temporal objects are immutable.");
 	    return undef;
 	}
