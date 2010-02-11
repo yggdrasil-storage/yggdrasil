@@ -5,7 +5,7 @@ use warnings;
 
 use base qw(Yggdrasil::Object);
 
-use Yggdrasil::Utilities qw|ancestors get_times_from|;
+use Yggdrasil::Utilities qw|get_times_from|;
 
 sub define {
     my $class  = shift;
@@ -215,7 +215,7 @@ sub _get_meta {
 
     my $entity = $self->{entity};
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = ancestors($storage, $entity->name(), $start, $stop);
+    my @ancestors = $entity->ancestors($start, $stop);
 
     foreach my $e ( $self, @ancestors ) {
 	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e->{entity}->name() ]},

@@ -121,7 +121,7 @@ sub define {
     my $status = $self->get_status();
 
     unless ($self->{bootstrap}) {
-	my $parent = $self->my_parent();
+	my( $parent ) = $schema =~ /^(.*)::/ || "UNIVERSAL";
 	if (! $self->can( operation => 'define', targets => [ $parent ] )) {
 	    $status->set( 403, "You are not permitted to create the structure '$schema' under '$parent'." );
 	    return;
@@ -214,9 +214,6 @@ sub store {
     } else {
 	# don't tick, but add committer instead
 	$params{fields}->{committer} = $uname;
-	if ($self->{bootstrap}) {
-	    $params{fields}->{committer} = 'bootstrap';
-	}
     }
 
 
@@ -369,72 +366,6 @@ sub exists :method {
     return $self->fetch( $schema, { return => '*', where => [ @_ ] });
 }
 
-# search ( entity, property, value )
-sub search {
-    my ($self, $entity, $property, $value) = @_;
-
-    my ($start, $stop);
-    if (@_ == 5) {
-	($start, $stop) = ($_[4], $_[4]);
-    } elsif (@_ == 6) {
-	($start, $stop) = ($_[4], $_[5]);
-    }
-
-    my $propertytable = $self->_get_schema_name( $entity . ':' . $property );
-
-    my ($e) = $self->fetch( 
-	$propertytable => { operator => 'LIKE',
-			    where  => [ value => $value ]},
-	Entities       => { return => [ 'id', 'visual_id' ], 
-			    where  => [ id     => \qq<$propertytable.id> ]},
-	MetaEntity     => { where  => [ entity => $entity,
-					id     => \qq<Entities.entity> ]},
-	{ start => $start, stop => $stop });
-
-    my @hits;
-    for my $hitref (@$e) {
-	if ($start) {
-	    push @hits, { _id => $hitref->{id}, visual_id => $hitref->{visual_id}, _start => $hitref->{start}, "_stop" => $hitref->{stop} };
-	} else {
-	    push @hits, { _id => $hitref->{id}, visual_id => $hitref->{visual_id} };
-	}
-    }
-    return \@hits;
-}
-
-sub get_entity_id {
-    my ($self, $entity) = @_;
-    
-    my $eref = $self->fetch('MetaEntity', { return => 'id', where => [ entity => $entity ]});
-    return $eref->[0]->{id};
-}
-
-sub get_entity_name {
-    my ($self, $id) = @_;
-    
-    my $eref = $self->fetch('MetaEntity', { return => 'entity', where => [ id => $id ]});
-    return $eref->[0]->{entity};
-}
-
-sub my_parent {
-    my $self = shift;
-
-    return $self->parent_of( $self->{name}, @_ );
-}
-
-sub parent_of {
-    my ($self, $name, $start, $stop) = @_;
-
-    my $p = $self->fetch( 'MetaInheritance', { return => "parent", where => [ child => $name ] },
-			  { start => $start, stop => $stop });
-
-    if ($p->[0]->{parent}) {
-	return $p->[0]->{parent};
-    } else {
-	return 'UNIVERSAL';
-    }
-}
-
 
 sub _convert_time {    
     my $self = shift;
@@ -519,38 +450,6 @@ sub _check_valid_type {
 	$type = "$type(255)";
     } 
     return $type;
-}
-
-sub _get_relation {
-    my ($self, $label) = @_;
-
-    my $ref = $self->fetch( "MetaRelation" => { return => [qw/id lval rval/],
-						where  => [ 'label' => $label ] },
-			  );
-
-    my $s = $ref->[0];
-    return unless defined $s->{id};
-
-    my $lval = $self->fetch( "MetaEntity" => { return => ['id', 'entity'],
-					       where  => [ id => $s->{lval} ] } );
-
-    my $rval = $self->fetch( "MetaEntity" => { return => ['id', 'entity'],
-					       where  => [ id => $s->{rval} ] } );
-
-    $s->{lval} = $lval->[0];
-    $s->{rval} = $rval->[0];
-
-    return $s;
-}
-
-sub _get_entity {
-    my $self   = shift;
-    my $entity = shift;
-
-    my $ref = $self->fetch( "MetaEntity" => { return => 'id',
-					      where  => [ 'entity' => $entity ] } );
-
-    return $ref->[0]->{id};
 }
 
 # Ask if a schema is temporal.  Schema presumed to be mapped, or a

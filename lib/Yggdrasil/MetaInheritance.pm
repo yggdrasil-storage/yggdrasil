@@ -26,8 +26,8 @@ sub add {
     my %params = @_;
     my $self   = $class->SUPER::new(@_);
     
-    my $me     = $self->{yggdrasil}->{storage}->get_entity_id( $params{child} );
-    my $parent = $self->{yggdrasil}->{storage}->get_entity_id( $params{parent} );
+    my $me     = $params{child}->{_id};
+    my $parent = $params{parent}->{_id};
     
     $self->{yggdrasil}->{storage}->store('MetaInheritance',
 			    key    => [ 'parent', 'child' ],
@@ -44,7 +44,7 @@ sub expire {
 
     my $entity = $params{entity};
 
-    my $me   = $self->{yggdrasil}->{storage}->get_entity_id( $entity );
+    my $me   = $entity->{_id};
 
     $self->{yggdrasil}->{storage}->expire('MetaInheritance', child => $me);
 }

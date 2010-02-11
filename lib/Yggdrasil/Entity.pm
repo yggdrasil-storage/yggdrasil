@@ -12,7 +12,7 @@ use Yggdrasil::MetaInheritance;
 
 use Yggdrasil::Property;
 
-use Yggdrasil::Utilities qw|ancestors get_times_from|;
+use Yggdrasil::Utilities qw|get_times_from|;
   
 sub define {
     my $class  = shift;
@@ -48,16 +48,19 @@ sub define {
     #$self->_meta_add($fqn);
 
     my $status = $self->get_status();
-    return $self if $status->status() == 202;
+    return unless $status->OK();
+
+    $self = __PACKAGE__->get( yggdrasil => $self, entity => $fqn );
 
     # --- Update MetaInheritance  
     if( defined $parent ) {
-	Yggdrasil::MetaInheritance->add( yggdrasil => $self, child => $fqn, parent => $parent );
+	$parent = __PACKAGE__->get( yggdrasil => $self, entity => $parent );
+	Yggdrasil::MetaInheritance->add( yggdrasil => $self, child => $self, parent => $parent );
 	#$self->_add_inheritance( $fqn, $parent );
     } else {
 	# warnings, this does update, which sets status.
 	#$self->_expire_inheritance( $fqn );
-	Yggdrasil::MetaInheritance->expire( yggdrasil => $self, entity => $fqn );
+	Yggdrasil::MetaInheritance->expire( yggdrasil => $self, entity => $self );
     }
 
     return $self;
@@ -218,7 +221,7 @@ sub property_exists {
     my ($start, $stop) = get_times_from( @_ );
     
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = ancestors($storage, $self->name(), $start, $stop);
+    my @ancestors = $self->ancestors($start, $stop);
     
     # Check to see if the property exists.
     foreach my $e ( $self->name(), @ancestors ) {
@@ -243,7 +246,7 @@ sub properties {
     my ($start, $stop) = get_times_from( @_ );
 
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = ancestors($storage, $self->name(), $start, $stop);
+    my @ancestors = $self->ancestors($start, $stop);
 
     my %properties;
     
@@ -274,6 +277,35 @@ sub properties {
     return sort values %properties;
 }
 
+# Word of warnings, ancestors returns *names* not objects.  However,
+# this is *probably* acceptable.
+sub ancestors {
+    my $self  = shift;
+    my ($start, $stop) = @_;
+
+    my @ancestors;
+    my %seen = ( $self->{_id} => 1 );
+
+    my $storage = $self->storage();
+    my $r = $storage->fetch( MetaInheritance => { return => "parent", where => [ child => $self->{_id} ] },
+			     MetaEntity => { return => "entity", where => [ id => \q<MetaInheritance.parent> ] },
+			     { start => $start, stop => $stop });
+    
+    while( @$r ) {
+	my $parent = $r->[0]->{parent};
+	my $name   = $r->[0]->{entity};
+
+	last if $seen{$parent};
+	$seen{$parent} = 1;
+	push( @ancestors, $name );
+
+	$r = $storage->fetch( MetaInheritance => { return => "parent", where => [ child => $parent ] },
+			      MetaEntity => { return => "entity", where => [ id => \q<MetaInheritance.parent> ] },
+			      { start => $start, stop => $stop } );
+    }
+
+    return @ancestors;
+}
 
 
 sub _admin_dump {

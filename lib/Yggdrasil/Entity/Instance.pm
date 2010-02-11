@@ -380,7 +380,7 @@ sub is_a {
 
     return 1 if $isa eq $entity->name();
 
-    my @ancestors = Yggdrasil::Utilities::ancestors($storage, $entity->name(), $start, $stop);
+    my @ancestors = $entity->ancestors($start, $stop);
 
     if( defined $isa ) {
 	my $r = grep { $isa eq $_ } @ancestors;
@@ -412,16 +412,10 @@ sub fetch_related {
   #      for now, only objects
 
   my $source = $self->{entity};
-
-  my $source_id = $self->storage()->_get_entity( $source->name() );
-  my $destin_id = $self->storage()->_get_entity( $relative->name() );
-  
-  my $paths = $self->_fetch_related( $source_id, $destin_id, undef, undef, $start, $stop );
-
+  my $paths = $self->_fetch_related( $source->{_id}, $relative->{_id}, undef, undef, $start, $stop );
 
   my %result;
   foreach my $path ( @$paths ) {
-
       my @schema;
       my $alias_prefix = "R";
       my $alias_num    = 1;

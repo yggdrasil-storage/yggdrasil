@@ -27,11 +27,8 @@ sub define {
     $self->{rval} = $rval;
 
     unless( $param{raw} ) {
-	my $id = $storage->_get_relation( $label );
-	if ($id && defined $id->{id}) {
-	    $self->{_id} = $id->{id};
-	    return $self 
-	}
+	my $relation = __PACKAGE__->get( yggdrasil => $self, label => $label );
+	return $relation if $relation;
     }
 
     # --- Add to MetaRelation
@@ -49,15 +46,17 @@ sub get {
     my $self  = $class->SUPER::new(@_);
     my %param = @_; 
     
-    my $ref = $param{yggdrasil}->{storage}->_get_relation( $param{label} );
     my $status = $param{yggdrasil}->get_status();
+    my $ref = $self->storage()->fetch( "MetaRelation" => { return => [qw/id lval rval/],
+						where  => [ 'label' => $param{label} ] },
+			  );
 
-    if( $ref && defined $ref->{id} ) {
+    if( $ref && defined $ref->[0]->{id} ) {
 	my $new = Yggdrasil::Relation->new( @_ );
-	$new->{_id} = $ref->{id};
+	$new->{_id} = $ref->[0]->{id};
 	
-	$new->{lval} = Yggdrasil::Entity->get( yggdrasil => $self, entity => $ref->{lval}->{entity} );
-	$new->{rval} = Yggdrasil::Entity->get( yggdrasil => $self, entity => $ref->{rval}->{entity} );
+	$new->{lval} = Yggdrasil::Entity->get( yggdrasil => $self, entity => $ref->[0]->{lval} );
+	$new->{rval} = Yggdrasil::Entity->get( yggdrasil => $self, entity => $ref->[0]->{rval} );
 
 	$new->{label} = $param{label};
 
