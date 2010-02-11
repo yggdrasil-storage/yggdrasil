@@ -470,6 +470,12 @@ sub entity_info {
 	my $type = $prop->type();
 	printf "  %-13s - %5s - %s\n",  $prop->name(), $prop->null()?'TRUE':'FALSE', $prop->type();
     }
+
+    my $tickid = $eobj->start();
+    my @tick = $y->get_ticks( $tickid );
+    printf "%-15s - %s (%d)\n", 'Created', $tick[0]->{stamp}, $tickid;
+    printf "%-15s - %s\n", 'Committer', $tick[0]->{committer};
+
 }
 
 sub entity_create {
@@ -522,7 +528,7 @@ sub instance_info {
 	    $value = substr( $value, 0, 60 ) . '[ ... ]';
 	}
 	
-	printf "%-15s - %s\n", $prop->name(), $value ;
+	printf "  %-13s - %s\n", $prop->name(), $value ;
     }
 
     my $tickid = $iobj->start();
