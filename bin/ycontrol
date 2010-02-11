@@ -262,6 +262,7 @@ my %cmd;
 	intime => {
 	    _DATE => \&ticks_in_time,
             },
+	current => \&tick_current,
     },
 
     whoami   => \&whoami,
@@ -757,6 +758,13 @@ sub tick_info {
 	}	
     }
     print "\n";
+}
+
+sub tick_current {
+    my ($tick_command, $current_command) = @_;
+
+    my @ticks = $y->get_ticks_by_time( time );
+    print $ticks[0];
 }
 
 sub ticks_in_time {
