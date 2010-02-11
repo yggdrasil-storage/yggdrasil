@@ -414,7 +414,7 @@ sub get_ticks {
 	return undef;
     }
 
-    my $events = $self->_get_instances_at_ticks( @_ );
+    my $events = $self->_get_instance_event_at_ticks( @_ );
 
     for my $t (@$fetchref) {
 	$t->{events} = $events->{ $t->{id} };
@@ -428,7 +428,7 @@ sub get_ticks {
 # caution.  Oh, and we're using q<> constructs to insert the value
 # literally, since a lot of db systems don't evaluate functions if
 # they're added via ?.
-sub _get_instances_at_ticks {
+sub _get_instance_event_at_ticks {
     my ($self, @ticks) = @_;
     my %tick;
 
@@ -445,7 +445,7 @@ sub _get_instances_at_ticks {
 					    'MetaEntity', { return => [ 'entity' ],
 							    where  => [ 'id' => \qq{Entities.entity} ],
 							  },
-					    { start => 0, stop => time },
+					    { start => 0, stop => undef },
 					  );
     for my $h (@$fetchref) {
 	my $etext = 'Created';

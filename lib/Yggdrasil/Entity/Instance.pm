@@ -95,6 +95,7 @@ sub fetch {
     # hard, adding a 'defined' fixes that problem, but we might wish
     # to define semantics here.
     if( @$time && defined $time->[0] && ! ( $time->[1] && $time->[0] == $time->[1] )) {
+#    if( @$time && defined $time->[0] && ! ( $time->[1] && $time->[0] == $time->[1] )) {
 	return @instances;
     } else {
 	return $instances[-1];
@@ -314,8 +315,12 @@ sub property {
 	$storage->store( $schema, key => "id", fields => { id => $self->{_id}, value => $value } );
     }
 
+    my @times;
+    if ($self->{_stop}) { # Historic object, search for property by start / stop times.
+	@times = ( start => $self->start(), stop => $self->stop() );
+    }
     my $r = $storage->fetch( $schema => { return => "value", where => [ id => $self->{_id} ] },
-			     { start => $self->{_start}, stop => $self->{_stop} } );
+			     { @times } );
 
     if ($r->[0]->{value}) {
 	# Pass through return value from Storage, it'll be 200 / 202 correctly.
