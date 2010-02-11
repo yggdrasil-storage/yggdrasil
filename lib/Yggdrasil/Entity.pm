@@ -64,6 +64,7 @@ sub define {
 }
 
 # get an entity
+# FIXME, temporality?
 sub get {
     my $class = shift;
 
@@ -83,7 +84,7 @@ sub get {
     my $entity = $params{entity};
     
     my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ entity => $entity ],
-							return => 'id' } );
+							return => [ 'id', 'start', 'stop' ] } );
     
     unless (defined $aref->[0]->{id}) {
 	$status->set( 404, "Entity '$entity' not found." );
@@ -91,15 +92,32 @@ sub get {
     } 
     
     $status->set( 200 );
-    return objectify( name => $entity, id => $aref->[0]->{id}, yggdrasil => $self->{yggdrasil} );
+    return objectify( name  => $entity,
+		      id    => $aref->[0]->{id},
+		      start => $aref->[0]->{start},
+		      stop  => $aref->[0]->{stop},
+		      yggdrasil => $self->{yggdrasil},
+		    );
+}
+
+sub start {
+    my $self = shift;
+    return $self->{_start}
+}
+
+sub stop {
+    my $self = shift;
+    return $self->{_stop}
 }
 
 sub objectify {
     my %params = @_;
     
     my $obj = new Yggdrasil::Entity( name => $params{name}, yggdrasil => $params{yggdrasil} );
-    $obj->{name} = $params{name};
-    $obj->{_id}  = $params{id};
+    $obj->{name}   = $params{name};
+    $obj->{_id}    = $params{id};
+    $obj->{_start} = $params{start};
+    $obj->{_stop}  = $params{stop};
     return $obj;
 }
 
