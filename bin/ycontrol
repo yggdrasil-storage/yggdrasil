@@ -197,6 +197,11 @@ my %cmd;
 		},
 	    },
 	},
+	info => {
+            _entity => {
+		 _entity_property => \&property_info,
+	    },
+	},
     },
 
     instance => {
@@ -372,11 +377,13 @@ sub user_info {
     my $user = $y->get_user( $username );
     print "'$username', no such user.\n" and return unless $user;
 
-    printf "%20s - %s\n", 'Username', $username;
-    printf "%20s - %s\n", 'Full name', $user->fullname() || '';
-    printf "%20s - %s\n", 'Session', $user->session() || '';
-    printf "%20s - %s\n", 'Password', $user->password() || '';
-    printf "%20s - %s\n", 'Roles', join ", ", map { $_->name() } $user->member_of();
+    printf "%-15s - %s\n", 'Username', $username;
+    printf "%-15s - %s\n", 'Full name', $user->fullname() || '';
+    printf "%-15s - %s\n", 'Session', $user->session() || '';
+    printf "%-15s - %s\n", 'Password', $user->password() || '';
+    printf "%-15s - %s\n", 'Roles', join ", ", map { $_->name() } $user->member_of();
+    
+    &display_tick( $user->start() );
 }
 
 sub user_password {
@@ -458,24 +465,30 @@ sub entity_info {
 
     print "'$entity', no such entity.\n" and return unless $eobj;
     
-    printf "%15s - %s\n", 'Name', $entity;
+    printf "%-15s - %s\n", 'Name', $entity;
 
     # Add multiline support.
-    print "Instances:\n";
-    printf "  %s\n", join ", ", map { $_->id() } $eobj->instances();
-
-    print "Properties:\n";
-    printf "  %-13s - %5s - %s\n", 'Name', 'Null?', 'Type';
-    for my $prop ($eobj->properties()) {
-	my $type = $prop->type();
-	printf "  %-13s - %5s - %s\n",  $prop->name(), $prop->null()?'TRUE':'FALSE', $prop->type();
+    my @instances = $eobj->instances();
+    printf "%-15s - ", "Instances";
+    if (@instances) {
+	print join (", ", map { $_->id() } @instances), "\n";
+    } else {
+	print "NULL\n";
     }
 
-    my $tickid = $eobj->start();
-    my @tick = $y->get_ticks( $tickid );
-    printf "%-15s - %s (%d)\n", 'Created', $tick[0]->{stamp}, $tickid;
-    printf "%-15s - %s\n", 'Committer', $tick[0]->{committer};
+    my @props = $eobj->properties();
 
+    if (@props) {
+	print "Properties:\n";
+	printf "  %-13s - %-10s - %s\n", 'Name', 'Type', 'Null?';
+	for my $prop (@props) {
+	    my $type = $prop->type();
+	    printf "  %-13s - %-10s - %s\n",  $prop->name(), lc $prop->type(), $prop->null()?'TRUE':'FALSE';
+	}
+    } else {
+	printf "%-15s - NULL\n", "Properties";
+    }
+    &display_tick( $eobj->start() );
 }
 
 sub entity_create {
@@ -509,6 +522,21 @@ sub property_create {
     }
 }
 
+sub property_info {
+    my($property_command, $info_command, $entity, $property) = @_;
+
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+    
+    my $pobj = $eobj->get_property( $property );
+    print "'$property', no such property in '$entity'.\n" and return unless $pobj;
+    
+    printf "%-15s - %s\n", 'Full name', "$entity:$property";
+    printf "%-15s - %s\n%-15s - %s\n", 'Type', lc $pobj->type(), 'Null legal', $pobj->null()?'TRUE':'FALSE';
+    
+    &display_tick( $pobj->start() );
+}
+
 # Instance interface
 sub instance_info {
     my ($instance_command, $info_command, $entity, $instance) = @_;
@@ -531,11 +559,7 @@ sub instance_info {
 	printf "  %-13s - %s\n", $prop->name(), $value ;
     }
 
-    my $tickid = $iobj->start();
-    my @tick = $y->get_ticks( $tickid );
-    printf "%-15s - %s (%d)\n", 'Created', $tick[0]->{stamp}, $tickid;
-    printf "%-15s - %s\n", 'Committer', $tick[0]->{committer};
-
+    &display_tick( $iobj->start() );
 }
 
 sub instance_edit {
@@ -821,6 +845,13 @@ sub grant_revoke {
 
 }
 
+# Helper stuff.
+sub display_tick {
+    my $tickid = shift;
+    my @tick = $y->get_ticks( $tickid );
+    printf "%-15s - %s (%d)\n", 'Created', $tick[0]->{stamp}, $tickid;
+    printf "%-15s - %s\n", 'Committer', $tick[0]->{committer};
+}
 
 # Yggdrasil expand interface.
 # WARNING, Yggdrasil is returning labels, not objects here!
