@@ -94,7 +94,7 @@ sub fetch {
     # WARNING, setting $time->[0] to 0 will break the second test
     # hard, adding a 'defined' fixes that problem, but we might wish
     # to define semantics here.
-    if( @$time && defined $time->[0] && $time->[1] && $time->[0] != $time->[1] ) {
+    if( @$time && defined $time->[0] && ! ( $time->[1] && $time->[0] == $time->[1] )) {
 	return @instances;
     } else {
 	return $instances[-1];
