@@ -823,13 +823,11 @@ sub expand_label {
 }
 
 sub expand_user {
-    my $eobj = $y->get_entity( 'MetaAuthUser' );
-    return map { $_->id() } $eobj->instances();
+    return $y->usernames();
 }
 
 sub expand_role {
-    my $eobj = $y->get_entity( 'MetaAuthRole' );
-    return map { $_->id() } $eobj->instances();
+    return $y->rolenames();
 }
 
 sub expand_entity {

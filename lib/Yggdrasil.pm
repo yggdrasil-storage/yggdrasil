@@ -288,7 +288,6 @@ sub entities {
 					       yggdrasil => $self ) } @$aref;
 }
 
-
 # relations, returns all the relations known to Yggdrasil.
 sub relations {
     my $self = shift;
@@ -314,6 +313,25 @@ sub exists {
     
     return undef unless $fetchref->[0];
     return $fetchref->[0]->{id};
+}
+
+# usernames / rolenames, returns all the usernames / rolenames known
+# to Yggdrasil.  This does *not* produce proper objects, as not
+# everyone is privy to all details about users and roles, but everyone
+# will need read access to MetaAuthUser and MetaAuthRole anyway.  If
+# you want proper objects, for now, call "get_user" or "get_role" as
+# needed.
+sub usernames {
+    my $self = shift;
+    my $eobj = $self->get_entity( 'MetaAuthUser' );
+    return map { $_->id() } $eobj->instances();
+}
+
+sub rolenames {
+    my $self = shift;
+    my $eobj = $self->get_entity( 'MetaAuthRole' );
+    return map { $_->id() } $eobj->instances();
+
 }
 
 # to access defined storage types
