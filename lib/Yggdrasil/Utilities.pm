@@ -17,6 +17,8 @@ sub get_times_from {
     }
 } 
 
+# Word of warnings, ancestors returns *names* not objects.  However,
+# this is *probably* acceptable.
 sub ancestors {
     my $storage = shift;
     my $entity  = shift;
