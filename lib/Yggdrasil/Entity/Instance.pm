@@ -79,7 +79,7 @@ sub fetch {
     push( @$time, $time->[0] ) if @$time == 1;
 
     my @instances;
-    for my $dataref ( $self->_get_in_time($vid, @$time) ) {
+    for my $dataref ( $self->_get_in_tick($vid, @$time) ) {
 	# UGH ...
 	my $o = __PACKAGE__->new( yggdrasil => $self );
 	$o->{visual_id} = $vid;
@@ -127,7 +127,7 @@ sub _get_id {
 }
 
 
-sub _get_in_time {    
+sub _get_in_tick {    
     my $self = shift;
     my $visual_id = shift;
     my @time = @_;
