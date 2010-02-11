@@ -75,7 +75,7 @@ sub can {
     my $dataref   = $params{data};
     my $targets_to_check;
     
-    return 1 if grep { /:/ } @$target;  # FIX: properties not implemented.
+    return 1 if grep { /[^:]:[^:]/ } @$target;  # FIX: properties not implemented.
     return 1 if $target eq "Relations"; # FIX: auth for Relation
     return 1 unless $user && $operation eq 'readable'; # Pre-login.
     
