@@ -608,18 +608,13 @@ sub instance_history {
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
 
-    my $now = time;
-    # FIXME, fetch breaks if no properties have any values set,
-    # ever, for the instance.  Incidently, this also means we always
-    # get two entries (one for creating the instance, one for the
-    # first property set).
-    my @iobjs = $eobj->fetch( $instance, 0, time );
+    my @iobjs = $eobj->fetch( $instance, 0, undef );
     print "'$instance', no such instance in $entity.\n" and return unless @iobjs;
     my $entries = scalar @iobjs || 0;
     
     print "$entity / $instance (full history, $entries ", $entries > 1?'entries':'entry', "):\n";
     
-    my @props = $eobj->properties( 0, time );
+    my @props = $eobj->properties( 0, undef );
     my (@lines);
     
     my %maxwidth;
@@ -635,7 +630,7 @@ sub instance_history {
 	    } elsif ($prop eq 'stop') {
 		$value = $iobj->stop();
 	    } else {
-		$value = $iobj->get( $prop );
+		$value = $iobj->get( $propname );
 	    }
 
 	    next unless $value;
