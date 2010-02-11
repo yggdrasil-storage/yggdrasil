@@ -374,47 +374,50 @@ sub _get_epoch_from_input {
     return timelocal( $sec, $min, $hour, $mday, $mon, $year );
 }
 
-sub get_tick {
-    my $self   = shift;
-    my $tickid = shift;
+# Get information about the ticks in question.
+sub get_ticks {
+    my $self  = shift;
+    my @ticks;
     
-    my $fetchref = $self->{storage}->fetch( 'Storage_ticker', { return => [ 'stamp', 'committer' ],
-								where  => [ 'id' => $tickid ] } );
-
-    my ($timestamp, $committer) = ($fetchref->[0]->{stamp}, $fetchref->[0]->{committer});
-    if (! $timestamp) {
-	$self->{status}->set( 400, 'Timestamp not found' );
+    for my $t (@_) {
+	push @ticks, 'id' => $t;
+    }
+    
+    my $fetchref = $self->{storage}->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
+								where  => [ @ticks ],
+								bind   => 'or',
+							      } );
+    
+    if (! $fetchref->[0]->{stamp}) {
+	$self->{status}->set( 400, 'Tick not found' );
 	return undef;
     }
-    
-    if (wantarray) {
-	# Let's ask if anyone has seen the tick in question. The
-	# possible options are: that it's seen in an entity, a
-	# property, a relation or an instance.  We'll have to check
-	# them all.
 
-	my @hits; # Hash, contains 'start', 'stop' and 'string' which
-                  # explains what happened. 
+    my $events = $self->_get_instances_at_ticks( @_ );
 
-	push @hits, $self->_get_instances_at_tick( $tickid );
-	
-	return ($timestamp, $committer, \@hits)
-    } else {
-	return $timestamp;
+    for my $t (@$fetchref) {
+	$t->{events} = $events->{ $t->{id} };
     }
+    return @$fetchref;
 }
 
-# Get all the instances that were created or expired on a given tick.
-# Beware, asking for temporal stuff with times set will clobber start
-# and stop between the tables, use 'as' or proceed with caution.  Oh,
-# and we're using q<> constructs to insert the value literally, since
-# a lot of db systems don't evaluate functions if they're added via ?.
-sub _get_instances_at_tick {
-    my ($self, $tickid) = @_;
-    my @hits;
+# Get all the instances that were created or expired on the given
+# ticks.  Beware, asking for temporal stuff with times set will
+# clobber start and stop between the tables, use 'as' or proceed with
+# caution.  Oh, and we're using q<> constructs to insert the value
+# literally, since a lot of db systems don't evaluate functions if
+# they're added via ?.
+sub _get_instances_at_ticks {
+    my ($self, @ticks) = @_;
+    my %tick;
+
+    my @where;
+    for my $t (@_) {
+	push @where, 'start' => $t, 'stop' => $t;
+    }
     
     my $fetchref = $self->{storage}->fetch( 'Entities', { return => [ 'visual_id', 'start', 'stop' ],
-							  where  => [ 'start' => $tickid, 'stop' => $tickid ],
+							  where  => [ @where ],
 							  bind   => 'or',
 							  as     => 1,
 							},
@@ -425,12 +428,13 @@ sub _get_instances_at_tick {
 					  );
     for my $h (@$fetchref) {
 	my $etext = 'Created';
+	my $id = $h->{Entities_start} || $h->{Entities_stop};
 	$etext = 'Expired' if $h->{Entities_stop};
-	push @hits, { start => $h->{Entities_start}, stop => $h->{Entities_stop},
-		      string => "$etext the instance '" . $h->{visual_id} . "' in '" . $h->{entity} . "'",
-		    };
+	push @{$tick{$id}}, { start => $h->{Entities_start}, stop => $h->{Entities_stop},
+			      string => "$etext the instance '" . $h->{visual_id} . "' in '" . $h->{entity} . "'",
+			    };
     }
-    return @hits;
+    return \%tick;
 }
 
 ###############################################################################

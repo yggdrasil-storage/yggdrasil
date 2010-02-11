@@ -526,9 +526,9 @@ sub instance_info {
     }
 
     my $tickid = $iobj->start();
-    my @tick = $y->get_tick( $tickid );
-    printf "%-15s - %s (%d)\n", 'Created', $tick[0], $tickid;
-    printf "%-15s - %s\n", 'Committer', $tick[1];
+    my @tick = $y->get_ticks( $tickid );
+    printf "%-15s - %s (%d)\n", 'Created', $tick[0]->{stamp}, $tickid;
+    printf "%-15s - %s\n", 'Committer', $tick[0]->{committer};
 
 }
 
@@ -698,24 +698,40 @@ sub relation_info {
 # Tick interface
 sub tick_info {
     my ($tick_command, $info_command, $tick) = @_;
-    my ($timestamp, $committer, $eventref) = $y->get_tick( $tick );
-    print "'$tick', no such tick.\n" and return unless $timestamp;
-    
-    print "Tick $tick:\n";
-    printf "%20s - %s\n", 'Timestamp', $timestamp;
-    printf "%20s - %s\n", 'Committer', $committer;
 
-    if (ref $eventref eq 'ARRAY') {
-	print "Events:\n";
-	for my $e (@$eventref) {
-	    printf " - " . $e->{string};
+    my @ticks;
+    my @sequences = split /,/, $tick;
+    
+    for my $s (@sequences) {
+	if ($s =~ /^(\d+)-(\d+)/) {
+	    push @ticks, $_ for ( $1 .. $2 );
+	} elsif ($s =~ /^(\d+)$/) {
+	    push @ticks, $s;
+	} else {
+	    print "Unable to parse input, '$s', skipping.\n";
+	}
+    }
+
+    my @ret = $y->get_ticks( @ticks );
+    print "'$tick', no such tick.\n" and return unless $ret[0];
+    
+    for my $t (@ret) {
+	print "Tick ", $t->{id}, ":\n";
+	printf "%20s - %s\n", 'Timestamp', $t->{stamp};
+	printf "%20s - %s\n", 'Committer', $t->{committer};
+
+	my $eventstring = 'Event';
+	for my $e (@{$t->{events}}) {
+	    printf "%20s - %s", $eventstring, $e->{string};
 	    if ($e->{stop}) {
 		print " (expired tick " . $e->{stop} . ")\n";
 	    } else {
 		print " (still valid)\n";
 	    }
-	}
+	    $eventstring = '';
+	}	
     }
+    print "\n";
 }
 
 sub ticks_in_time {
