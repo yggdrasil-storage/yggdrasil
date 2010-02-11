@@ -367,6 +367,9 @@ sub _get_epoch_from_input {
 	($hour, $min, $sec) = ($1, $2, $3);	
     } elsif ($time =~ /^(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)$/) {
 	($year, $mon, $mday, $hour, $min, $sec) = ($1, $2 - 1, $3, $4, $5, $6);
+    } elsif ($time =~ /^(\d{3,})$/) {
+	# We haz epoch?  Yarp.
+	return $time;
     } else {
 	return;
     }
