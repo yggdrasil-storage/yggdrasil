@@ -36,6 +36,24 @@ sub get {
     return;
 }
 
+sub get_all {
+    my $class = shift;
+    my $self  = $class->SUPER::new( @_ );
+    my %params = @_;
+
+    my $meta_role = Yggdrasil::Entity->get( yggdrasil => $self, entity => "MetaAuthRole" );
+
+    my @roles;
+    for my $role_obj ( $meta_role->instances() ) {
+	my $role = $class->SUPER::new( @_ );
+	$role->{_role_obj} = $role_obj;
+
+	push( @roles, $role );
+    }
+
+    return @roles;
+}
+
 sub undefine {
 
 }

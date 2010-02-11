@@ -296,6 +296,22 @@ sub relations {
     return map { $_->{label} } @$aref;
 }
 
+
+# users, returns all users known to Yggdrasil. 
+sub users {
+    my $self = shift;
+    
+    return Yggdrasil::User->get_all( yggdrasil => $self );
+}
+
+
+# roles, returns all roles known to Yggdrasil.
+sub roles {
+    my $self = shift;
+    
+    return Yggdrasil::Role->get_all( yggdrasil => $self, @_ );
+}
+
 # Generic exist method for non-instanced calls across Yggdrasil to see
 # if a given instance of a given entity exists.  It is called as
 # "$HOSTOBJ->exists( 'nommo' )", or "$ROOMOBJ->exists( 'B810' ) etc.

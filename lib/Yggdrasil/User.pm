@@ -34,7 +34,7 @@ sub get {
     my $class = shift;
     my $self = $class->SUPER::new( @_ );
     my %params = @_;
-    
+
     my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
     $self->{_user_obj} = $meta_user->fetch( $params{'user'} );
 
@@ -43,6 +43,24 @@ sub get {
     $self->_load_memberships();
 
     return $self;
+}
+
+sub get_all {
+    my $class = shift;
+    my $self  = $class->SUPER::new( @_ );
+    my %params = @_;
+
+    my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
+
+    my @users;
+    for my $user_obj ( $meta_user->instances() ) {
+	my $user = $class->SUPER::new( @_ );
+	$user->{_user_obj} = $user_obj;
+
+	push( @users, $user );
+    }
+    
+    return @users;
 }
 
 sub start {
@@ -152,10 +170,11 @@ sub member_of {
     my $uobj = $self->{_user_obj};
 
     my $roles = $self->storage()->fetch(
-	Entities =>
-	{ return => [ qw/visual_id/ ], where => [ id => \qq<MetaAuthRolemembership.role> ] },
-	MetaAuthRolemembership =>
-	{ where => [ user => $uobj->{_id} ] } );
+	Entities => {
+		     return => [ qw/visual_id/ ], 
+		     where => [ id => \qq<MetaAuthRolemembership.role> ]
+		    },
+	MetaAuthRolemembership => { where => [ user => $uobj->{_id} ] } );
     # FIX fetch does *not* return status code in a sane way.  This
     # needs to be solved at the SQL layer upon completing a
     # transaction.
