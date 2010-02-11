@@ -467,11 +467,8 @@ sub _process_temporal {
 	if (! defined $stop ) {
 	    push @wheres, "( not $qstop <= $start or $qstop $isnull NULL )";
 	} else {
-	    if ($stop eq $start) {
-		push @wheres, "$qstart <= $stop and ( $qstop > $start or $qstop $isnull NULL )";		
-	    } else {
-		push @wheres, "$qstart < $stop and ( $qstop > $start or $qstop $isnull NULL )";
-	    }
+	    my $op = $stop == $start?'<=':'<';
+	    push @wheres, "($qstop $isnull NULL or $qstart $op $stop) and ( $qstop > $start or $qstop $isnull NULL )";
 	}
     } elsif( defined $stop ) {
 	push @wheres, "$qstart <= $stop";

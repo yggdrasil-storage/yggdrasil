@@ -87,7 +87,6 @@ sub fetch {
 	$o->{_start}    = $dataref->{start};
 	$o->{_stop}     = $dataref->{stop};
 	$o->{entity}    = $entity;
-
 	push( @instances, $o );
     }
 
@@ -183,10 +182,10 @@ sub _get_in_tick {
 	for( my $i = 0; $i < @sorted; $i++ ) {
 	    my $e = $sorted[$i];
 	    my $next = $sorted[$i+1] || {};
-
-	    if( $i == 0 ) {
-		$e->{start} = $time[0];
-	    }
+	    
+#	    if( $i == 0 ) {
+#		$e->{start} = $time[0];
+#	    }
 
 	    $e->{stop} = $next->{start} || $time[1];
 	}
@@ -222,14 +221,20 @@ sub _filter_start_times {
 	    next unless $key =~ /_start$/;
 	    
 	    my $val = $e->{$key};
+	    next unless defined $val;
 	    
 	    # print "VAL = $key $val $start :: $stop\n";
 	    my $good;
 	    if( defined $start ) {
 		if( defined $stop ) {
-		    $good = $start <= $val && $val < $stop;
+		    my $event_stop = $key;
+		    $event_stop =~ s/_start$/_stop/;
+		    my $event_stop_val = $e->{$event_stop};
+		    $good = (($start <= $val && $val < $stop)
+			     ||
+			     ($val <= $stop && ! defined $event_stop_val));
 		} else {
-		    $good = $val >= $start if $val && $start;
+		    $good = $val >= $start if $val && defined $start;
 		}
 	    } elsif( defined $stop ) {
 		$good = $val < $stop;
