@@ -47,4 +47,14 @@ sub get_status {
     return $self->{yggdrasil}->{status};
 }
 
+sub start {
+    my $self = shift;
+    return $self->{_start};
+}
+
+sub stop {
+    my $self = shift;
+    return $self->{_stop};
+}
+
 1;

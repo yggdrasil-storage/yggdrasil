@@ -45,6 +45,16 @@ sub get {
     return $self;
 }
 
+sub start {
+    my $self = shift;
+    return $self->{_user_obj}->{_start};
+}
+
+sub stop {
+    my $self = shift;
+    return $self->{_user_obj}->{_stop};
+}
+
 sub get_with_session {
     my $class = shift;
     my $self = $class->SUPER::new( @_ );

@@ -243,16 +243,6 @@ sub _filter_start_times {
     return \%times;
 }
 
-sub start {
-    my $self = shift;
-    return $self->{_start};
-}
-
-sub stop {
-    my $self = shift;
-    return $self->{_stop};
-}
-
 sub get {
     my $self = shift;
     return $self->property( @_ );
@@ -295,8 +285,8 @@ sub property {
 	return undef;
     }
 
-    # FIX: Sadly, $p->full_name doesn't deal with inheritance properly.
-    my $schema = $entity->property_exists( $key );
+    my $schemaref = $entity->property_exists( $key );
+    my $schema    = $schemaref->{name};
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
 	if( defined $self->{_stop} ) {

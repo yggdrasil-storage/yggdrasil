@@ -126,16 +126,16 @@ sub name {
 sub entity {
     my $self = shift;
 
-    # FIX: This should return the entity object
     return $self->{entity};
 }
 
-# FIX, this does *NOT* take inheritance into account and is as such
-# completely broken
+
 sub full_name {
     my $self = shift;
 
-    return join(':', $self->{entity}, $self->{name});
+    # Testing is the only thing that uses this method, and it has
+    # managed to make $self->{entity} a string...
+    return join(':', $self->{entity}, $self->{name} );
 }
 
 sub get {
@@ -170,7 +170,9 @@ sub get {
     my $prop = $entityobj->property_exists( $propname );
     if ($prop) {
 	$self->{name}   = $propname;
-	$self->{entity} = $params{entity};
+	$self->{entity} = $entityobj;
+	$self->{_start} = $prop->{start};
+	$self->{_stop}  = $prop->{stop};
 	$status->set( 200 );
 	return $self;
     } else {

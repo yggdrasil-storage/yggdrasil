@@ -100,16 +100,6 @@ sub get {
 		    );
 }
 
-sub start {
-    my $self = shift;
-    return $self->{_start}
-}
-
-sub stop {
-    my $self = shift;
-    return $self->{_stop}
-}
-
 sub objectify {
     my %params = @_;
     
@@ -221,7 +211,8 @@ sub get_property {
     return Yggdrasil::Property->get( yggdrasil => $self, entity => $self, property => $prop, @_ );
 }
 
-# Handle property queries.
+# Handle property queries.  Returns undef or a hash with 'name',
+# 'start' and 'stop'.
 sub property_exists {
     my ($self, $property) = (shift, shift);
     my ($start, $stop) = get_times_from( @_ );
@@ -234,12 +225,14 @@ sub property_exists {
 	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
 							      entity => $e,
 							    ]},
-				   'MetaProperty', { return => 'property',
+				   'MetaProperty', { return => [ 'property', 'start', 'stop' ],
 						     where => [ property => $property ] },
 				   { start => $start, stop => $stop });
 
 	# The property name might be "0".
-	return join(":", $e, $property) if defined $aref->[0]->{property};
+	return { name  => join(":", $e, $property ),
+		 start => $aref->[0]->{start},
+		 stop  => $aref->[0]->{stop} } if defined $aref->[0]->{property};
     }
     
     return;
