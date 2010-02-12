@@ -264,14 +264,26 @@ sub get_ticks_from_time {
 						    } );
 
     } else {
+
+	my $max_stamp = $self->fetch( Storage_ticker => { return   => "stamp",
+							  filter   => "MAX",
+							  where    => [ stamp => \qq<$from> ],
+							  operator => "<=",
+							} );
+
+	$max_stamp = $max_stamp->[0]->{max_stamp};
+	return unless $max_stamp;
+
 	$fetchref = $self->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
-						      where  => [ 'stamp' => \qq<$from> ],
+						      where  => [ 'stamp' => $max_stamp ],
 						      operator => '=',
 						    } );
+
+	
     }
 
     my @hits;
-    for my $tick (@$fetchref) {
+    for my $tick (sort { $a->{id} <=> $b->{id}  } @$fetchref) {
 	push @hits, $tick;
     }
     return @hits;

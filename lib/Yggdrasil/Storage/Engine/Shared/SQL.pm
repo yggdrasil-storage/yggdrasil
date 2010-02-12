@@ -104,6 +104,22 @@ sub _last_insert_id {
     return $dbh->last_insert_id( undef, undef, $table, undef );
 }
 
+sub _apply_filter {
+    my $self   = shift;
+    my $filter = shift;
+    my $field  = shift;
+
+    my @parts = split /\./, $field;
+
+    if( uc($filter) eq "MAX" ) {
+	return "MAX($field) AS max_" . $parts[-1];
+    } elsif( uc($filter) eq "MIN" ) {
+	return "MIN($field) AS min_" . $parts[-1];
+    } else {
+	Yggdrasil::fatal( "No such filter as $filter" );
+    }
+}
+
 # Perform a prewritten statement that is not expected to return
 # anything.  An important note here is that the table name is already
 # given and assumed to be correct.  Any mapping has to be done before
@@ -187,6 +203,7 @@ sub _fetch {
 	my $as       = $queryref->{as};
 	my $bind     = $queryref->{bind} || 'and';
 	my $alias    = $queryref->{alias} || $schema;
+	my $filter   = $queryref->{filter};
 
 	my $real_schema = $schema;
 	$schema = $alias;
@@ -210,6 +227,13 @@ sub _fetch {
 	    my ($w_tmp, $tr_tmp) = $self->_process_temporal( $schema, $start, $stop, $as );
 	    push( @wheres, @$w_tmp );
 	    push( @temporal_returns, @$tr_tmp );
+	}
+
+	if( $filter ) {
+	    $filter = [$filter] unless ref $filter;
+	    for( my $i=0; $i<@$filter; $i++ ) {
+		$returns[$i] = $self->_apply_filter( $filter->[$i], $returns[$i] );
+	    }
 	}
     }
 

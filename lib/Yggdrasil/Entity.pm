@@ -133,10 +133,17 @@ sub fetch {
     my $self  = shift;
     my $name  = shift;
 
+    my @time;
+    for my $t (@_) {
+	push(@time, undef) and next unless defined $t;
+	my @tick = $self->yggdrasil()->get_ticks_by_time( $t );
+	push(@time, $tick[-1]->{id} );
+    }
+
     return Yggdrasil::Entity::Instance->fetch( yggdrasil => $self,
 					       entity    => $self,
 					       id        => $name, 
-					       time      => [@_] );
+					       time      => [@time] );
 }
 
 # delete instance
