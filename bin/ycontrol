@@ -764,7 +764,7 @@ sub tick_current {
     my ($tick_command, $current_command) = @_;
 
     my @ticks = $y->get_ticks_by_time( time );
-    print $ticks[0];
+    print $ticks[0]->{id}, "\n";
 }
 
 sub ticks_in_time {
