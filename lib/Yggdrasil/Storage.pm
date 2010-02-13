@@ -3,6 +3,7 @@ package Yggdrasil::Storage;
 use strict;
 use warnings;
 
+use Yggdrasil::Transaction;
 use Yggdrasil::Storage::Mapper;
 
 our $STORAGEMAPPER   = 'Storage_mapname';
@@ -10,6 +11,8 @@ our $STORAGETEMPORAL = 'Storage_temporals';
 our $STORAGECONFIG   = 'Storage_config';
 our $STORAGETICKER   = 'Storage_ticker';
 our $MAPPER;
+
+our $TRANSACTION = Yggdrasil::Transaction->create_singleton();
 
 our $ADMIN = undef;
 
@@ -66,6 +69,7 @@ sub new {
 	}
 	
 	my $storage = $engine_class->new(@_);
+	$storage->{transaction} = $TRANSACTION;
 	
 	unless (defined $storage) {
 	    $status->set( 500 );
@@ -116,6 +120,8 @@ sub define {
     my $self = shift;
     my $schema = shift;
 
+    my $transaction = $TRANSACTION->init( path => 'define' );
+
     my %data = @_;
     my $originalname = $schema;
     my $status = $self->get_status();
@@ -155,6 +161,7 @@ sub define {
 	$data{fields}->{committer} = { type => 'VARCHAR(255)', null => 0 };
     }
 
+    $transaction->log( "Defined $originalname" );
     my $retval = $self->_define( $schema, %data );
 
    # We might create a schema with name "0", so check for a defined value.
@@ -173,6 +180,7 @@ sub define {
 	}
     }
     
+    $transaction->commit();
     return $retval;
 }
 
@@ -183,6 +191,8 @@ sub store {
     my %params = @_;
 
     my $status = $self->get_status();
+
+    my $transaction = $TRANSACTION->init( path => 'store' );
 
     my $uname;
     if( $self->{bootstrap} ) {
@@ -229,9 +239,12 @@ sub store {
 	    $keys{$key} = $params{fields}->{$key};
 	}
 
+	$transaction->log( "Expire: $schema " . join( ", ", %keys ) );
 	$self->_expire( $real_schema, $tick, %keys );
     }
 
+    $transaction->log( "Store: $schema " . join( ", ", %keys ) );
+    $transaction->commit();
     return $self->_store( $real_schema, tick => $tick, %params );
 }
 
@@ -264,7 +277,6 @@ sub get_ticks_from_time {
 						    } );
 
     } else {
-
 	my $max_stamp = $self->fetch( Storage_ticker => { return   => "stamp",
 							  filter   => "MAX",
 							  where    => [ stamp => \qq<$from> ],
@@ -304,6 +316,8 @@ sub raw_store {
 sub fetch {
     my $self = shift;
     my @targets;
+
+    my $transaction = $TRANSACTION->init( path => 'fetch' );
     
     my $time;
     if( @_ % 2 ) { 
@@ -320,13 +334,17 @@ sub fetch {
 
     # Add "as" parameter that can be used later to prefix returned values from the query
     # (to ensure unique return values, eg. Foo_stop, Bar_stop, ... )
+    my @schemas_looked_at;
     for( my $i=0; $i < @_; $i += 2 ) {
 	my( $schema, $queryref ) = ($_[$i], $_[$i+1]);
+	push @schemas_looked_at, $schema;
 	next unless $queryref->{join} || $queryref->{as};
 	$queryref->{as} = $schema;
 	push @targets, $schema;
     }
 
+    $transaction->log( "Fetch: " . join( ', ', @schemas_looked_at) );
+    
     unless ($self->{bootstrap}) {
 	my %params = @_;
 	if (! $self->can( operation => 'readable', data => \%params, targets => \@targets )) {
@@ -335,8 +353,9 @@ sub fetch {
 	    return;
 	} 
     }
-
-    return $self->_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_, $time );
+    my $ref = $self->_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_, $time );
+    $transaction->commit();
+    return $ref;
 }
 
 # Ask Auth if an action can be performed on a target.  Returns true / false.

@@ -375,7 +375,7 @@ sub get_ticks_by_time {
     my $from = $self->_get_epoch_from_input( shift );
     my $to   = $self->_get_epoch_from_input( shift );
 
-    return unless $from;
+    return unless defined $from;
 
     # We need to feed the backend something it can use, and they like
     # working with all sorts of weird stuff, but we'll delegate that
@@ -390,7 +390,7 @@ sub get_ticks_by_time {
 sub _get_epoch_from_input {
     my $self = shift;
     my $time = shift;
-    return unless $time;
+    return unless defined $time;
 
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
     if ($time =~ /^\d{2}$/) {
@@ -401,7 +401,7 @@ sub _get_epoch_from_input {
 	($hour, $min, $sec) = ($1, $2, $3);	
     } elsif ($time =~ /^(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)$/) {
 	($year, $mon, $mday, $hour, $min, $sec) = ($1, $2 - 1, $3, $4, $5, $6);
-    } elsif ($time =~ /^(\d{3,})$/) {
+    } elsif ($time =~ /^(\d{3,})$/ || $time == 0) {
 	# We haz epoch?  Yarp.
 	return $time;
     } else {
@@ -475,6 +475,17 @@ sub _get_instance_event_at_ticks {
     return \%tick;
 }
 
+# Transaction interface.
+sub transaction_stack_get {
+    my $self = shift;
+    return $self->{storage}->{transaction}->get_stack();
+}
+
+sub transaction_stack_clear {
+    my $self = shift;
+    return $self->{storage}->{transaction}->clear_stack();
+}
+  
 ###############################################################################
 # Helper functions
 sub _setup_logger {

@@ -254,6 +254,11 @@ my %cmd;
         },    
     },
 
+    transaction => {
+	 _help  => 'Transactional information',
+         log    => \&transaction_log,
+    },
+	
     tick => {
 	_help => "Tick related commands",
 	info  => {
@@ -617,7 +622,7 @@ sub instance_history {
     
     my @props = $eobj->properties( 0, undef );
     my (@lines);
-    
+
     my %maxwidth;
     $maxwidth{start} = $maxwidth{stop} = 6; # default, will be overwritten if length is longer.
     for my $iobj (@iobjs) {
@@ -627,11 +632,11 @@ sub instance_history {
 	    my $value;
 
 	    if ($prop eq 'start') {
-		$value = $iobj->start() || '0';
+		$value = $iobj->start() || 0;
 	    } elsif ($prop eq 'stop') {
 		$value = $iobj->stop();
 	    } else {
-		$value = $iobj->get( $propname );
+		$value = $iobj->get( $propname ) || '';
 	    }
 
 	    next unless $value;
@@ -647,7 +652,7 @@ sub instance_history {
     my @header;
     for my $prop ('start', 'stop', @props) {
 	my $propname = ref $prop?$prop->name():$prop;
-	my $w = $maxwidth{$propname};
+	my $w = $maxwidth{$propname} || 1;
 	push @header, sprintf "%-${w}s", $propname;
     }
     print join( ' | ', @header ), "\n";
@@ -656,7 +661,7 @@ sub instance_history {
 	my @l;
 	for my $prop ('start', 'stop', @props) {
 	    my $propname = ref $prop?$prop->name():$prop;
-	    my $w = $maxwidth{$propname};
+	    my $w = $maxwidth{$propname} || 1;
 	    push @l, sprintf "%-${w}s", $l->{$propname} || '';
 	}
 	print join( ' | ', @l ), "\n";
@@ -846,6 +851,20 @@ sub grant_revoke {
 	return;
     }
 
+}
+
+sub transaction_log {
+    my @entries = $y->transaction_stack_get();
+    print "Transaction stack empty.\n" and return unless @entries;
+    
+    print "Transaction stack:\n";
+    for my $entry (@entries) {
+	printf " %05d | %-7s | %s\n", $entry->id(), $entry->path(), join( ', ', $entry->get_commit_log());
+	for my $engine ($entry->get_engine_log()) {
+	    print "       | $engine\n";
+	}
+    }
+    $y->transaction_stack_clear();
 }
 
 # Helper stuff.

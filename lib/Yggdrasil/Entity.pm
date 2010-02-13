@@ -136,7 +136,9 @@ sub fetch {
     # FUGLY, FIXME TO WORK!
     my @time;
     for my $t (@_) {
-	push(@time, undef) and next unless defined $t;
+	# If the tick undef or 0, pass it along, we're dealing with
+	# semantics here.
+	push(@time, $t) and next if ! defined $t || $t == 0;
 	my @tick = $self->yggdrasil()->get_ticks_by_time( $t );
 	if (@time > 1) {
 	    push(@time, $tick[-1]->{id} );

@@ -139,9 +139,17 @@ sub _sql {
 	return;
     }
 
-    my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);
+    # Log + debugging.
+    my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);    
     $self->{logger}->debug( "$sql -> Args: [$args_str]" );
     debug_if( 5, "SQL: $sql -> Args: [$args_str]" );
+
+    # Transaction information.
+    my $sqlinline = $sql;
+    my $i = 0;
+    $sqlinline =~ s/\?/"'" . $attr[$i++] . "'"/ge;
+    $self->{transaction}->engine( $sqlinline . " ($args_str)" );
+    
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
 	return;
