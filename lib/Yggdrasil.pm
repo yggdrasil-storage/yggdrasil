@@ -445,7 +445,8 @@ sub get_ticks {
 # literally, since a lot of db systems don't evaluate functions if
 # they're added via ?.
 sub _get_instance_event_at_ticks {
-    my ($self, @ticks) = @_;
+    my $self  = shift;
+    my @ticks = @_;
     my %tick;
 
     my @where;
