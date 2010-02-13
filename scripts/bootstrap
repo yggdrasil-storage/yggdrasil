@@ -22,7 +22,7 @@ _die( "Unable to load Yggdrasil" ) unless $status->OK();
 my $connect = $ygg->connect( %$opts );
 _die( "Unable to connect to Yggdrasil" ) unless $status->OK();
 
-my $bootstrap = $ygg->bootstrap( terjekv => 'flappa' );
+my $bootstrap = $ygg->bootstrap( terjekv => 'flappa', davidra => 'bah' );
 _die( "Unable to bootstrap" ) unless $status->OK();
 
 print "Yggdrasil is now bootstrapped with the following users:\n";
