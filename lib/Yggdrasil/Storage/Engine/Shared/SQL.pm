@@ -148,7 +148,7 @@ sub _sql {
     my $sqlinline = $sql;
     my $i = 0;
     $sqlinline =~ s/\?/"'" . $attr[$i++] . "'"/ge;
-    $self->{transaction}->engine( $sqlinline . " ($args_str)" );
+    $self->{transaction}->engine( $sqlinline );
     
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
