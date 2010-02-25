@@ -68,7 +68,7 @@ sub members {
     my $robj = $self->{_role_obj};
 
     my $users = $self->storage()->fetch( 
-	Entities =>
+	Instances =>
 	{ return => [ qw/visual_id/ ], where => [ id => \qq<MetaAuthRolemembership.user> ] },
 	MetaAuthRolemembership => 
 	{ where => [ role => $robj->{_id} ] } );

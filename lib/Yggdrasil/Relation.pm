@@ -97,9 +97,9 @@ sub participants {
     foreach my $part (@$parts) {
 	my $l = $part->{lval};
 	my $r = $part->{rval};
-	my $lval = $storage->fetch( Entities => { where => [ id => $l ],
+	my $lval = $storage->fetch( Instances => { where => [ id => $l ],
 						  return => 'visual_id' } );
-	my $rval = $storage->fetch( Entities => { where => [ id => $r ],
+	my $rval = $storage->fetch( Instances => { where => [ id => $r ],
 						  return => 'visual_id' } );
 	
 	my $li = Yggdrasil::Entity::Instance->new( yggdrasil => $self );

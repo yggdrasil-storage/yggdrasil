@@ -322,7 +322,7 @@ sub exists {
 
     my $entity = $self->_extract_entity(ref $self);
 
-    my $fetchref = $self->{storage}->fetch( 'Entities', { return => 'id',
+    my $fetchref = $self->{storage}->fetch( 'Instances', { return => 'id',
 							  where  => [ visual_id => $visual_id,
 								      entity    => $entity ] },
 					    { start => $time[0], stop => $time[1] } );
@@ -454,21 +454,21 @@ sub _get_instance_event_at_ticks {
 	push @where, 'start' => $t, 'stop' => $t;
     }
     
-    my $fetchref = $self->{storage}->fetch( 'Entities', { return => [ 'visual_id', 'start', 'stop' ],
+    my $fetchref = $self->{storage}->fetch( 'Instances', { return => [ 'visual_id', 'start', 'stop' ],
 							  where  => [ @where ],
 							  bind   => 'or',
 							  as     => 1,
 							},
 					    'MetaEntity', { return => [ 'entity' ],
-							    where  => [ 'id' => \qq{Entities.entity} ],
+							    where  => [ 'id' => \qq{Instances.entity} ],
 							  },
 					    { start => 0, stop => undef },
 					  );
     for my $h (@$fetchref) {
 	my $etext = 'Created';
-	my $id = $h->{Entities_start} || $h->{Entities_stop};
-	$etext = 'Expired' if $h->{Entities_stop};
-	push @{$tick{$id}}, { start => $h->{Entities_start}, stop => $h->{Entities_stop},
+	my $id = $h->{Instances_start} || $h->{Instances_stop};
+	$etext = 'Expired' if $h->{Instances_stop};
+	push @{$tick{$id}}, { start => $h->{Instances_start}, stop => $h->{Instances_stop},
 			      string => "$etext the instance '" . $h->{visual_id} . "' in '" . $h->{entity} . "'",
 			    };
     }

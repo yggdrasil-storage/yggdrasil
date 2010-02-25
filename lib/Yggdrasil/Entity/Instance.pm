@@ -34,7 +34,7 @@ sub create {
 
     my $eid = $idref->[0]->{id};
 
-    $self->{_id} = $self->storage()->store( Entities => 
+    $self->{_id} = $self->storage()->store( Instances => 
 					    fields => { visual_id => $vid,
 							entity    => $eid } );
 
@@ -118,8 +118,8 @@ sub _get_id {
     my $idfetch = $self->storage()->fetch(
 	MetaEntity => { 
 	    where => [ entity => $entity->name(), 
-		       id     => \qq{Entities.entity} ]	},
-	Entities   => {
+		       id     => \qq{Instances.entity} ]	},
+	Instances   => {
 	    return => "id",
 	    where => [ visual_id => $self->id() ] } );
 
@@ -138,9 +138,9 @@ sub _get_in_tick {
     #      Can't we just check $self->{_id}?
     my $idref  = $self->storage()->fetch('MetaEntity', { 
 							where => [ entity => $entity->name(), 
-								   id     => \qq{Entities.entity}, ],
+								   id     => \qq{Instances.entity}, ],
 						       },
-					 'Entities', {
+					 'Instances', {
 						      return => [ "id", 'start', 'stop' ],
 						      where => [ visual_id => $visual_id ] } );
 
@@ -162,7 +162,7 @@ sub _get_in_tick {
 	{ start => $time[0], stop => $time[1] } );
     
     my @wheres;
-    push( @wheres, 'Entities' => { join => "left", where => [ id => $id ] } );
+    push( @wheres, 'Instances' => { join => "left", where => [ id => $id ] } );
     
     foreach my $prop ( map { $_->{property} } @$fetchref ) {
 	my $table = join(":", $entity->name(), $prop);
@@ -444,11 +444,11 @@ sub fetch_related {
       }
 
       push(@schema,
-	   Entities => { return => "visual_id", 
+	   Instances => { return => "visual_id", 
 			 where => [ id     => \qq<$alias.lval>,
 				    id     => \qq<$alias.rval> ],
 			 bind => "or" },
-	   Entities => { where => [ entity => $path->[-1] ] } );
+	   Instances => { where => [ entity => $path->[-1] ] } );
 
       my $res = $self->storage()->fetch( @schema, { start => $start, stop => $stop } );
 

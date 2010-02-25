@@ -21,8 +21,8 @@ sub define {
 		      nomap    => 1,
 		      hints    => {
 				   id   => { index => 1, foreign => 'MetaRelation' },
-				   lval => { foreign => 'Entities' },
-				   rval => { foreign => 'Entities' },
+				   lval => { foreign => 'Instances' },
+				   rval => { foreign => 'Instances' },
 				  },
 		    );
     

@@ -169,7 +169,7 @@ sub instances {
     
     my $instances = $self->storage()->fetch( 
 	'MetaEntity' => { where  => [ entity => $self->name() ] },
-	'Entities'   => { return => [ 'visual_id', 'id' ],
+	'Instances'   => { return => [ 'visual_id', 'id' ],
 			  where  => [ entity => \qq{MetaEntity.id} ] } );
     
     # FIXME, find a way to create instance objects in a nice way
@@ -326,16 +326,16 @@ sub _admin_dump {
     my $self   = shift;
     my $entity = shift;
 
-    return $self->{storage}->raw_fetch( Entities => { where => [ entity => $entity ] } );
+    return $self->{storage}->raw_fetch( Instances => { where => [ entity => $entity ] } );
 }
 
 sub _admin_restore {
     my $self   = shift;
     my $data   = shift;
 
-    $self->{storage}->raw_store( "Entities", fields => $data );
+    $self->{storage}->raw_store( "Instances", fields => $data );
 
-    my $id = $self->{storage}->raw_fetch( Entities =>
+    my $id = $self->{storage}->raw_fetch( Instances =>
 					  { return => "id", 
 					    where => [ %$data ] } );
     return $id->[0]->{id};

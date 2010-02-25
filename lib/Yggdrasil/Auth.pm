@@ -119,7 +119,7 @@ sub _get_targets_and_operation {
 		push @targets_to_check, $storage->parent_of( $t );
 	    }
 	    $operation = 'writeable';
-	} elsif ($target eq 'Entities' && $operation eq 'store') {
+	} elsif ($target eq 'Instances' && $operation eq 'store') {
 	    for my $t ($self->_get_metaentity_store_targets( $dataref )) {
 		push @targets_to_check, $storage->parent_of( $t );
 	    }
@@ -230,9 +230,9 @@ sub _generate_default_users {
 
 #     # To avoid recursion, call _fetch directly.  :-/
 #     my $ref = $self->{yggdrasil}->{storage}->_fetch( 
-# 						    MetaAuthRolemembership => { where => [ user => \qq{Entities.id} ],
+# 						    MetaAuthRolemembership => { where => [ user => \qq{Instances.id} ],
 # 										return => 'role' },
-# 						    Entities     => { where => [ visual_id => $user ]}
+# 						    Instances     => { where => [ visual_id => $user ]}
 # 						   );
 
 #     return $ref->[0]->{role};
@@ -295,7 +295,7 @@ sub _get_inheritance_parent {
 sub _global_read_access {
     my ($self, $entity) = @_;
 
-    if ($entity =~ /^Storage/ || $entity =~ /^Meta/ || $entity eq 'Entities') {
+    if ($entity =~ /^Storage/ || $entity =~ /^Meta/ || $entity eq 'Instances') {
 	return 1;
     } else {
 	return 0;

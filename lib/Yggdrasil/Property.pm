@@ -84,7 +84,7 @@ sub define {
 					       null => $params{null}}},
 		      
 		      temporal => 1,
-		      hints => { id => { index => 1, foreign => 'Entities' }},
+		      hints => { id => { index => 1, foreign => 'Instances' }},
 		    );
   
     

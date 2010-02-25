@@ -170,7 +170,7 @@ sub member_of {
     my $uobj = $self->{_user_obj};
 
     my $roles = $self->storage()->fetch(
-	Entities => {
+	Instances => {
 		     return => [ qw/visual_id/ ], 
 		     where => [ id => \qq<MetaAuthRolemembership.role> ]
 		    },
@@ -192,11 +192,11 @@ sub get_roles {
 #    my $self = shift;
     
     #my $u = $self->{_user_obj};
-    my $idref = $self->storage()->_fetch(MetaAuthRolemembership => { where => [ user => \qq{Entities.id} ],
+    my $idref = $self->storage()->_fetch(MetaAuthRolemembership => { where => [ user => \qq{Instances.id} ],
 								     return => 'role' },
-					 Entities => { where => [ visual_id => $user ]});
+					 Instances => { where => [ visual_id => $user ]});
 
-    my $roref = $self->storage()->_fetch(Entities => { where => [ id => $idref->[0]->{role} ],
+    my $roref = $self->storage()->_fetch(Instances => { where => [ id => $idref->[0]->{role} ],
 						       return => 'visual_id' });
 
     print "$_\n" for caller();

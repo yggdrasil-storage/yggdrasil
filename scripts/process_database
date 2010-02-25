@@ -89,7 +89,7 @@ for my $rowref (@$mapstruct) {
     $human_to_machine{$rowref->[1]} = $rowref->[2];
 }
 
-my $realname = $human_to_machine{'Entities'} || 'Entities';
+my $realname = $human_to_machine{'Instances'} || 'Instances';
 my $tableref = $storage->_dump_structure( $realname );
 for my $rowref (@$tableref) {
     my @row = @$rowref;
@@ -138,7 +138,7 @@ for my $structure (@structures) {
 	    for my $c (@row) {
 		if ($dereference && $c && $c =~ /^\d+$/ &&
 		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[ARIP]/ ||
-		     $mapped_struct eq 'Entities' || $mapped_struct eq 'Relations')) {
+		     $mapped_struct eq 'Instances' || $mapped_struct eq 'Relations')) {
 		    my $key = $1;
 		    if ($mapped_struct eq 'Relations') {
 			# id | <id1> | <id2>
@@ -170,7 +170,7 @@ for my $structure (@structures) {
 			if ($i == 2) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}
-		    } elsif ($mapped_struct eq 'Entities') {
+		    } elsif ($mapped_struct eq 'Instances') {
 			if ($i == 1) {
 			    $c = "$c (" . $entities{$c} . ")";
 			}

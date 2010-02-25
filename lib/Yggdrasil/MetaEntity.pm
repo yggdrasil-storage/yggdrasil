@@ -19,7 +19,7 @@ sub define {
 		      temporal => 1,
 		      nomap    => 1, );
     
-    $storage->define( "Entities",
+    $storage->define( "Instances",
 		      fields   => { 
 				   entity    => { type => "INTEGER" },
 				   visual_id => { type => "TEXT" },
