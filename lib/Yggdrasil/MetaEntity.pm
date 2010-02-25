@@ -12,12 +12,60 @@ sub define {
     
     # --- Tell Storage to create SCHEMA, noop if it exists.
     $storage->define( "MetaEntity",
-		      fields   => {
-				   id     => { type => 'SERIAL' },
-				   entity => { type => "VARCHAR(255)", null => 0 },
-				  },
-		      temporal => 1,
-		      nomap    => 1, );
+		      fields     => {
+				     id     => { type => 'SERIAL' },
+				     entity => { type => "VARCHAR(255)", null => 0 },
+				    },
+		      temporal   => 1,
+		      nomap      => 1,
+		      auth       => {
+				     # Create a new entity.  __PARENT__ is expanded to the parent of the
+				     # current entity, __AUTH__ expands to "my" auth schema.  Write
+				     # access to parent required.
+				     create => {
+						MetaEntity  => { entity => '__PARENT__' },
+						':Auth'     => {
+								id    => \qq<MetaEntity.id>,
+								write => 1,
+							       },
+					       },
+				     # get an entity.  Read self to access.
+				     fetch  => {
+						MetaEntity  => { entity => '__SELF__' },
+						':Auth'     => {
+								id   => \qq<MetaEntity.id>,
+								read => 1,
+							       },
+					       },
+				     # rename entity.  Modify self required.
+				     update => {
+						MetaEntity  => { entity => '__SELF__' },
+						':Auth'       => {								 
+								  id     => \qq<MetaEntity.id>,
+								  modify => 1,
+								 },
+					       },
+				     # expire / delete entity.  Write to parent, modify self.
+				     expire => {
+						MetaEntity  => {
+								entity => '__SELF__',
+								alias  => 'ME1',
+							       },
+						MetaEntity  => {
+								entity => '__PARENT__',
+								alias  => 'ME2',
+							       },
+						':Auth'       => {
+								id     => \qq<ME1.id>,
+								modify => 1,
+							       },
+						':Auth'       => {
+								id     => \qq<ME2.id>,
+								write  => 1,
+							       },
+					       },
+				    },
+		    );
     
     $storage->define( "Instances",
 		      fields   => { 
@@ -28,9 +76,51 @@ sub define {
 		      nomap    => 1,
 		      hints    => {
 				   entity => { foreign => 'MetaEntity' },
-				  }			      
-
-
+				  },
+		      auth => {
+			       # Create instance, require write access to entity.
+			       create => {
+					  MetaEntity      => { entity => '__ENTITY__' },
+					  'MetaEntity:Auth' => {
+								id    => \qq<MetaEntity.id>,
+								write => 1,
+							       },					  
+					 },
+			       # No need to check readability of the entity, as you can
+			       # only access the fetch call from that entity object.  If you
+			       # have been given that entity object, odds are you can read it.
+			       # (Hopefully).
+			       fetch  => {
+					  Instances => { visual_id => '__SELF__' },
+					  ':Auth'     => {
+							id   => \qq<Instances.id>,
+							read => 1,
+						       },
+					 },
+			       # expire / delete instance.
+			       expire => {
+					  Instances => { visual_id => '__SELF__' },
+					  ':Auth'     => {
+							id     => \qq<Instances.id>,
+							modify => 1,
+						       },
+					  MetaEntity      => { entity => '__ENTITY__' },
+					  'MetaEntity:Auth' => {
+								id    => \qq<MetaEntity.id>,
+								write => 1,
+							       },
+					 },
+			       # Rename, edit visual ID.  Modify self, write to entity.
+			       update => {
+					  Instances => { visual_id => '__SELF__' },
+					  ':Auth'     => {
+							  id     => \qq<Instances.id>,
+							  modify => 1,
+							 },
+					  
+					 },
+			      },
+		      
 		    );
 }    
 

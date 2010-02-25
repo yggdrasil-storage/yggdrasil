@@ -18,9 +18,49 @@ sub define {
 				    id       => { type => "SERIAL" } },
 		      temporal => 1,
 		      nomap    => 1,
-		      hints    => {
-				   entity => { foreign => 'MetaEntity', index => 1 },
-						 },
+		      hints    => { entity => { foreign => 'MetaEntity', index => 1 }, },
+		      
+		      auth => {
+			       # Create a new property.
+			       create => { MetaEntity => { entity => '__ENTITY__' },
+ 					   'MetaEntity:Auth' => { 
+								 id     => \qq<MetaEntity.id>,
+								 modify => 1,
+								},
+					 },
+			       # Get the property (Entity.ip, not that of an instance).
+			       fetch => { MetaProperty => { id => '__SELF__' },
+					  ':Auth'        => {
+							     id   => \qq<MetaProperty.id>,
+							     read => 1, 
+							    },
+					  
+					},
+			       # Remove a property from an entity.
+			       expire => { MetaEntity => { entity => '__ENTITY__' },
+ 					   'MetaEntity:Auth' => { 
+								 id     => \qq<MetaEntity.id>,
+								 modify => 1,
+								},
+					   MetaProperty => { id => '__SELF__' },
+					   ':Auth'        => {
+							      id     => \qq<MetaProperty.id>,
+							      modify => 1, 
+							     },					  
+					 },
+			       # Change type / possibility of null / rename
+			       update => { MetaEntity => { entity => '__ENTITY__' },
+ 					   'MetaEntity:Auth' => { 
+								 id     => \qq<MetaEntity.id>,
+								 modify => 1,
+								},
+					   MetaProperty => { id => '__SELF__' },
+					   ':Auth'        => {
+							      id     => \qq<MetaProperty.id>,
+							      modify => 1, 
+							     },					  
+					 },
+			      },
 		    );
 }
 

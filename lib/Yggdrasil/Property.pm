@@ -85,6 +85,29 @@ sub define {
 		      
 		      temporal => 1,
 		      hints => { id => { index => 1, foreign => 'Instances' }},
+
+		      auth => {			       
+			       create => undef,
+			       fetch => { $name => { id => '__SELF__' },
+					  ':Auth' => {
+						      id   => \qq<$name.id>,
+						      read => 1,
+						     },
+					},
+			       expire => { $name => { id => '__SELF__' },
+					   ':Auth' => {
+						       id     => \qq<$name.id>,
+						       modify => 1,
+						      },
+					 },
+			       update => { $name => { id => '__SELF__' },
+					   ':Auth' => { 
+						       id    => \qq<$name.id>,
+						       write => 1,
+						      },
+					 },
+			      },
+		      
 		    );
   
     

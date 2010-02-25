@@ -24,6 +24,74 @@ sub define {
 				   lval => { foreign => 'Instances' },
 				   rval => { foreign => 'Instances' },
 				  },
+		      auth => {
+			       # Create a new link.
+			       create => {
+					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
+  					  'MetaEntity:Auth' => { 
+								id   => \qq<E1.id>,
+								read => 1,
+							       },
+					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
+  					  'MetaEntity:Auth' => { 
+								id   => \qq<E2.id>,
+								read => 1,
+							       },
+					  Instances => { visual_id => '__INSTANCE1__', alias => 'I1' },
+					  'Instances:Auth' => {
+							       id => \qq<I1.id>,
+							       modify => 1,
+							      },
+					  Instances => { visual_id => '__INSTANCE2__', alias => 'I2' },
+					  'Instances:Auth' => {
+							       id => \qq<I2.id>,
+							       modify => 1,
+							      },
+					  MetaRelation => { label => '__RELATION__' },
+					  'MetaRelation:Auth' => { 
+								  id    => \qq<MetaRelation.label>,
+								  write => 1,
+								 },
+					 },
+			       # Expire a link.  Oddly similar to create (above).
+			       expire => {
+					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
+  					  'MetaEntity:Auth' => { 
+								id   => \qq<E1.id>,
+								read => 1,
+							       },
+					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
+  					  'MetaEntity:Auth' => { 
+								id   => \qq<E2.id>,
+								read => 1,
+							       },
+					  Instances => { visual_id => '__INSTANCE1__', alias => 'I1' },
+					  'Instances:Auth' => {
+							       id => \qq<I1.id>,
+							       modify => 1,
+							      },
+					  Instances => { visual_id => '__INSTANCE2__', alias => 'I2' },
+					  'Instances:Auth' => {
+							       id => \qq<I2.id>,
+							       modify => 1,
+							      },
+					  MetaRelation => { label => '__RELATION__' },
+					  'MetaRelation:Auth' => { 
+								  id    => \qq<MetaRelation.label>,
+								  write => 1,
+								 },
+					 },
+			       # Read a link, ie, follow it.
+			       fetch => {
+					 Relations => { id => '__SELF__' },
+					 ':Auth'     => {
+							 id   => \qq<Relations.id>,
+							 read => 1,
+							},
+					},
+			       # Update, NOT allowed.
+			       update => undef,
+			      },
 		    );
     
     
@@ -41,7 +109,59 @@ sub define {
 		      hints    => {
 				   lval => { index => 1, foreign => 'MetaEntity' },
 				   rval => { index => 1, foreign => 'MetaEntity' },
-				  }
+				  },
+		      auth => {
+			       # To create a Relation between two entities one must have
+			       # permissions to modify both entites.  The order of E1 / E2 is
+			       # irrelevant.
+			       create => {					  
+					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
+					  'MetaEntity:Auth' => {
+								id     => \qq<E1.id>,
+								modify => 1,
+							       },
+					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
+					  'MetaEntity:Auth' => {
+								id     => \qq<E2.id>,
+								modify => 1,
+							       },
+					 },
+			       # To fetch a relation, one must be able to read it.
+			       fetch => {
+					 MetaRelation => { label => '__SELF__' },
+					 ':Auth'        => { 
+							    id   => \qq<MetaRelation.label>,
+							    read => 1,
+							   },
+					},
+			       # To expire / delete a relation, modify both entities and the
+			       # relation itself.
+			       expire => {
+					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
+					  'MetaEntity:Auth' => {
+								id     => \qq<E1.id>,
+								modify => 1,
+							       },
+					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
+					  'MetaEntity:Auth' => {
+								id     => \qq<E2.id>,
+								modify => 1,
+							       },
+					  MetaRelation => { label => '__SELF__' },
+					  ':Auth'        => { 
+							     id     => \qq<MetaRelation.label>,
+							     modify => 1,
+							    },
+					 },
+			       # re-lable.
+			       update => {
+					  MetaRelation => { label => '__SELF__' },
+					  ':Auth'        => { 
+							     id     => \qq<MetaRelation.label>,
+							     modify => 1,
+							    },
+					 },
+			      },
 		    );
 }
 
