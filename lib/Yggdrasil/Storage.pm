@@ -239,11 +239,11 @@ sub store {
 	    $keys{$key} = $params{fields}->{$key};
 	}
 
-	$transaction->log( "Expire: $schema " . join( ", ", %keys ) );
+	$transaction->log( "Expire: $schema " . join( ", ", map { defined()?$_:"" } %keys ) );
 	$self->_expire( $real_schema, $tick, %keys );
     }
 
-    $transaction->log( "Store: $schema " . join( ", ", %keys ) );
+    $transaction->log( "Store: $schema " . join( ", ", map { defined()?$_:"" } %keys ) );
     $transaction->commit();
     return $self->_store( $real_schema, tick => $tick, %params );
 }

@@ -109,7 +109,7 @@ sub _apply_filter {
     my $filter = shift;
     my $field  = shift;
 
-    my @parts = split /\./, $field;
+    my @parts = split m/\./, $field;
 
     if( uc($filter) eq "MAX" ) {
 	return "MAX($field) AS max_" . $parts[-1];
@@ -146,8 +146,10 @@ sub _sql {
 
     # Transaction information.
     my $sqlinline = $sql;
-    my $i = 0;
-    $sqlinline =~ s/\?/"'" . $attr[$i++] . "'"/ge;
+    for my $attr ( @attr ) {
+	$attr = defined $attr ? $attr : "NULL";
+	$sqlinline =~ s/\?/"'$attr'"/e;
+    }
     $self->{transaction}->engine( $sqlinline );
     
     unless ($sth->execute(@attr)) {
