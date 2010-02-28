@@ -3,13 +3,20 @@ package Yggdrasil::Storage;
 use strict;
 use warnings;
 
+use Storable qw();
+
 use Yggdrasil::Transaction;
 use Yggdrasil::Storage::Mapper;
 
-our $STORAGEMAPPER   = 'Storage_mapname';
-our $STORAGETEMPORAL = 'Storage_temporals';
-our $STORAGECONFIG   = 'Storage_config';
-our $STORAGETICKER   = 'Storage_ticker';
+our $STORAGEMAPPER     = 'Storage_mapname';
+our $STORAGETEMPORAL   = 'Storage_temporals';
+our $STORAGECONFIG     = 'Storage_config';
+our $STORAGETICKER     = 'Storage_ticker';
+our $STORAGEAUTHSCHEMA = 'Storage_auth_schema';
+our $STORAGEAUTHUSER   = 'Storage_auth_user';
+our $STORAGEAUTHROLE   = 'Storage_auth_role';
+our $STORAGEAUTHMEMBER = 'Storage_auth_membership';
+
 our $MAPPER;
 
 our $TRANSACTION = Yggdrasil::Transaction->create_singleton();
@@ -95,7 +102,8 @@ sub new {
 	$storage->_initialize_mapper();
 	$storage->_initialize_ticker();
 	$storage->_initialize_temporal();
-	
+	$storage->_initialize_auth();
+
 	return $storage;
     }
 }
@@ -164,8 +172,7 @@ sub define {
     $transaction->log( "Defined $originalname" );
     my $retval = $self->_define( $schema, %data );
 
-   # We might create a schema with name "0", so check for a defined value.
-    if (defined $retval) {
+    if ($retval) {
 	unless ($data{nomap}) {
 	    $self->{logger}->warn( "Remapping $originalname to $schema." );	
 	    $self->{_mapcacheh2m}->{$originalname} = $schema;
@@ -177,6 +184,55 @@ sub define {
 	    $self->{_temporalcache}->{$schema} = 1;
 	    $self->store( $STORAGETEMPORAL, key => "tablename",
 			  fields => { tablename => $schema, temporal => 1 });
+	}
+
+	if( $data{auth} ) {
+	    my $authtable = join("_", "Storage", "userauth", $originalname);
+	    $self->define( $authtable,
+			   fields => {
+				      # FIX: id must be the same type as $schema's id
+				      id   => { type => 'INTEGER', null => 0 },
+				      role => { type => 'INTEGER', null => 0 },
+				      w    => { type => 'BOOLEAN' },
+				      r    => { type => 'BOOLEAN' },
+				      'm'  => { type => 'BOOLEAN' },
+				      },
+			   nomap => 0,
+			   hints => {
+				     id   => { foreign => $schema },
+				     role => { foreign => $STORAGEAUTHROLE },
+				    } );
+
+	    # Change Foo:Auth to the real auth table
+	    my $auth = $data{auth};
+	    for my $action ( keys %$auth ) {
+		my $restrictions = $auth->{$action};
+		next unless $restrictions;
+
+		for( my $i=0; $i<@$restrictions; $i+=2 ) {
+		    my $table = $restrictions->[$i];
+
+		    if( $table eq ":Auth" ) {
+			$restrictions->[$i] = $authtable;
+		    } elsif( $table =~ /:Auth$/ ) {
+			# FIX: eg. Instances:Auth - fetch to get the mapping?
+			my $real_schema = $self->_get_auth_schema_name( $table );
+			$restrictions->[$i] = $real_schema;
+		    }
+		}
+
+		my @mapped = $self->_map_fetch_schema_references( @$restrictions );
+		$auth->{$action} = \@mapped;
+	    }
+
+	    my $bindings = Storable::nfreeze( $data{auth} );
+	    $self->_store( $STORAGEAUTHSCHEMA, 
+			  key => [ qw/usertable authtable/ ],
+			  fields => {
+				     usertable => $schema,
+				     authtable => $authtable,
+				     bindings  => $bindings
+				    } );
 	}
     }
     
@@ -209,7 +265,7 @@ sub store {
     }
 
     # Check if we already have the value
-    my $real_schema = $self->_get_schema_name( $schema );
+    my $real_schema = $self->_get_schema_name( $schema ) || $schema;
     my $aref = $self->fetch( $real_schema => { where => [ %{$params{fields}} ] } );
     if( @$aref ) {
 	$status->set( 202, "Value(s) already set" );
@@ -258,7 +314,8 @@ sub tick {
 	$c = $self->{user}->id();
     }
     
-    return $self->_store( $self->_get_schema_name($STORAGETICKER), fields => { committer => $c } );
+    my $schema = $self->_get_schema_name($STORAGETICKER) || $STORAGETICKER;
+    return $self->_store( $schema, fields => { committer => $c } );
 }
 
 # At this point we should be getting epochs to work with.
@@ -306,7 +363,8 @@ sub raw_store {
     my $schema = shift;
     $self->_admin_verify();
     
-    return $self->_raw_store( $self->_get_schema_name( $schema ), @_ );
+    my $mapped = $self->_get_schema_name( $schema ) || $schema;
+    return $self->_raw_store( $mapped, @_ );
 }
 
 # fetch ( schema1, { return => [ fieldnames ], where => [ s1field1 => s1value1, ... ], operator => operator, bind => bind-op }
@@ -351,11 +409,50 @@ sub fetch {
 	    my $status = $self->get_status();
 	    $status->set( 403 );
 	    return;
-	} 
+	}
     }
-    my $ref = $self->_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_, $time );
+
+    # map schema names
+    my @schemadefs = $self->_map_fetch_schema_references( @_ );
+
+    my $ref = $self->_fetch( @schemadefs, $time );
     $transaction->commit();
     return $ref;
+}
+
+sub _map_fetch_schema_references {
+    my $self = shift;
+    my @defs = @_;
+
+    my @mapped_def;
+    while( @defs ) {
+	my( $schema, $struct ) = ( shift @defs, shift @defs );
+
+	# Map schema names mentioned inside the fetch
+	for my $lfield ( keys %$struct ) {
+	    my $val = $struct->{$lfield};
+	    next unless ref $val eq "SCALAR";
+
+	    $val = $$val;
+	    next unless $val =~ /:/;
+
+	    my @parts = split m/\./, $val;
+	    my $rfield = pop @parts;
+	    
+	    my $mapped = $self->_get_schema_name( join(".", @parts) );
+	    next unless $mapped;
+
+	    $mapped .= "." . $rfield;
+	    $struct->{$lfield} = \$mapped;
+	}
+
+	# Map the schema name itself
+	my $mapped = $self->_get_schema_name( $schema ) || $schema;
+
+	push( @mapped_def, $mapped, $struct );
+    }
+
+    return @mapped_def;
 }
 
 # Ask Auth if an action can be performed on a target.  Returns true / false.
@@ -369,7 +466,9 @@ sub raw_fetch {
     my $self = shift;
     $self->_admin_verify();
     
-    return $self->_raw_fetch( map { ref()?$_:$self->_get_schema_name( $_ ) } @_ );
+    my @mapped_def = $self->_map_fetch_schema_references( @_ );
+
+    return $self->_raw_fetch( @mapped_def );
 }
 
 # expire ( $schema, $indexfield, $key )
@@ -377,7 +476,7 @@ sub expire {
     my $self   = shift;
     my $schema = shift;
     
-    my $real_schema = $self->_get_schema_name( $schema );
+    my $real_schema = $self->_get_schema_name( $schema ) || $schema;
     return unless $self->_schema_is_temporal($real_schema);
 
     # Tick
@@ -391,10 +490,9 @@ sub exists :method {
     my $self = shift;
     my $schema = shift;
 
-    $schema = $self->_get_schema_name( $schema );
-    
-    return undef unless $self->_structure_exists( $schema );
-    return $self->fetch( $schema, { return => '*', where => [ @_ ] });
+    my $mapped_schema = $self->_get_schema_name( $schema ) || $schema;
+    return undef unless $self->_structure_exists( $mapped_schema );
+    return $self->fetch( $mapped_schema, { return => '*', where => [ @_ ] });
 }
 
 
@@ -442,12 +540,21 @@ sub _map_schema_name {
 }
 
 # Get the schema name for a schema, if it is mapped, it'll be located
-# in the mapcache, if not it'll be passed along without intervention.
+# in the mapcache.
 sub _get_schema_name {
     my $self = shift;
     my $schema = shift;
 
-    return $self->{_mapcacheh2m}->{$schema} || $schema;
+    return $self->{_mapcacheh2m}->{$schema};
+}
+
+# FIXME: ie. write me
+sub _get_auth_schema_name {
+    my $self = shift;
+    my $schema = shift;
+
+    return $schema;
+    # $schema =~ s/:Auth$//;
 }
 
 sub get_defined_types {
@@ -552,6 +659,67 @@ sub _initialize_ticker {
 				      null => 0,
 				      default => "current_timestamp" },
 		       }, );
+    }
+}
+
+
+sub _initialize_auth {
+    my $self = shift;
+
+    $self->_initialize_user_auth();
+    $self->_initialize_schema_auth();
+}
+
+sub _initialize_user_auth {
+    my $self = shift;
+    
+    unless( $self->_structure_exists($STORAGEAUTHROLE) ) {
+	$self->define( $STORAGEAUTHROLE,
+		       nomap  => 1,
+		       fields => {
+				  id   => { type => 'SERIAL', null => 0 },
+				  name => { type => 'TEXT', null => 0 },
+				 } );
+    }
+
+    unless( $self->_structure_exists($STORAGEAUTHUSER) ) {
+	$self->define( $STORAGEAUTHUSER,
+		       nomap  => 1,
+		       fields => {
+				  id       => { type => 'SERIAL', null => 0 },
+				  name     => { type => 'TEXT', null => 0 },
+				  password => { type => 'PASSWORD' }
+				  } );
+    }
+
+    unless( $self->_structure_exists($STORAGEAUTHMEMBER) ) {
+	$self->define( $STORAGEAUTHMEMBER,
+		       nomap  => 1,
+		       fields => {
+				  user => { type => 'INTEGER', null => 0 },
+				  role => { type => 'INTEGER', null => 0 },
+				 },
+		       temporal => 1,
+		       nomap    => 1,
+		       hints    => {
+				    user => { foreign => $STORAGEAUTHUSER },
+				    role => { foreign => $STORAGEAUTHROLE },
+				   } );
+    }
+}
+
+sub _initialize_schema_auth {
+    my $self = shift;
+
+    unless( $self->_structure_exists($STORAGEAUTHSCHEMA) ) {
+	$self->define( $STORAGEAUTHSCHEMA,
+		       nomap  => 1,
+		       fields => {
+				  usertable => { type => 'TEXT',
+						    null => 0 },
+				  authtable => { type => 'TEXT',
+						    null => 0 },
+				  bindings  => { type => 'BINARY' } } );
     }
 }
 
