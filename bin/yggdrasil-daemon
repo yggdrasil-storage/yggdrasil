@@ -7,11 +7,12 @@ BEGIN { our $VERSION = 0.05 }
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
 
+use Yggdrasil;
 
 use Yggdrasil::Common::Config;
 use Yggdrasil::Common::CommandLine ("foo=s", "bar:s");
 				    
-
+use XML::Twig;
 use IO::Socket;
 # use IO::Socket::SSL;
 
@@ -26,8 +27,8 @@ my $c = Yggdrasil::Common::Config->new();
 my $config = $c->get($label);
 die "No such label as $label\n" unless $config;
 
-our $HOST = $config->get('host') || 'localhost';
-our $PORT = $config->get('port') || 33221;
+our $HOST = $config->get('daemonhost') || 'localhost';
+our $PORT = $config->get('daemonport') || 33221;
 
 my $server = IO::Socket::INET->new( LocalAddr => $HOST,
 				    LocalPort => $PORT,
@@ -60,20 +61,81 @@ sub handle_client {
 
     print $client "HELO\n";
 
+    my ($user, $password, $connected, $toread, $buffer);
+    my $parser = new XML::Twig(
+			       twig_roots   => { 'start' => \&handle_start,
+						 'end'   => \&handle_end,
+					       }
+			      );
     while( my $line = <$client> ) {
 	chomp $line;
-
+	$line =~ s/\r//;
+	
 	if( $line =~ m<quit|end|exit>i ) {
 	    print " $$ closing connection\n";
 	    $client->close();
 	    exit;
 	}
 
-	print $client scalar reverse($line), "\n";
+	my $y = new Yggdrasil();
+	my $status = $y->get_status();	
+	
+	if ($line =~ /^USER: (.*)/) {
+	    $user = $1;
+	} elsif ($line =~ /^PASSWORD: (.*)/) {
+	    $password = $1;
+	}
+
+	if ($user && $password && !$connected) {
+	    $y->connect( 
+			user      => $config->get( 'engineuser' ),
+			password  => $config->get( 'enginepassword' ),
+			host      => $config->get( 'enginehost' ),
+			port      => $config->get( 'engineport' ),
+			db        => $config->get( 'enginedb' ),
+			engine    => $config->get( 'enginetype' ),
+		       );
+	    
+	    if ($status->OK()) {
+		$y->login( user => $user, password => $password );
+		if ($status->OK()) {
+		    print $client "Login accepted, welcome to Yggdrasil\n";
+		    $connected = 1;
+		} else {
+		    print $client "Login failed: ", $status->message(), "\n";
+		    $client->close();
+		}
+	    } else {
+		print $client "Connect failed: ", $status->message(), "\n";
+	    }
+	} elsif ($toread && $toread > 0) {
+	    $buffer .= "$line\n";
+	    $toread--;
+	}
+	    
+	if ($connected && !$toread) {
+	    if ($buffer) {
+		print "Buffer was:\n$buffer";
+		undef $buffer;
+	    }
+	    
+	    if ($line =~ /^Length: (\d+)/) {		
+		$toread = $1;
+		print $client "Expecting $toread lines of data...\n";
+	    }
+	} 
     }
 
     print " $$ closing anyway!\n";
     exit;
+}
+
+sub handle_start {
+    print "*** START ***\n", @_, "\n";
+}
+
+sub handle_end {
+    print "*** END ***\n", @_, "\n";
 }
 
 __DATA__
