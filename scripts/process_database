@@ -14,6 +14,8 @@ use Preamble qw|getopts status status_die|;
 use Yggdrasil;
 use Yggdrasil::Storage;
 
+use Storable qw||;
+
 my ($zap, $dump, $bootstrap, $dereference, $onlytables) = (0, 1, 0, 1);
 
 my ($user, $password, $host, $port, $db, $engine) =
@@ -136,6 +138,12 @@ for my $structure (@structures) {
 	    my $i = 0;
 	    my ($lval, $rval) = ();
 	    for my $c (@row) {
+		if ($mapped_struct =~ /^Storage_auth_.*/) {
+		    if ($i == 1) {
+			$c = 'Blob';
+		    }
+		}
+		
 		if ($dereference && $c && $c =~ /^\d+$/ &&
 		    ($mapped_struct =~ /^([a-z]+)_\w+$/i || $mapped_struct =~ /^Meta[ARIP]/ ||
 		     $mapped_struct eq 'Instances' || $mapped_struct eq 'Relations')) {
@@ -207,6 +215,7 @@ for my $structure (@structures) {
 		my $index = 0;
 		my @data;
 		for my $entry (@$rowref) {
+		    no warnings;
 		    push @data, sprintf "%-@{[$widths[$index]]}s", $entry;
 		    $index++;
 		}
