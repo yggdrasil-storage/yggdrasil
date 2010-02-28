@@ -22,44 +22,44 @@ sub define {
 		      
 		      auth => {
 			       # Create a new property.
-			       create => { MetaEntity => { entity => '__ENTITY__' },
+			       create => [ MetaEntity => { entity => '__ENTITY__' },
  					   'MetaEntity:Auth' => { 
-								 id     => \qq<MetaEntity.id>,
-								 modify => 1,
+								 id  => \qq<MetaEntity.id>,
+								 'm' => 1,
 								},
-					 },
+					 ],
 			       # Get the property (Entity.ip, not that of an instance).
-			       fetch => { MetaProperty => { id => '__SELF__' },
+			       fetch => [ MetaProperty => { id => '__SELF__' },
 					  ':Auth'        => {
-							     id   => \qq<MetaProperty.id>,
-							     read => 1, 
+							     id => \qq<MetaProperty.id>,
+							     r  => 1, 
 							    },
 					  
-					},
+					],
 			       # Remove a property from an entity.
-			       expire => { MetaEntity => { entity => '__ENTITY__' },
+			       expire => [ MetaEntity => { entity => '__ENTITY__' },
  					   'MetaEntity:Auth' => { 
-								 id     => \qq<MetaEntity.id>,
-								 modify => 1,
+								 id  => \qq<MetaEntity.id>,
+								 'm' => 1,
 								},
 					   MetaProperty => { id => '__SELF__' },
 					   ':Auth'        => {
-							      id     => \qq<MetaProperty.id>,
-							      modify => 1, 
+							      id  => \qq<MetaProperty.id>,
+							      'm' => 1, 
 							     },					  
-					 },
+					 ],
 			       # Change type / possibility of null / rename
-			       update => { MetaEntity => { entity => '__ENTITY__' },
+			       update => [ MetaEntity => { entity => '__ENTITY__' },
  					   'MetaEntity:Auth' => { 
-								 id     => \qq<MetaEntity.id>,
-								 modify => 1,
+								 id  => \qq<MetaEntity.id>,
+								 'm' => 1,
 								},
 					   MetaProperty => { id => '__SELF__' },
 					   ':Auth'        => {
-							      id     => \qq<MetaProperty.id>,
-							      modify => 1, 
+							      id  => \qq<MetaProperty.id>,
+							      'm' => 1, 
 							     },					  
-					 },
+					 ],
 			      },
 		    );
 }

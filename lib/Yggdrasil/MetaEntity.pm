@@ -22,31 +22,31 @@ sub define {
 				     # Create a new entity.  __PARENT__ is expanded to the parent of the
 				     # current entity, __AUTH__ expands to "my" auth schema.  Write
 				     # access to parent required.
-				     create => {
+				     create => [
 						MetaEntity  => { entity => '__PARENT__' },
 						':Auth'     => {
 								id    => \qq<MetaEntity.id>,
-								write => 1,
+								w     => 1,
 							       },
-					       },
+					       ],
 				     # get an entity.  Read self to access.
-				     fetch  => {
+				     fetch  => [
 						MetaEntity  => { entity => '__SELF__' },
 						':Auth'     => {
 								id   => \qq<MetaEntity.id>,
-								read => 1,
+								r    => 1,
 							       },
-					       },
+					       ],
 				     # rename entity.  Modify self required.
-				     update => {
+				     update => [
 						MetaEntity  => { entity => '__SELF__' },
 						':Auth'       => {								 
 								  id     => \qq<MetaEntity.id>,
-								  modify => 1,
+								  'm'    => 1,
 								 },
-					       },
+					       ],
 				     # expire / delete entity.  Write to parent, modify self.
-				     expire => {
+				     expire => [
 						MetaEntity  => {
 								entity => '__SELF__',
 								alias  => 'ME1',
@@ -57,13 +57,13 @@ sub define {
 							       },
 						':Auth'       => {
 								id     => \qq<ME1.id>,
-								modify => 1,
+								'm'    => 1,
 							       },
 						':Auth'       => {
 								id     => \qq<ME2.id>,
-								write  => 1,
+								w      => 1,
 							       },
-					       },
+					       ],
 				    },
 		    );
     
@@ -79,46 +79,46 @@ sub define {
 				  },
 		      auth => {
 			       # Create instance, require write access to entity.
-			       create => {
+			       create => [
 					  MetaEntity      => { entity => '__ENTITY__' },
 					  'MetaEntity:Auth' => {
 								id    => \qq<MetaEntity.id>,
-								write => 1,
+								w     => 1,
 							       },					  
-					 },
+					 ],
 			       # No need to check readability of the entity, as you can
 			       # only access the fetch call from that entity object.  If you
 			       # have been given that entity object, odds are you can read it.
 			       # (Hopefully).
-			       fetch  => {
+			       fetch  => [
 					  Instances => { visual_id => '__SELF__' },
 					  ':Auth'     => {
 							id   => \qq<Instances.id>,
-							read => 1,
+							r    => 1,
 						       },
-					 },
+					 ],
 			       # expire / delete instance.
-			       expire => {
+			       expire => [
 					  Instances => { visual_id => '__SELF__' },
 					  ':Auth'     => {
 							id     => \qq<Instances.id>,
-							modify => 1,
+							'm'    => 1,
 						       },
 					  MetaEntity      => { entity => '__ENTITY__' },
 					  'MetaEntity:Auth' => {
 								id    => \qq<MetaEntity.id>,
-								write => 1,
+								w     => 1,
 							       },
-					 },
+					 ],
 			       # Rename, edit visual ID.  Modify self, write to entity.
-			       update => {
+			       update => [
 					  Instances => { visual_id => '__SELF__' },
 					  ':Auth'     => {
 							  id     => \qq<Instances.id>,
-							  modify => 1,
+							  'm'    => 1,
 							 },
 					  
-					 },
+					 ],
 			      },
 		      
 		    );
