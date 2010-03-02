@@ -299,6 +299,7 @@ my %cmd_handler = (
 my $prompt = " > ";
 my @cmd_path = ();
 $attribs->{completion_function} = sub { completion(@_, \%cmd, \@cmd_path) };
+$attribs->{completer_quote_characters} = q<"'>;
 
 while ( defined (my $input = $term->readline($prompt)) ) {
     chomp $input;
@@ -731,7 +732,7 @@ sub tick_info {
     my ($tick_command, $info_command, $tick) = @_;
 
     my @ticks;
-    my @sequences = split /,/, $tick;
+    my @sequences = split m/,/, $tick;
     
     for my $s (@sequences) {
 	if ($s =~ /^(\d+)-(\d+)/) {
@@ -956,7 +957,7 @@ sub completion {
     $line = join(" ", @$path, $line);
 
     # All "words" before the one we are writing 'now'
-    my @commands = shellwords( $line );
+    my @commands = lineparser( $line );
 
     # add the word we are about to write now (if it's empty)
     push( @commands, $word ) if $word !~ /\S/;
@@ -994,4 +995,24 @@ sub completion {
 	} keys %$top if ref $top eq 'HASH';
     
     return;
+}
+
+# wrapper around shellwords that can handle unclosed quotes
+sub lineparser {
+    my $line = shift;
+    
+    return unless length $line;
+
+    my @r = shellwords( $line );
+    unless( @r ) {
+	my $closed = $line . '"';
+	@r = shellwords( $closed );
+    }
+
+    unless( @r ) {
+	my $closed = $line . "'";
+	@r = shellwords( $closed );
+    }
+
+    return grep { defined && length } @r;
 }
