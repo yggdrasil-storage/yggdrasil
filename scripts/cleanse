@@ -7,20 +7,33 @@ use DBI;
 
 my $db   = $ENV{YGG_DB};
 my $host = $ENV{YGG_HOST};
-my $port = $ENV{YGG_MYSQL_PORT};
+my $port = $ENV{YGG_PORT};
 my $user = $ENV{YGG_USER};
 my $pass = $ENV{YGG_PASSWORD};
+my $engine = $ENV{YGG_ENGINE};
 
-my $dbh = DBI->connect( "DBI:mysql:database=$db;host=$host;port=$port", $user, $pass );
+unless ($port) {
+    if ($engine eq 'mysql') {
+	$port = 3306;	
+    } elsif ($engine eq 'Pg') {
+	$port = 5432;
+    }
+}
+
+my $dbh = DBI->connect( "DBI:$engine:database=$db;host=$host;port=$port", $user, $pass );
 unless( $dbh ) {
     die "No database?\n";
 }
 
-my $sth = $dbh->prepare( "show tables" );
+
+my $query = 'show tables';
+$query = "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'" if $engine eq 'Pg';
+
+my $sth = $dbh->prepare( $query );
 $sth->execute();
 
 my $tables =  $sth->fetchall_arrayref();
 for my $t ( @$tables ) {
     print "Dropping $t->[0]\n";
-    $dbh->do( "drop table $t->[0]" );
+    $dbh->do( "DROP TABLE $t->[0] CASCADE" );
 }
