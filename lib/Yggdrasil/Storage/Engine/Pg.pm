@@ -42,7 +42,7 @@ sub yggdrasil_is_empty {
     my $self = shift;
 
     for my $struct ($self->_list_structures()) {
-	return 0 if $struct !~ /Storage_/;
+	return 0 if $struct !~ /Storage_/i;
     }
     return 1;
 }
@@ -119,4 +119,18 @@ sub _convert_time {
  
      return "${time}::abstime::timestamp with time zone";
 }
+
+sub _last_insert_id {
+    my $self = shift;
+    my $table = shift;
+
+    my $dbh = $self->{dbh};
+    return $dbh->last_insert_id( undef, undef, lc $table, undef );
+}
+
+
+sub _engine_requires_serial_as_key {
+    return 1;
+}
+
 1;

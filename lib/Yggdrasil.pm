@@ -280,7 +280,7 @@ sub entities {
     my @roleids = map { $_->{_role_obj}->{_id} } @roles;
 
     my $aref = $self->{storage}->_fetch( 
-	MetaAuthEntity => { where => [ role => \@roleids, readable => 1 ]},
+	MetaAuthEntity => { where => [ roleid => \@roleids, readable => 1 ]},
 	MetaEntity     => { where => [ id => \qq{MetaAuthEntity.entity}, ],
 			    return => 'entity' });
 

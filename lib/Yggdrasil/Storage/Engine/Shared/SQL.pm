@@ -49,12 +49,19 @@ sub _define {
 	$keys{$fieldname}++ if $field->{key};
 	
 	push @indexes, $fieldname if $field->{index} && ! $keys{$fieldname};
-	push @sqlfields, $self->_create_foreign_key( $field->{foreign}, $fieldname ) if $field->{foreign};
-
+	# FIXME: Foregin keys isn't supported as of yet.  The issue is
+	# MetaEntity and its friends requiring the key to be both ID
+	# and START, but we can't make the foreign key contain both
+	# values.  Also, time we need to be able to reuse ID (which is
+	# a SERIAL field...) for rename et al.  This is bad[tm].  For now,
+	# disable foreign key generation.
+	
+	# push @sqlfields, $self->_create_foreign_key( $field->{foreign}, $fieldname ) if $field->{foreign};
     }
-        
+
     $sql .= join ",\n", @sqlfields;
-    $sql .= ",\nPRIMARY KEY (" . join( ", ", keys %keys ) . ")" if %keys;
+    $sql .= ",\nPRIMARY KEY (" . join( ", ", keys %keys ) . ")" if %keys &&
+	  $self->_engine_supports_primary_keys();
     $sql .= ");\n";
 
     $self->{logger}->debug( $sql );
@@ -69,6 +76,13 @@ sub _define {
 
     # Find a way to deal with return values from here, worked / didn't
     # would be nice.
+    return 1;
+}
+
+# Does the engine support primary keys, and does that support include
+# multiple fields to be used as composite keys?  If you can't support
+# this, override it in the engine class.  SQLite for needs this.
+sub _engine_supports_primary_keys {
     return 1;
 }
 
@@ -372,7 +386,7 @@ sub _store {
     # Execute the SQL and fetch the generated id (if any)
     my $sql = "INSERT INTO $schema ($dbfields) VALUES($placeholders)";
     $self->_sql( $sql, values %$fields, @tick_val );
-    my $r = $self->_last_insert_id();
+    my $r = $self->_last_insert_id( $schema );
 
     my $status = $self->get_status();
     $status->set( 200, "Value(s) set" );
@@ -425,6 +439,11 @@ sub _expire {
 	
     for my $key (keys %params) {
 	push @sets, "$key = ?";
+	# Dear gods, FIXME.  Let's send proper queries to expire.
+	unless (defined $params{$key}) {
+#	    print "$tick for $schema but $key is undef\n";
+	    return;
+	}
     }
     my $keys = join " and ", @sets;
 

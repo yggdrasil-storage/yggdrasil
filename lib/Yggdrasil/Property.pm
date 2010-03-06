@@ -84,7 +84,7 @@ sub define {
 					       null => $params{null}}},
 		      
 		      temporal => 1,
-		      hints => { id => { index => 1, foreign => 'Instances' }},
+		      hints => { id => { index => 1, foreign => 'Instances', key => 1 } },
 
 		      auth => {			       
 			       create => undef,
@@ -119,7 +119,6 @@ sub define {
 				type     => $params{type},
 				nullp    => $params{null},
 			      } ) unless $params{raw};
-
     if ($status->status() == 202) {
 	$status->set( 202, "Property '$property' already existed for '$entity'." );
     } else {

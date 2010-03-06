@@ -69,9 +69,9 @@ sub members {
 
     my $users = $self->storage()->fetch( 
 	Instances =>
-	{ return => [ qw/visual_id/ ], where => [ id => \qq<MetaAuthRolemembership.user> ] },
+	{ return => [ qw/visual_id/ ], where => [ id => \qq<MetaAuthRolemembership.userid> ] },
 	MetaAuthRolemembership => 
-	{ where => [ role => $robj->{_id} ] } );
+	{ where => [ roleid => $robj->{_id} ] } );
 
     # FIXME, fetch does *not* return status code in a sane way.  This
     # needs to be solved at the SQL layer upon completing a
@@ -221,30 +221,30 @@ sub _set_permissions {
     
     # FIX: gah we don't get Host_ip on property ip, but only "ip"
     #      for the time being we "solve" this by checking for ... casing! YAY!
-    if( $e !~ /^[A-Z]/ ) {
-	# revoke rights for property access
+#     if( $e !~ /^[A-Z]/ ) {
+# 	# revoke rights for property access
 
-	# FIX: we don't do properties yet, because we don't know what bloody entity we belong to
-	return;
+# 	# FIX: we don't do properties yet, because we don't know what bloody entity we belong to
+# 	return;
 
-	my $ido = $storage->fetch( MetaProperty => { return => "id",
-						     where  => [ property => $p,
-								 entity   => \qq<MetaEntity.id> ]
-						   },
-				   MetaEntity => { where => [ entity => $e ] } );
-	my $id = $ido->[0]->{id};
+# 	my $ido = $storage->fetch( MetaProperty => { return => "id",
+# 						     where  => [ property => $p,
+# 								 entity   => \qq<MetaEntity.id> ]
+# 						   },
+# 				   MetaEntity => { where => [ entity => $e ] } );
+# 	my $id = $ido->[0]->{id};
 
-	$storage->store( "MetaAuthProperty",
-			 key => [ qw/role property/ ],
-			 fields => {
-				    writeable => $param{write},
-				    readable  => $param{read},
-				    role      => $self->{_id},
-				    property  => $id,
-				   } );
+# 	$storage->store( "MetaAuthProperty",
+# 			 key => [ qw/role property/ ],
+# 			 fields => {
+# 				    writeable => $param{write},
+# 				    readable  => $param{read},
+# 				    roleid    => $self->{_id},
+# 				    property  => $id,
+# 				   } );
 	
 	
-    } else {
+#     } else {
 	# revoke rights for entity access
 	my $ido= $storage->fetch( MetaEntity => { return => "id", where => [ entity => $e ] } );
 	my $id = $ido->[0]->{id};
@@ -252,17 +252,17 @@ sub _set_permissions {
 	Yggdrasil::fatal( "Unable to set access to entity '$e', no such entity!" ) unless $id;
 	
 	$storage->store( "MetaAuthEntity",
-			 key => [ qw/role entity/ ],
+			 key => [ qw/roleid entity/ ],
 			 fields => { 
 				    deleteable => $param{delete},
 				    createable => $param{create},
 				    writeable  => $param{write},
 				    readable   => $param{read},
-				    role       => $robj->{_id},
+				    roleid     => $robj->{_id},
 				    entity     => $id,
 				   } );
 	
-    } 
+#    } 
 
 }
 
@@ -276,9 +276,9 @@ sub add {
     my $uobj = $user->{_user_obj};
 
     $self->{yggdrasil}->{storage}->store( "MetaAuthRolemembership",
-					  key => [ qw/role user/ ],
-					  fields => { role => $robj->{_id},
-						      user => $uobj->{_id},
+					  key => [ qw/roleid userid/ ],
+					  fields => { roleid => $robj->{_id},
+						      userid => $uobj->{_id},
 						    } );
 
     return 1 if $self->get_status()->OK();
@@ -295,8 +295,8 @@ sub remove {
     my $uobj = $user->{_user_obj};
 
     $self->{yggdrasil}->{storage}->expire( "MetaAuthRolemembership",
-					   role => $robj->{_id},
-					   user => $uobj->{_id} );
+					   roleid => $robj->{_id},
+					   userid => $uobj->{_id} );
 
     return 1 if $self->get_status()->OK();
     return;

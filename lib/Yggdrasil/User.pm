@@ -172,9 +172,9 @@ sub member_of {
     my $roles = $self->storage()->fetch(
 	Instances => {
 		     return => [ qw/visual_id/ ], 
-		     where => [ id => \qq<MetaAuthRolemembership.role> ]
+		     where => [ id => \qq<MetaAuthRolemembership.roleid> ]
 		    },
-	MetaAuthRolemembership => { where => [ user => $uobj->{_id} ] } );
+	MetaAuthRolemembership => { where => [ userid => $uobj->{_id} ] } );
     # FIX fetch does *not* return status code in a sane way.  This
     # needs to be solved at the SQL layer upon completing a
     # transaction.
@@ -192,16 +192,14 @@ sub get_roles {
 #    my $self = shift;
     
     #my $u = $self->{_user_obj};
-    my $idref = $self->storage()->_fetch(MetaAuthRolemembership => { where => [ user => \qq{Instances.id} ],
-								     return => 'role' },
+    my $idref = $self->storage()->_fetch(MetaAuthRolemembership => { where => [ userid => \qq{Instances.id} ],
+								     return => 'roleid' },
 					 Instances => { where => [ visual_id => $user ]});
 
-    my $roref = $self->storage()->_fetch(Instances => { where => [ id => $idref->[0]->{role} ],
+    my $roref = $self->storage()->_fetch(Instances => { where => [ id => $idref->[0]->{roleid} ],
 						       return => 'visual_id' });
 
-    print "$_\n" for caller();
-
-    return Yggdrasil::Role->get( yggdrasil => $self, role => $roref->[0]->{visual_id} );
+    return Yggdrasil::Role->get( yggdrasil => $self, roleid => $roref->[0]->{visual_id} );
 }
 
 sub _generate_password {

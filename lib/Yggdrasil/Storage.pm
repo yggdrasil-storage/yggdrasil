@@ -115,14 +115,14 @@ sub get_status {
 
 # define( Schema',
 #         fields   => { field1, 
-#                               { null => BOOL(0), type => type(TEXT),
+#                               { null  => BOOL(0), type => type(TEXT),
 #                                 index => BOOL(0), constraint => constraint(undef) }
 #                       field2, 
-#                               { null => BOOL(0), type => type(TEXT), 
+#                               { null  => BOOL(0), type => type(TEXT), 
 #                                 index => BOOL(0), constraint => constraint(undef) }
 #         temporal => BOOL(0),
 #         nomap => BOOL(0),
-#         hints => { field1 => { foreign => 'Schema', index => [1|0] }}
+#         hints => { field1 => { key => BOOL(0), foreign => 'Schema', index => BOOL(0) }}
 # );
 sub define {
     my $self = shift;
@@ -162,7 +162,7 @@ sub define {
 	# Add temporal field
 	$data{fields}->{start} = { type => 'INTEGER', null => 0 };
 	$data{fields}->{stop}  = { type => 'INTEGER', null => 1 };
-	$data{hints}->{start}  = { foreign => $STORAGETICKER };
+	$data{hints}->{start}  = { foreign => $STORAGETICKER, key => 1 };
 	$data{hints}->{stop}   = { foreign => $STORAGETICKER };
     } else {
 	# Add commiter field
@@ -231,7 +231,8 @@ sub define {
 			  fields => {
 				     usertable => $schema,
 				     authtable => $authtable,
-				     bindings  => $bindings
+				     bindings  => $bindings,
+				     committer => $self->{bootstrap}?'bootstrap':$self->{user}->id(),
 				    } );
 	}
     }
@@ -696,14 +697,14 @@ sub _initialize_user_auth {
 	$self->define( $STORAGEAUTHMEMBER,
 		       nomap  => 1,
 		       fields => {
-				  user => { type => 'INTEGER', null => 0 },
-				  role => { type => 'INTEGER', null => 0 },
+				  userid => { type => 'INTEGER', null => 0 },
+				  roleid => { type => 'INTEGER', null => 0 },
 				 },
 		       temporal => 1,
 		       nomap    => 1,
 		       hints    => {
-				    user => { foreign => $STORAGEAUTHUSER },
-				    role => { foreign => $STORAGEAUTHROLE },
+				    userid => { foreign => $STORAGEAUTHUSER },
+				    roleid => { foreign => $STORAGEAUTHROLE },
 				   } );
     }
 }
@@ -757,9 +758,10 @@ sub _initialize_config {
 	$self->define( $STORAGECONFIG, 
 		       nomap  => 1,
 		       fields => {
-				  id    => { type => 'TEXT' },
-				  value => { type => 'TEXT' },
+				  id    => { type => 'VARCHAR(255)' },
+				  value => { type => 'TEXT' },				  
 				 },
+		       hints  => { id => { key => 1 } },	       
 		     );
 	$self->store( $STORAGECONFIG, key => "id",
 		      fields => { id => 'mapstruct', value => $STORAGEMAPPER });

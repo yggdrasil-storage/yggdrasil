@@ -27,23 +27,23 @@ sub define {
 			      fields   => {
 				  id       => { type => "SERIAL" },
 				  property => { type => "INTEGER" },
-				  role     => { type => "INTEGER" },
+				  roleid     => { type => "INTEGER" },
 				  readable  => { type => "BOOLEAN" },
 				  writeable => { type => "BOOLEAN" },
 			      },
 			      temporal => 1,
 			      nomap    => 1,
-			      hints    => {
-				  property => { foreign => "MetaProperty" },
-				  role     => { foreign => "MetaAuthRole" },
-			      }
+#			      hints    => {
+#				  property => { foreign => "MetaProperty" },
+#				  role     => { foreign => "MetaAuthRole" },
+#			      }
 	);
 
     $self->{storage}->define( "MetaAuthEntity",
 			      fields   => { 
 				  id     => { type => "SERIAL" },
 				  entity => { type => "INTEGER" },
-				  role   => { type => "INTEGER" },
+				  roleid   => { type => "INTEGER" },
 				  readable   => { type => "BOOLEAN" },
 				  writeable  => { type => "BOOLEAN" },
 				  createable => { type => "BOOLEAN" },
@@ -51,23 +51,23 @@ sub define {
 			      },
 			      temporal => 1,
 			      nomap    => 1,
-			      hints    => {
-				  entity => { foreign => "MetaEntity" },
-				  role   => { foreign => "MetaAuthRole" },
-			      }
+# 			      hints    => {
+# 				  entity => { foreign => "MetaEntity" },
+# 				  role   => { foreign => "MetaAuthRole" },
+# 			      }
 	);
 
     $self->{storage}->define( "MetaAuthRolemembership",
 			      fields   => {
-				  role => { type => "INTEGER" },
-				  user => { type => "INTEGER" },
+				  roleid => { type => "INTEGER" },
+				  userid => { type => "INTEGER" },
 			      },
 			      temporal => 1,
 			      nomap    => 1,
-			      hints    => {
-				  role => { foreign => "MetaAuthRole" },
-				  user => { foreign => "MetaAuthUser" },
-			      }
+# 			      hints    => {
+# 				  role => { foreign => "MetaAuthRole" },
+# 				  user => { foreign => "MetaAuthUser" },
+# 			      }
 	);
     return $self;
 }

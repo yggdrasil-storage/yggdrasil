@@ -11,6 +11,75 @@ sub define {
   
     my $storage = $self->{yggdrasil}->{storage};
     
+    $storage->define( "MetaRelation",
+		      fields   => { id          => { type => "SERIAL" },
+				    requirement => { type => "VARCHAR(255)", null => 1 },
+				    lval        => { type => "INTEGER",      null => 0 },
+				    rval        => { type => "INTEGER",      null => 0 },
+				    label       => { type => 'VARCHAR(255)', null => 0 },
+				    l2r         => { type => 'VARCHAR(255)', null => 1 },
+				    r2l         => { type => 'VARCHAR(255)', null => 1 },
+				  },
+		      temporal => 1,
+		      nomap    => 1,
+		      hints    => {
+				   lval => { index => 1, foreign => 'MetaEntity' },
+				   rval => { index => 1, foreign => 'MetaEntity' },
+				  },
+		      auth => {
+			       # To create a Relation between two entities one must have
+			       # permissions to modify both entites.  The order of E1 / E2 is
+			       # irrelevant.
+			       create => [					  
+					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
+					  'MetaEntity:Auth' => {
+								id  => \qq<E1.id>,
+								'm' => 1,
+							       },
+					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
+					  'MetaEntity:Auth' => {
+								id  => \qq<E2.id>,
+								'm' => 1,
+							       },
+					 ],
+			       # To fetch a relation, one must be able to read it.
+			       fetch => [
+					 MetaRelation => { label => '__SELF__' },
+					 ':Auth'        => { 
+							    id => \qq<MetaRelation.label>,
+							    r  => 1,
+							   },
+					],
+			       # To expire / delete a relation, modify both entities and the
+			       # relation itself.
+			       expire => [
+					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
+					  'MetaEntity:Auth' => {
+								id  => \qq<E1.id>,
+								'm' => 1,
+							       },
+					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
+					  'MetaEntity:Auth' => {
+								id  => \qq<E2.id>,
+								'm' => 1,
+							       },
+					  MetaRelation => { label => '__SELF__' },
+					  ':Auth'        => { 
+							     id  => \qq<MetaRelation.label>,
+							     'm' => 1,
+							    },
+					 ],
+			       # re-lable.
+			       update => [
+					  MetaRelation => { label => '__SELF__' },
+					  ':Auth'        => { 
+							     id  => \qq<MetaRelation.label>,
+							     'm' => 1,
+							    },
+					 ],
+			      },
+		    );
+        
     $storage->define( "Relations", 
 		      fields   => { 
 				   id   => { type => 'INTEGER' },
@@ -20,9 +89,9 @@ sub define {
 		      temporal => 1,
 		      nomap    => 1,
 		      hints    => {
-				   id   => { index => 1, foreign => 'MetaRelation' },
-				   lval => { foreign => 'Instances' },
-				   rval => { foreign => 'Instances' },
+				   id   => { index => 1, foreign => 'MetaRelation', key => 1 },
+				   lval => { foreign => 'Instances', key => 1 },
+				   rval => { foreign => 'Instances', key => 1 },
 				  },
 		      auth => {
 			       # Create a new link.
@@ -94,75 +163,7 @@ sub define {
 			      },
 		    );
     
-    
-    $storage->define( "MetaRelation",
-		      fields   => { id          => { type => "SERIAL" },
-				    requirement => { type => "VARCHAR(255)", null => 1 },
-				    lval        => { type => "INTEGER",      null => 0 },
-				    rval        => { type => "INTEGER",      null => 0 },
-				    label       => { type => 'VARCHAR(255)', null => 0 },
-				    l2r         => { type => 'VARCHAR(255)', null => 1 },
-				    r2l         => { type => 'VARCHAR(255)', null => 1 },
-				  },
-		      temporal => 1,
-		      nomap    => 1,
-		      hints    => {
-				   lval => { index => 1, foreign => 'MetaEntity' },
-				   rval => { index => 1, foreign => 'MetaEntity' },
-				  },
-		      auth => {
-			       # To create a Relation between two entities one must have
-			       # permissions to modify both entites.  The order of E1 / E2 is
-			       # irrelevant.
-			       create => [					  
-					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
-					  'MetaEntity:Auth' => {
-								id  => \qq<E1.id>,
-								'm' => 1,
-							       },
-					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
-					  'MetaEntity:Auth' => {
-								id  => \qq<E2.id>,
-								'm' => 1,
-							       },
-					 ],
-			       # To fetch a relation, one must be able to read it.
-			       fetch => [
-					 MetaRelation => { label => '__SELF__' },
-					 ':Auth'        => { 
-							    id => \qq<MetaRelation.label>,
-							    r  => 1,
-							   },
-					],
-			       # To expire / delete a relation, modify both entities and the
-			       # relation itself.
-			       expire => [
-					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
-					  'MetaEntity:Auth' => {
-								id  => \qq<E1.id>,
-								'm' => 1,
-							       },
-					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
-					  'MetaEntity:Auth' => {
-								id  => \qq<E2.id>,
-								'm' => 1,
-							       },
-					  MetaRelation => { label => '__SELF__' },
-					  ':Auth'        => { 
-							     id  => \qq<MetaRelation.label>,
-							     'm' => 1,
-							    },
-					 ],
-			       # re-lable.
-			       update => [
-					  MetaRelation => { label => '__SELF__' },
-					  ':Auth'        => { 
-							     id  => \qq<MetaRelation.label>,
-							     'm' => 1,
-							    },
-					 ],
-			      },
-		    );
+
 }
 
 sub add {

@@ -21,23 +21,21 @@ sub new {
 
     my $status = $self->get_status();
 
-    my $path;
-    unless( $data{db} && $data{path} ) {
-	$path = ":memory:";
-    } else {
-	$data{db} ||= 'yggdrasil';
-	$data{path} ||= '/tmp';
+    $data{db} ||= ':memory:';
 
-	$path = join('/', $data{path}, $data{db});
-    }
-
-    $self->{dbh} = DBI->connect( "dbi:SQLite:dbname=$path", "", "" );
+    $self->{dbh} = DBI->connect( "dbi:SQLite:dbname=$data{db}", "", "" );
 
     return $self;
 }
 
 sub info {
     return "in-memory dataset only";
+}
+
+# I don't support multiple primary keys in the same table, so I have
+# to set primary key support to null.
+sub _engine_supports_primary_keys {
+    return undef;
 }
 
 sub yggdrasil_is_empty {
