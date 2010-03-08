@@ -31,51 +31,58 @@ sub define {
 			       # permissions to modify both entites.  The order of E1 / E2 is
 			       # irrelevant.
 			       create => [					  
-					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
 					  'MetaEntity:Auth' => {
-								id  => \qq<E1.id>,
-								'm' => 1,
+								where => [
+									  id  => \q<MetaRelation.lval>,
+									  'm' => 1,
+									 ],
 							       },
-					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
 					  'MetaEntity:Auth' => {
-								id  => \qq<E2.id>,
-								'm' => 1,
+								where => [
+									  id  => \qq<MetaRelation.rval>,
+									  'm' => 1,
+									 ],
 							       },
 					 ],
 			       # To fetch a relation, one must be able to read it.
 			       fetch => [
-					 MetaRelation => { label => '__SELF__' },
-					 ':Auth'        => { 
-							    id => \qq<MetaRelation.label>,
-							    r  => 1,
-							   },
+					 ':Auth' => {
+						     where => [
+							       id => \qq<MetaRelation.id>,
+							       r  => 1,
+							      ],
+						    },
 					],
 			       # To expire / delete a relation, modify both entities and the
 			       # relation itself.
 			       expire => [
-					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
 					  'MetaEntity:Auth' => {
-								id  => \qq<E1.id>,
-								'm' => 1,
+								where => [
+									  id  => \qq<MetaRelation.lval>,
+									  'm' => 1,
+									 ],
 							       },
-					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
 					  'MetaEntity:Auth' => {
-								id  => \qq<E2.id>,
-								'm' => 1,
+								where => [
+									  id  => \qq<MetaRelation.rval>,
+									  'm' => 1,
+									 ],
 							       },
-					  MetaRelation => { label => '__SELF__' },
-					  ':Auth'        => { 
-							     id  => \qq<MetaRelation.label>,
-							     'm' => 1,
-							    },
+					  ':Auth' => {
+						      where => [
+								id  => \qq<MetaRelation.id>,
+								'm' => 1,
+							       ],
+						     },
 					 ],
 			       # re-lable.
 			       update => [
-					  MetaRelation => { label => '__SELF__' },
-					  ':Auth'        => { 
-							     id  => \qq<MetaRelation.label>,
-							     'm' => 1,
-							    },
+					  ':Auth' => { 
+						      where => [
+								id  => \qq<MetaRelation.id>,
+								'm' => 1,
+							       ],
+						     },
 					 ],
 			      },
 		    );
@@ -96,74 +103,54 @@ sub define {
 		      auth => {
 			       # Create a new link.
 			       create => [
-					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
-  					  'MetaEntity:Auth' => { 
-								id => \qq<E1.id>,
-								r  => 1,
-							       },
-					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
-  					  'MetaEntity:Auth' => { 
-								id => \qq<E2.id>,
-								r  => 1,
-							       },
-					  Instances => { visual_id => '__INSTANCE1__', alias => 'I1' },
 					  'Instances:Auth' => {
-							       id  => \qq<I1.id>,
+							       id  => \qq<Relations.lval>,
 							       'm' => 1,
 							      },
-					  Instances => { visual_id => '__INSTANCE2__', alias => 'I2' },
 					  'Instances:Auth' => {
-							       id  => \qq<I2.id>,
+							       id  => \qq<Relations.rval>,
 							       'm' => 1,
 							      },
-					  MetaRelation => { label => '__RELATION__' },
 					  'MetaRelation:Auth' => { 
-								  id => \qq<MetaRelation.label>,
+								  id => \qq<Relations.id>,
 								  w  => 1,
 								 },
 					 ],
 			       # Expire a link.  Oddly similar to create (above).
 			       expire => [
-					  MetaEntity => { entity => '__ENTITY1__', alias => 'E1' },
-  					  'MetaEntity:Auth' => { 
-								id => \qq<E1.id>,
-								r  => 1,
-							       },
-					  MetaEntity => { entity => '__ENTITY2__', alias => 'E2' },
-  					  'MetaEntity:Auth' => { 
-								id => \qq<E2.id>,
-								r  => 1,
-							       },
-					  Instances => { visual_id => '__INSTANCE1__', alias => 'I1' },
 					  'Instances:Auth' => {
-							       id  => \qq<I1.id>,
-							       'm' => 1,
+							       where => [
+									 id  => \qq<Relations.lval>,
+									 'm' => 1,
+									],
 							      },
-					  Instances => { visual_id => '__INSTANCE2__', alias => 'I2' },
 					  'Instances:Auth' => {
-							       id  => \qq<I2.id>,
-							       'm' => 1,
+							       where => [
+									 id  => \qq<Relations.rval>,
+									 'm' => 1,
+									],
 							      },
-					  MetaRelation => { label => '__RELATION__' },
 					  'MetaRelation:Auth' => { 
-								  id => \qq<MetaRelation.label>,
-								  w  => 1,
+								  where => [
+									    id => \qq<Relations.id>,
+									    w  => 1,
+									   ],
 								 },
 					 ],
 			       # Read a link, ie, follow it.
 			       fetch => [
-					 Relations => { id => '__SELF__' },
-					 ':Auth'     => {
-							 id => \qq<Relations.id>,
-							 r  => 1,
-							},
+					 ':Auth' => {
+						     where => [
+							       id => \qq<Relations.id>,
+							       r  => 1,
+							      ],
+						    },
 					],
 			       # Update, NOT allowed.
 			       update => undef,
 			      },
 		    );
     
-
 }
 
 sub add {
