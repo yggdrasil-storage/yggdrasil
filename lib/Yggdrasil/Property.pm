@@ -88,26 +88,31 @@ sub define {
 
 		      auth => {			       
 			       create => undef,
-			       fetch => [ $name => { id => '__SELF__' },
-					  ':Auth' => {
-						      id => \qq<$name.id>,
-						      r  => 1,
-						     },
+			       fetch => [ 
+					 ':Auth' => {
+						     where => [
+							       id => \qq<$name.id>,
+							       r  => 1,
+							      ],
+						    },
 					],
-			       expire => [ $name => { id => '__SELF__' },
-					   ':Auth' => {
-						       id  => \qq<$name.id>,
-						       'm' => 1,
-						      },
+			       expire => [
+					  ':Auth' => {
+						      where => [
+								id  => \qq<$name.id>,
+								'm' => 1,
+							       ],
+						     },
 					 ],
-			       update => [ $name => { id => '__SELF__' },
-					   ':Auth' => { 
-						       id => \qq<$name.id>,
-						       w  => 1,
-						      },
+			       update => [ 
+					  ':Auth' => { 
+						      where => [
+								id => \qq<$name.id>,
+								w  => 1,
+							       ],
+						     },
 					 ],
 			      },
-		      
 		    );
   
     
