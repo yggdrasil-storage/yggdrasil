@@ -22,43 +22,53 @@ sub define {
 		      
 		      auth => {
 			       # Create a new property.
-			       create => [ MetaEntity => { entity => '__ENTITY__' },
- 					   'MetaEntity:Auth' => { 
-								 id  => \qq<MetaEntity.id>,
-								 'm' => 1,
-								},
+			       create => [
+					  'MetaEntity:Auth' => {
+								where => [
+									  id  => \qq<MetaProperty.entity>,
+									  'm' => 1,
+									 ],
+							       },
 					 ],
 			       # Get the property (Entity.ip, not that of an instance).
-			       fetch => [ MetaProperty => { id => '__SELF__' },
-					  ':Auth'        => {
-							     id => \qq<MetaProperty.id>,
-							     r  => 1, 
-							    },
+			       fetch => [ 
+					 ':Auth' => {
+						     where => [
+							       id => \qq<MetaProperty.id>,
+							       r  => 1, 
+							      ],
+						    },
 					  
 					],
 			       # Remove a property from an entity.
-			       expire => [ MetaEntity => { entity => '__ENTITY__' },
- 					   'MetaEntity:Auth' => { 
-								 id  => \qq<MetaEntity.id>,
-								 'm' => 1,
-								},
-					   MetaProperty => { id => '__SELF__' },
-					   ':Auth'        => {
-							      id  => \qq<MetaProperty.id>,
-							      'm' => 1, 
-							     },					  
+			       expire => [ 
+					  'MetaEntity:Auth' => { 
+								where => [
+									  id  => \qq<MetaProperty.entity>,
+									  'm' => 1,
+									 ],
+							       },
+					  ':Auth' => {
+						      where => [
+								id  => \qq<MetaProperty.id>,
+								'm' => 1, 
+							       ],
+						     },
 					 ],
 			       # Change type / possibility of null / rename
-			       update => [ MetaEntity => { entity => '__ENTITY__' },
- 					   'MetaEntity:Auth' => { 
-								 id  => \qq<MetaEntity.id>,
-								 'm' => 1,
-								},
-					   MetaProperty => { id => '__SELF__' },
-					   ':Auth'        => {
-							      id  => \qq<MetaProperty.id>,
-							      'm' => 1, 
-							     },					  
+			       update => [ 
+					  'MetaEntity:Auth' => { 
+								where => [
+									  id  => \qq<MetaProperty.entity>,
+									  'm' => 1,
+									 ],
+							       },
+					  ':Auth' => {
+						      where => [
+								id  => \qq<MetaProperty.id>,
+								'm' => 1, 
+							       ],
+						     },
 					 ],
 			      },
 		    );
