@@ -20,6 +20,7 @@ inc/Module/Install/Can.pm
 inc/Module/Install/Fetch.pm
 inc/Module/Install/Makefile.pm
 inc/Module/Install/Metadata.pm
+inc/Module/Install/Scripts.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
 lib/Yggdrasil.pm
@@ -48,6 +49,8 @@ lib/Yggdrasil/Role.pm
 lib/Yggdrasil/Status.pm
 lib/Yggdrasil/Storage.pm
 lib/Yggdrasil/Storage/Auth.pm
+lib/Yggdrasil/Storage/Auth/Role.pm
+lib/Yggdrasil/Storage/Auth/User.pm
 lib/Yggdrasil/Storage/Engine/mysql.pm
 lib/Yggdrasil/Storage/Engine/Pg.pm
 lib/Yggdrasil/Storage/Engine/Shared/SQL.pm
@@ -55,6 +58,7 @@ lib/Yggdrasil/Storage/Engine/SQLite.pm
 lib/Yggdrasil/Storage/Mapper.pm
 lib/Yggdrasil/Storage/Mapper/MD5.pm
 lib/Yggdrasil/Storage/Mapper/SHA1.pm
+lib/Yggdrasil/Transaction.pm
 lib/Yggdrasil/User.pm
 lib/Yggdrasil/Utilities.pm
 Makefile.PL
@@ -63,6 +67,7 @@ META.yml
 README
 scripts/bittest
 scripts/bootstrap
+scripts/cleanse
 scripts/load-props
 scripts/process_database
 scripts/props

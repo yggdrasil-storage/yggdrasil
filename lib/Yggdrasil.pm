@@ -11,9 +11,6 @@ use Time::Local;
 use Log::Log4perl qw(get_logger :levels :nowarn);
 use Carp;
 
-use Yggdrasil::MetaAuth;
-use Yggdrasil::Auth;
-
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
@@ -49,7 +46,7 @@ sub new {
     if ( ref $self eq __PACKAGE__ ) {
 	$self->{status} = new Yggdrasil::Status();
 	$self->_setup_logger( $params{logconfig} );
-	$self->{auth}   = new Yggdrasil::Auth( yggdrasil => $self );
+	#$self->{auth}   = new Yggdrasil::Auth( yggdrasil => $self );
 	Yggdrasil::Debug->new( $params{debug} );
 	$self->{strict} = $params{strict} || 1;
 	$self->{status}->set( 200 );
@@ -77,22 +74,14 @@ sub bootstrap {
     my $status = $self->get_status();
     if ($self->{storage}->yggdrasil_is_empty()) {
 	$self->{bootstrap} = 1;
+	my %usermap = $self->{storage}->bootstrap( %userlist );
 	Yggdrasil::MetaEntity->define( yggdrasil => $self );
 	Yggdrasil::MetaRelation->define( yggdrasil => $self );
 	Yggdrasil::MetaProperty->define( yggdrasil => $self );
 	Yggdrasil::MetaInheritance->define( yggdrasil => $self );
 	
-	Yggdrasil::MetaAuth->define( yggdrasil => $self );
-
 	my $universal = $self->define_entity( 'UNIVERSAL' );
-	
-	# FIX: add default users to %userlist _here_, before calling this and rename that horrible function name!
-	my @users = Yggdrasil::Auth->_setup_default_users_and_roles( yggdrasil => $self, users => \%userlist );
-	my %usermap;
-	
-	for my $user (@users) {
-	    $usermap{$user->id()} = $user->password();
-	}
+
 	$status->set( 200, 'Bootstrap successful.');
 	return \%usermap;
     } else {
@@ -104,10 +93,8 @@ sub bootstrap {
 sub connect {
     my $self = shift;
 
-    $self->{storage} = Yggdrasil::Storage->new(@_,
-					       status => $self->{status},
-					       auth   => $self->{auth},
-	);
+    $self->{storage} =
+      Yggdrasil::Storage->new(@_, status => $self->{status} );
 
     return unless $self->get_status()->OK();
 
@@ -125,11 +112,14 @@ sub login {
 	return;
     }
 
-    my $auth = new Yggdrasil::Auth( yggdrasil => $self );
-    $self->{user} = $auth->authenticate( %params );
+    # we're nobody until authenticated
+    $self->{user} = $self->{storage}->user();
+
+    #my $auth = new Yggdrasil::Auth( yggdrasil => $self );
+    $self->{user} = $self->{storage}->authenticate( %params );
 
     if ($status->OK()) {
-	$self->{storage}->{user} = $self->user();
+	#$self->{storage}->{user} = $self->user();
 	return $self->user();
     }
 
@@ -195,14 +185,14 @@ sub get_user {
     my $self = shift;
     my $user = shift;
 
-    return Yggdrasil::User->get( yggdrasil => $self, user => $user, @_ );
+    return Yggdrasil::Storage::Auth::User->get( $self->{storage}, $user );
 }
 
 sub get_role {
     my $self = shift;
     my $role = shift;
 
-    return Yggdrasil::Role->get( yggdrasil => $self, role => $role, @_ );
+    return Yggdrasil::Storage::Auth::Role->get( $self->{storage}, $role );
 }
 
 sub get_entity {
@@ -279,10 +269,7 @@ sub entities {
     my @roles = $self->user()->member_of();
     my @roleids = map { $_->{_role_obj}->{_id} } @roles;
 
-    my $aref = $self->{storage}->_fetch( 
-	MetaAuthEntity => { where => [ roleid => \@roleids, readable => 1 ]},
-	MetaEntity     => { where => [ id => \qq{MetaAuthEntity.entity}, ],
-			    return => 'entity' });
+    my $aref = $self->{storage}->fetch( MetaEntity => { return => 'entity' });
 
     return map { Yggdrasil::Entity::objectify( name      => $_->{entity}, 
 					       yggdrasil => $self ) } @$aref;
@@ -332,22 +319,15 @@ sub exists {
 }
 
 # usernames / rolenames, returns all the usernames / rolenames known
-# to Yggdrasil.  This does *not* produce proper objects, as not
-# everyone is privy to all details about users and roles, but everyone
-# will need read access to MetaAuthUser and MetaAuthRole anyway.  If
-# you want proper objects, for now, call "get_user" or "get_role" as
-# needed.
+# to Yggdrasil.
 sub usernames {
     my $self = shift;
-    my $eobj = $self->get_entity( 'MetaAuthUser' );
-    return map { $_->id() } $eobj->instances();
+    return map { $_->name() } Yggdrasil::Storage::Auth::User->get_all( $self->{storage} );
 }
 
 sub rolenames {
     my $self = shift;
-    my $eobj = $self->get_entity( 'MetaAuthRole' );
-    return map { $_->id() } $eobj->instances();
-
+    return map { $_->name() } Yggdrasil::Storage::Auth::Role->get_all( $self->{storage} );
 }
 
 # to access defined storage types
@@ -461,6 +441,7 @@ sub _get_instance_event_at_ticks {
 							},
 					    'MetaEntity', { return => [ 'entity' ],
 							    where  => [ 'id' => \qq{Instances.entity} ],
+							    as     => 1,
 							  },
 					    { start => 0, stop => undef },
 					  );

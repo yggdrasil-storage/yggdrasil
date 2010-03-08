@@ -14,57 +14,58 @@ sub define {
     $storage->define( "MetaEntity",
 		      fields     => {
 				     id     => { type => 'SERIAL' },
+				     parent => { type => 'INTEGER' },
 				     entity => { type => "VARCHAR(255)", null => 0 },
 				    },
 		      temporal   => 1,
 		      nomap      => 1,
+		      hints      => {
+				     parent => { foreign => 'MetaEntity' },
+				    },
 		      auth       => {
-				     # Create a new entity.  __PARENT__ is expanded to the parent of the
-				     # current entity, __AUTH__ expands to "my" auth schema.  Write
-				     # access to parent required.
+				     # Write access to parent required.
 				     create => [
-						MetaEntity  => { entity => '__PARENT__' },
-						':Auth'     => {
-								id    => \qq<MetaEntity.id>,
-								w     => 1,
-							       },
+						':Auth' => {
+							    where => [
+								      id    => \qq<MetaEntity.parent>,
+								      w     => 1,
+								     ],
+							   },
 					       ],
 				     # get an entity.  Read self to access.
 				     fetch  => [
-						MetaEntity  => { entity => '__SELF__' },
-						':Auth'     => {
-								id   => \qq<MetaEntity.id>,
-								r    => 1,
-							       },
+						':Auth' => {
+							    where => [
+								      id   => \qq<MetaEntity.id>,
+								      r    => 1,
+								     ],
+							   },
 					       ],
 				     # rename entity.  Modify self required.
 				     update => [
-						MetaEntity  => { entity => '__SELF__' },
-						':Auth'       => {								 
-								  id     => \qq<MetaEntity.id>,
-								  'm'    => 1,
-								 },
+						':Auth' => { 
+							    where => [
+								      id     => \qq<MetaEntity.id>,
+								      'm'    => 1,
+								     ],
+							   },
 					       ],
 				     # expire / delete entity.  Write to parent, modify self.
 				     expire => [
-						MetaEntity  => {
-								entity => '__SELF__',
-								alias  => 'ME1',
-							       },
-						MetaEntity  => {
-								entity => '__PARENT__',
-								alias  => 'ME2',
-							       },
-						':Auth'       => {
-								id     => \qq<ME1.id>,
-								'm'    => 1,
-							       },
-						':Auth'       => {
-								id     => \qq<ME2.id>,
-								w      => 1,
-							       },
+						':Auth' => {
+							    where => [
+								      id => \qq<MetaEntity.parent>,
+								      w  => 1,
+								     ],
+							   },
+						':Auth' => {
+							    where => [
+								      id  => \qq<MetaEntity.id>,
+								      'm' => 1,
+								     ],
+							   },
 					       ],
-				    },
+					    },
 		    );
     
     $storage->define( "Instances",
@@ -80,44 +81,48 @@ sub define {
 		      auth => {
 			       # Create instance, require write access to entity.
 			       create => [
-					  MetaEntity      => { entity => '__ENTITY__' },
-					  'MetaEntity:Auth' => {
-								id    => \qq<MetaEntity.id>,
-								w     => 1,
-							       },					  
+					  'MetaEntity:Auth' => { 
+								where => [
+									  id    => \qq<Instances.entity>,
+									  w     => 1,
+									 ],
+							       },
 					 ],
 			       # No need to check readability of the entity, as you can
 			       # only access the fetch call from that entity object.  If you
 			       # have been given that entity object, odds are you can read it.
 			       # (Hopefully).
 			       fetch  => [
-					  Instances => { visual_id => '__SELF__' },
-					  ':Auth'     => {
-							id   => \qq<Instances.id>,
-							r    => 1,
-						       },
+					  ':Auth' => {
+						      where => [
+								id   => \qq<Instances.id>,
+								r    => 1,
+							       ],
+						     },
 					 ],
 			       # expire / delete instance.
 			       expire => [
-					  Instances => { visual_id => '__SELF__' },
-					  ':Auth'     => {
-							id     => \qq<Instances.id>,
-							'm'    => 1,
-						       },
-					  MetaEntity      => { entity => '__ENTITY__' },
+					  ':Auth' => { 
+						      where => [
+								id     => \qq<Instances.id>,
+								'm'    => 1,
+							       ],
+						     },
 					  'MetaEntity:Auth' => {
-								id    => \qq<MetaEntity.id>,
-								w     => 1,
+								where => [
+									  id    => \qq<Instances.entity>,
+									  w     => 1,
+									 ],
 							       },
 					 ],
 			       # Rename, edit visual ID.  Modify self, write to entity.
 			       update => [
-					  Instances => { visual_id => '__SELF__' },
-					  ':Auth'     => {
-							  id     => \qq<Instances.id>,
-							  'm'    => 1,
-							 },
-					  
+					  ':Auth' => {
+						      where => [
+								id     => \qq<Instances.id>,
+								'm'    => 1,
+							       ],
+						     },
 					 ],
 			      },
 		      
@@ -131,14 +136,11 @@ sub add {
 
     my $name = $params{entity};
     
-    $self->{yggdrasil}->{storage}->store( "MetaEntity", key => "entity", fields => { entity => $name } );
+    my $id = $self->{yggdrasil}->{storage}->store( "MetaEntity", key => "entity", fields => { entity => $name } );
 
-    unless ($self->{yggdrasil}->{bootstrap}) {
-	# FIX: should we have a ->get_authenticated_user() ?
-	my $user = $self->yggdrasil()->user();
-	for my $role ( $user->get_cached_member_of() ) {
-	    $role->grant( $name, 'd' );
-	}
+    my $user = $self->storage()->user();
+    for my $role ( $user->member_of() ) {
+	$role->grant( 'MetaEntity' => 'm', id => $id );
     }
 }
 

@@ -8,6 +8,9 @@ use Storable qw();
 use Yggdrasil::Transaction;
 use Yggdrasil::Storage::Mapper;
 
+use Yggdrasil::Storage::Auth::User;
+use Yggdrasil::Storage::Auth::Role;
+
 our $STORAGEMAPPER     = 'Storage_mapname';
 our $STORAGETEMPORAL   = 'Storage_temporals';
 our $STORAGECONFIG     = 'Storage_config';
@@ -53,7 +56,7 @@ sub new {
     
     # Throw-away object, used to get access to class methods.
     bless $self, $class;
-    
+
     my $path = join('/', $self->_storage_path(), 'Engine');
 
     my $db;
@@ -76,27 +79,20 @@ sub new {
 	}
 	
 	my $storage = $engine_class->new(@_);
+	$storage->{bootstrap} = $data{bootstrap};
 	$storage->{transaction} = $TRANSACTION;
 	
 	unless (defined $storage) {
 	    $status->set( 500 );
 	    return undef;
 	}
-      
-	$storage->{bootstrap} = $data{bootstrap};
 
-	$storage->{auth}   = $data{auth};
 	$storage->{status} = $status;
 
 	$MAPPER = $data{mapper};
 	$ADMIN  = $data{admin};
 	
 	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
-
-	if( ! $storage->{bootstrap} && $storage->yggdrasil_is_empty() ) {
-	    $status->set( 503, "Yggdrasil has not been bootstrapped" );
-	    return;
-	}
 	
 	$storage->_initialize_config();
 	$storage->_initialize_mapper();
@@ -104,10 +100,94 @@ sub new {
 	$storage->_initialize_temporal();
 	$storage->_initialize_auth();
 
+	$storage->_set_default_user("nobody");
 	return $storage;
     }
 }
-  
+
+sub _set_default_user {
+    my $self = shift;
+    my $user = shift;
+
+    my $u = Yggdrasil::Storage::Auth::User->get_nobody( $self );
+    $self->{user} = $u;
+}
+
+sub user {
+    my $self = shift;
+
+    return $self->{user};
+}
+
+sub bootstrap {
+    my $self  = shift;
+    my %users = @_;
+
+    my $status = $self->{status};
+    $self->{bootstrap} = 1;
+
+    if( ! $self->{bootstrap} && $self->yggdrasil_is_empty() ) {
+	$status->set( 503, "Yggdrasil has not been bootstrapped" );
+	return;
+    }
+
+    # Create default users and roles
+    my %roles;
+    for my $role ( qw/admin user/ ) {
+	my $r = Yggdrasil::Storage::Auth::Role->define( $self, $role );
+	$roles{$role} = $r;
+    }
+
+    # create nobody
+    my $nobody_role = Yggdrasil::Storage::Auth::Role->define( $self, "nobody" );
+    my $nobody_user = Yggdrasil::Storage::Auth::User->define( $self, "nobody", undef );
+    $nobody_role->add( $nobody_user );
+    $nobody_role->grant( $Yggdrasil::Storage::STORAGEAUTHUSER => 'r',
+			 id => $nobody_user->id() );
+
+    my %usermap;
+    for my $user ( "root", (getpwuid( $> ) || "default"), keys %users ) {
+	my $pwd = $users{$user};
+	$pwd ||= $self->_generate_password();
+
+	my $u = Yggdrasil::Storage::Auth::User->define( $self, $user, $pwd );
+
+	for my $rolename ( keys %roles ) {
+	    my $role = $roles{$rolename};
+	    $role->add( $u );
+	    $role->grant( $Yggdrasil::Storage::STORAGEAUTHUSER => 'm', 
+			  id => $u->id() );
+
+	    $nobody_role->grant( $Yggdrasil::Storage::STORAGEAUTHUSER => 'r', 
+				 id => $u->id() );
+
+	}
+
+	$self->{user} = $u if $user eq "root";
+	$usermap{$user} = $pwd;
+    }
+
+    return %usermap;
+}
+
+sub _generate_password {
+    my $self = shift;
+    my $randomdevice = "/dev/urandom";
+    my $pwd_length = 12;
+    
+    my $password = "";
+    my $randdev;
+    open( $randdev, $randomdevice ) 
+	|| die "Unable to open random device $randdev: $!\n";
+    until( length($password) == $pwd_length ) {
+        my $byte = getc $randdev;
+        $password .= $byte if $byte =~ /[a-z0-9]/i;
+    }
+    close $randdev;
+
+    return $password;
+}
+
 sub get_status {
     my $self = shift;
     return $self->{status};
@@ -187,59 +267,140 @@ sub define {
 	}
 
 	if( $data{auth} ) {
-	    my $authtable = join("_", "Storage", "userauth", $originalname);
-	    $self->define( $authtable,
-			   fields => {
-				      # FIX: id must be the same type as $schema's id
-				      id   => { type => 'INTEGER', null => 0 },
-				      role => { type => 'INTEGER', null => 0 },
-				      w    => { type => 'BOOLEAN' },
-				      r    => { type => 'BOOLEAN' },
-				      'm'  => { type => 'BOOLEAN' },
-				      },
-			   nomap => 0,
-			   hints => {
-				     id   => { foreign => $schema },
-				     role => { foreign => $STORAGEAUTHROLE },
-				    } );
-
-	    # Change Foo:Auth to the real auth table
-	    my $auth = $data{auth};
-	    for my $action ( keys %$auth ) {
-		my $restrictions = $auth->{$action};
-		next unless $restrictions;
-
-		for( my $i=0; $i<@$restrictions; $i+=2 ) {
-		    my $table = $restrictions->[$i];
-
-		    if( $table eq ":Auth" ) {
-			$restrictions->[$i] = $authtable;
-		    } elsif( $table =~ /:Auth$/ ) {
-			# FIX: eg. Instances:Auth - fetch to get the mapping?
-			my $real_schema = $self->_get_auth_schema_name( $table );
-			$restrictions->[$i] = $real_schema;
-		    }
-		}
-
-		my @mapped = $self->_map_fetch_schema_references( @$restrictions );
-		$auth->{$action} = \@mapped;
-	    }
-
-	    my $bindings = Storable::nfreeze( $data{auth} );
-	    $self->_store( $STORAGEAUTHSCHEMA, 
-			  key => [ qw/usertable authtable/ ],
-			  fields => {
-				     usertable => $schema,
-				     authtable => $authtable,
-				     bindings  => $bindings,
-				     committer => $self->{bootstrap}?'bootstrap':$self->{user}->id(),
-				    } );
+	    $self->_define_auth( $schema, $originalname, $data{auth}, $data{nomap} );
 	}
     }
     
     $transaction->commit();
     return $retval;
 }
+
+sub _define_auth {
+    my $self = shift;
+    my $schema = shift;
+    my $originalname = shift;
+    my $auth = shift;
+    my $nomap = shift;
+
+    my $authschema = join("_", "Storage", "userauth", $originalname);
+    $self->define( $authschema,
+		   fields => {
+			      # FIX: id must be the same type as $schema's id
+			      id     => { type => 'INTEGER', null => 0 },
+			      roleid => { type => 'INTEGER', null => 0 },
+			      w      => { type => 'BOOLEAN' },
+			      r      => { type => 'BOOLEAN' },
+			      'm'    => { type => 'BOOLEAN' },
+			     },
+		   nomap => $nomap,
+		   hints => {
+			     id     => { foreign => $schema },
+			     roleid => { foreign => $STORAGEAUTHROLE },
+			    } );
+    
+
+    for my $action ( keys %$auth ) {
+	my $restrictions = $auth->{$action};
+	next unless $restrictions;
+
+	for( my $i=1; $i<@$restrictions; $i+=2 ) {
+	    my $authschema_constraint = $restrictions->[$i];
+
+	    # Add a new uniq alias.  FIXME for rand.
+	    my $uniq_alias = join("_", "_auth", int(rand()*100_000) );
+	    $authschema_constraint->{_auth_alias} = $uniq_alias;
+	}	
+
+	for( my $i=0; $i<@$restrictions; $i+=2 ) {
+	    my $authschema_binding    = $restrictions->[$i];
+	    my $authschema_constraint = $restrictions->[$i+1];
+
+	    # Change Foo:Auth, :Auth etc. to the real auth table
+	    my $real_schema = $authschema_binding;
+	    if( $authschema_binding eq ":Auth" ) {
+		$real_schema = $authschema;
+	    } elsif( $authschema_binding =~ /:Auth$/ ) {
+		$real_schema = $self->_get_auth_schema_name( $authschema_binding );
+	    }
+
+	    $restrictions->[$i] = $real_schema;
+
+	    # Change any \q<Schema.field> to the uniq alias, ie.
+	    # \q<uniq_alias.field>
+	    my $where = $authschema_constraint->{where};
+	    next unless ref $where;
+
+	    for( my $f=0; $f<@$where; $f+=2 ) {
+		my $field = $where->[$f];
+		my $value = $where->[$f+1];
+		next unless ref $value eq "SCALAR";
+
+		my( $schemaref, $schemafield ) = split m/\./, $$value;
+		if( $schemaref eq $originalname && ! $nomap ) {
+		    my $mapped_schema = join(".", $schema, $schemafield);
+		    $where->[$f+1] = \$mapped_schema;
+		}
+
+
+		my @matches = $self->_find_schema_by_name_or_alias( $schemaref, $restrictions );
+
+		if( @matches > 1 ) {
+		    die "'$schemaref' is mentioned more than once in the definition of $originalname\n";
+		}
+		
+		if( @matches == 0 && $schemaref ne $originalname ) {
+		    die "'$schemaref' is never mentioned in the definition of $originalname\n";
+		}
+		
+		unless( $schemaref eq $originalname ) {
+		    my $new_ref = join(".", $matches[0]->{_auth_alias}, $schemafield );
+		    $where->[$f+1] = \$new_ref;
+		}
+	    }
+	}
+
+	# set alias = _auth_alias and remove _auth_alias
+	for( my $i=1; $i<@$restrictions; $i+=2 ) {
+	    my $constraint = $restrictions->[$i];
+	    $constraint->{alias} = $constraint->{_auth_alias};
+	    delete $constraint->{_auth_alias};
+	}
+	my @mapped = $self->_map_fetch_schema_references( @$restrictions );
+	$auth->{$action} = \@mapped;
+    }
+
+    my $bindings = Storable::nfreeze( $auth );
+    $self->_store( $STORAGEAUTHSCHEMA, 
+		   key => [ qw/usertable authtable/ ],
+		   fields => {
+			      usertable => $schema,
+			      authtable => $authschema,
+			      bindings  => $bindings,
+			      committer => $self->{bootstrap}?'bootstrap':$self->{user}->id(),
+			     } );
+}
+
+sub _find_schema_by_name_or_alias {
+    my $self = shift;
+    my $name = shift;
+    my $definitions = shift;
+    
+    my @matches;
+
+    for( my $i=0; $i<@$definitions; $i+=2 ) {
+	my $schema      = $definitions->[$i];
+	my $constraints = $definitions->[$i+1];
+
+	my $found = 0;
+	if( $schema eq $name ) { $found = 1 }
+	if( defined $constraints->{alias} && $constraints->{alias} eq $name ) { $found = 1 };
+
+	push( @matches, $constraints ) if $found;
+    }
+
+    return @matches;
+}
+
 
 # store ( schema, key => id|[f1,f2...], fields => { fieldname => value, fieldname2 => value2 })
 sub store {
@@ -253,7 +414,7 @@ sub store {
 
     my $uname;
     if( $self->{bootstrap} ) {
-	$uname = "bootstrap";
+	$uname = $self->{user}?$self->{user}->id():'bootstrap';
     } else {
 	$uname = $self->{user}->id();
     }
@@ -301,8 +462,18 @@ sub store {
     }
 
     $transaction->log( "Store: $schema " . join( ", ", map { defined()?$_:"" } %keys ) );
-    $transaction->commit();
-    return $self->_store( $real_schema, tick => $tick, %params );
+    $transaction->commit();    
+    my $r = $self->_store( $real_schema, tick => $tick, %params );
+    my $user = $self->user();
+    
+    if ($user) {	
+	for my $role ( $user->member_of() ) {	    
+	    $role->grant( $real_schema => 'm', id => $r );
+	}
+    }    
+
+    return $r;
+
 }
 
 sub tick {
@@ -403,22 +574,87 @@ sub fetch {
     }
 
     $transaction->log( "Fetch: " . join( ', ', @schemas_looked_at) );
-    
+
+    my @schemadefs = @_;
     unless ($self->{bootstrap}) {
-	my %params = @_;
-	if (! $self->can( operation => 'readable', data => \%params, targets => \@targets )) {
-	    my $status = $self->get_status();
-	    $status->set( 403 );
-	    return;
-	}
+	# Add auth bindings to query
+	my @authdefs = $self->_add_auth( "fetch", @schemadefs );
+	push( @schemadefs, @authdefs );
     }
 
     # map schema names
-    my @schemadefs = $self->_map_fetch_schema_references( @_ );
+    @schemadefs = $self->_map_fetch_schema_references( @schemadefs );
 
     my $ref = $self->_fetch( @schemadefs, $time );
     $transaction->commit();
     return $ref;
+}
+
+sub _add_auth {
+    my $self = shift;
+    my $authtype = shift;
+    my @schemadefs = @_;
+    
+    my @authdefs;
+    for( my $i=0; $i<@schemadefs; $i+=2 ) {
+	my $schema = $schemadefs[$i];
+	my $schemabindings = $schemadefs[$i+1];
+
+	# 1. Find auth-bindings for this schema
+	my $ret = $self->_fetch( $STORAGEAUTHSCHEMA =>
+				 {
+				  return => 'bindings',
+				  where  => [ usertable => $schema ]
+				 } );
+	next unless $ret;
+
+	my $frozen_bindings = $ret->[0]->{bindings};
+	my $bindings = Storable::thaw( $frozen_bindings );
+
+	# 2. What auth-bindings to apply (Fetch/Create/Expire etc.)
+	my $typebindings = $bindings->{$authtype};
+	next unless $typebindings;
+
+	# 3. Find any references (\q<>) in the bindings to this schema
+	my @membership;
+	for( my $j=0; $j<@$typebindings; $j+=2 ) {
+	    my $authschema = $typebindings->[$j];
+	    my $authconstraint = $typebindings->[$j+1];
+
+	    my $where = $authconstraint->{where};
+	    next unless $where;
+
+	    for( my $k=1; $k<@$where; $k+=2 ) {
+		next unless ref $where->[$k] eq "SCALAR";
+		my $ref = $where->[$k];
+		my $value = $$ref;
+
+		my( $target, $field ) = split m/\./, $value;
+		next unless $target eq $schema;
+
+		if( $schemabindings->{alias} ) {
+		    $target = $schemabindings->{alias};
+		    $value = join(".", $target, $field);
+		    $where->[$k] = \$value;
+		}
+	    }
+
+	    my $alias = $authconstraint->{alias};
+	    my $member = {
+			  where => [
+				    userid => $self->user()->id(),
+				    roleid => \qq<$alias.roleid>,
+				   ]
+			 };
+
+	    push( @membership, $STORAGEAUTHMEMBER, $member );
+						    
+	}
+
+	push( @authdefs, @$typebindings, @membership );
+    }
+
+    return @authdefs;
 }
 
 sub _map_fetch_schema_references {
@@ -456,11 +692,61 @@ sub _map_fetch_schema_references {
     return @mapped_def;
 }
 
+sub authenticate {
+    my $self = shift;
+    my %params = @_;
+    
+    my ($user, $pass, $session) = ($params{'user'}, $params{'password'}, $params{'session'});
+
+    my $status = $self->get_status();
+    my $user_obj;
+
+    if (defined $user && defined $pass) {
+	# Otherwise, we got both a username and a password.
+	$user_obj = Yggdrasil::Storage::Auth::User->get( $self, $user );
+
+	if( $user_obj ) {
+	    my $realpass = $user_obj->password() || '';
+
+	    if (! defined $pass || $pass ne $realpass) {
+		$user_obj = undef;
+	    }
+	}
+	$session = undef;
+    } elsif ($session) {
+	# Lastly, we got a session id - see if we find a user with this session id
+	# $user_obj = Yggdrasil::User->get_with_session( yggdrasil => $self, session => $session );
+    } elsif (-t && ! defined $user && ! defined $pass) {
+	# First, let see if we're connected to a tty without getting a
+	# username / password, at which point we're already authenticated
+	# and we don't want to touch the session.  $> is effective UID.
+	my $uname = (getpwuid($>))[0];
+	$user_obj = Yggdrasil::Storage::Auth::User->get( $self, $uname );
+	$session = "invalid";
+    }
+
+    if( $user_obj ) {
+	$self->{user} = $user_obj;
+	#unless( $session ) {
+	#    $session = md5_hex(time() * $$ * rand(time() + $$));
+	#    $user_obj->session( $session );
+	#}
+	#$self->{session} = $session;
+	$status->set( 200 );
+    } else {
+	$status->set( 403 );
+    }
+
+    return $user_obj;
+}
+
+
 # Ask Auth if an action can be performed on a target.  Returns true / false.
 sub can {
     my $self = shift;
 
-    return $self->{auth}->can( @_ );
+    return 1;
+#    return $self->{auth}->can( @_ );
 }
 
 sub raw_fetch {
@@ -546,16 +832,28 @@ sub _get_schema_name {
     my $self = shift;
     my $schema = shift;
 
+    use Carp;
+    unless( $schema ) { confess( "No schema!" ) }
     return $self->{_mapcacheh2m}->{$schema};
 }
 
-# FIXME: ie. write me
+
+# Map string like "Instances:Auth" to "Storage_auth_Instances" f.ex.
 sub _get_auth_schema_name {
     my $self = shift;
     my $schema = shift;
 
-    return $schema;
-    # $schema =~ s/:Auth$//;
+    my @parts = split( ":", $schema );
+    pop @parts; # remove the ":Auth" part
+    my $usertable = join(":", @parts);
+
+    my $ret = $self->_fetch( $STORAGEAUTHSCHEMA => 
+			     { 
+			      return => 'authtable',
+			      where  => [ usertable => $usertable ],
+			     } );
+    
+    return $ret->[0]->{authtable};
 }
 
 sub get_defined_types {
@@ -667,8 +965,8 @@ sub _initialize_ticker {
 sub _initialize_auth {
     my $self = shift;
 
-    $self->_initialize_user_auth();
     $self->_initialize_schema_auth();
+    $self->_initialize_user_auth();
 }
 
 sub _initialize_user_auth {
@@ -680,7 +978,40 @@ sub _initialize_user_auth {
 		       fields => {
 				  id   => { type => 'SERIAL', null => 0 },
 				  name => { type => 'TEXT', null => 0 },
-				 } );
+		       },
+		       auth => {
+			   create =>
+			       [
+				':Auth' => {
+				    where => [ id  => \qq<$STORAGEAUTHROLE.id>,
+					       'm' => 1 ],
+				},
+			       ],
+			   
+			   fetch => 
+			       [
+				':Auth' => {
+				    where => [ id => \qq<$STORAGEAUTHROLE.id>,
+					       r  => 1],
+				},
+			       ],
+			   
+			   update => 
+			       [
+				':Auth' => {
+				    where => [ id => \qq<$STORAGEAUTHROLE.id>,
+					       w  => 1 ],
+				},
+			       ],
+
+			   expire =>
+			       [
+				':Auth' => {
+				    where => [ id  => \qq<$STORAGEAUTHROLE.id>,
+					       'm' => 1 ],
+				},
+			       ],
+		       } );
     }
 
     unless( $self->_structure_exists($STORAGEAUTHUSER) ) {
@@ -690,7 +1021,40 @@ sub _initialize_user_auth {
 				  id       => { type => 'SERIAL', null => 0 },
 				  name     => { type => 'TEXT', null => 0 },
 				  password => { type => 'PASSWORD' }
-				  } );
+		       },
+		       auth => {
+			   create =>
+			       [
+				':Auth' => {
+				    where => [ id  => \qq<$STORAGEAUTHUSER.id>,
+					       'm' => 1 ],
+				},
+			       ],
+			   
+			   fetch => 
+			       [
+				':Auth' => {
+				    where => [ id => \qq<$STORAGEAUTHUSER.id>,
+					       r  => 1],
+				},
+			       ],
+			   
+			   update => 
+			       [
+				':Auth' => {
+				    where => [ id => \qq<$STORAGEAUTHUSER.id>,
+					       w  => 1 ],
+				},
+			       ],
+
+			   expire =>
+			       [
+				':Auth' => {
+				    where => [ id  => \qq<$STORAGEAUTHUSER.id>,
+					       'm' => 1 ],
+				},
+			       ],
+			 } );
     }
 
     unless( $self->_structure_exists($STORAGEAUTHMEMBER) ) {
@@ -705,8 +1069,42 @@ sub _initialize_user_auth {
 		       hints    => {
 				    userid => { foreign => $STORAGEAUTHUSER },
 				    roleid => { foreign => $STORAGEAUTHROLE },
-				   } );
+				   },
+		       auth     => {
+			   create => 
+			       [
+				qq<$STORAGEAUTHROLE:Auth> => 
+				{
+				 where => [ id  => \qq<$STORAGEAUTHMEMBER.roleid>,
+					    'm' => 1 ],
+				},
+			       ],
+			   fetch  => 
+				    [
+				     qq<$STORAGEAUTHROLE:Auth> => 
+				     {
+				      where => [ id => \qq<$STORAGEAUTHMEMBER.roleid>,
+						 r  => 1, ],
+				     },
+				     qq<$STORAGEAUTHUSER:Auth> =>
+				     {
+				      where => [ id => \qq<$STORAGEAUTHMEMBER.userid>,
+						 r  => 1, ],
+				     }
+				    ],
+			   update => undef,
+			   expire => 
+			       [
+				qq<$STORAGEAUTHROLE:Auth> =>
+				{
+				 where => [ id  => \qq<$STORAGEAUTHMEMBER.roleid>,
+					    'm' => 1, ],
+				},
+			       ]
+		       } );
+    
     }
+
 }
 
 sub _initialize_schema_auth {
