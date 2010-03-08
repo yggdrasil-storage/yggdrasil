@@ -33,7 +33,6 @@ $y->connect(
 die $status->message() unless $status->OK();
 
 my $iam = $y->login();
-my @roles = $iam->get_cached_member_of();
 
 die $status->message() unless $status->OK();
 
@@ -386,12 +385,12 @@ sub user_info {
     print "'$username', no such user.\n" and return unless $user;
 
     printf "%-15s - %s\n", 'Username', $username;
-    printf "%-15s - %s\n", 'Full name', $user->fullname() || '';
-    printf "%-15s - %s\n", 'Session', $user->session() || '';
+#    printf "%-15s - %s\n", 'Full name', $user->fullname() || '';
+#    printf "%-15s - %s\n", 'Session', $user->session() || '';
     printf "%-15s - %s\n", 'Password', $user->password() || '';
     printf "%-15s - %s\n", 'Roles', join ", ", map { $_->name() } $user->member_of();
     
-    &display_tick( $user->start() );
+#    &display_tick( $user->start() );
 }
 
 sub user_password {
