@@ -62,8 +62,10 @@ sub _define {
     $sql .= join ",\n", @sqlfields;
     $sql .= ",\nPRIMARY KEY (" . join( ", ", keys %keys ) . ")" if %keys &&
 	  $self->_engine_supports_primary_keys();
-    $sql .= ");\n";
-
+    $sql .= ") ";
+    $sql .= $self->_engine_post_create_details();
+    $sql .= ";\n";
+    
     $self->{logger}->debug( $sql );
     $self->_sql( $sql );
 
@@ -73,7 +75,6 @@ sub _define {
 	$self->_sql( $indexsql );
     }
     
-
     # Find a way to deal with return values from here, worked / didn't
     # would be nice.
     return 1;
@@ -84,6 +85,13 @@ sub _define {
 # this, override it in the engine class.  SQLite for needs this.
 sub _engine_supports_primary_keys {
     return 1;
+}
+
+# If the engine requires something extra to be added to the end of the
+# CREATE TABLE ( ... ) statement, you can overload this method.
+# Typically used to make mysql add things like "ENGINE=InnoDB".
+sub _engine_post_create_details {
+    return "";
 }
 
 # Create an index as per the default SQL method of doing so, this 

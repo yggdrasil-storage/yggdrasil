@@ -113,6 +113,12 @@ sub _engine_requires_serial_as_key {
     return 1;
 }
 
+# FIXME, some way of telling mysql.pm which engine to use might be
+# useful for some people.
+sub _engine_post_create_details {
+    return "ENGINE=InnoDB";
+}
+
 sub _convert_time {
     my $self = shift;
     my $time = shift;
