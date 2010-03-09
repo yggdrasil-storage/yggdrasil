@@ -6,6 +6,8 @@ use warnings;
 use UNIVERSAL qw/VERSION/;
 use Getopt::Long;
 
+use Yggdrasil::Common::Config;
+
 our $VERSION = 0.01;
 our $SELF = bless {}, __PACKAGE__;
 
@@ -40,10 +42,12 @@ sub _setup {
 
     Getopt::Long::Configure( "pass_through" );
 
-    my $set = sub { 
+    my $set = sub {
 	my( $key, $val ) = @_;
 	if( $key eq "verbose" && ! defined $val ) {
 	    $self->{$key}++;
+	} elsif ( $key eq 'list-lables' ) {
+	    $self->{$key} = 1;
 	} else {
 	    $self->{$key} = $val;
 	}
@@ -53,9 +57,11 @@ sub _setup {
     my $r = GetOptions( 'help'        => $set,
 			'version'     => $set,
 			'verbose:i'   => $set,
-			'list-labels' => $set,
+			'list-lables' => $set,
 			'debug:i'     => $set, 
 			'label=s'     => $set,
+			'username=s'  => $set,
+			'password=s'  => $set,
 #			'host=s'      => $set,
 #			'port=i'      => $set,
 		      );
@@ -84,6 +90,20 @@ sub INIT {
 	$self->_version();
 	
 	exit;
+    } elsif (defined $self->{'list-lables'}) {
+	$self->_list_labels();
+	
+	exit;
+    } elsif (defined $self->{username} && ! defined $self->{password} && -t) {
+	# We have a user, but no password, and we have a TTY.  Let's
+	# ask for a password shall we?
+	my $password;
+	print "Password: ";
+	system("stty -echo");
+	chop($password = <>);
+	print "\n";
+	system("stty echo");
+	$self->{password} = $password;	
     }
 }
 
@@ -98,7 +118,6 @@ sub _client_help {
     }
 }
 
-
 sub _version {
     my $self = shift;
 
@@ -106,6 +125,19 @@ sub _version {
     print "$0 version $version\n";
 }
 
+sub _list_labels {
+    my $self = shift;
+    
+    my $c = Yggdrasil::Common::Config->new();
+    for my $l ($c->labels()) {
+	print "$l:\n";
+	my $lo = $c->get( $l );
+	for my $k (sort $lo->keys()) {
+	    printf "  %15s - %s\n", $k, $lo->get( $k );
+	}
+	print "\n";
+    }
+}
 
 sub _help {
     my $self = shift;
@@ -122,8 +154,10 @@ Other Options:
 --help             Prints out usage.
 --version          Prints version information.
 --verbose [level]  Sets or increases verbosity level.
---list-labels      Lists all defined labels.
+--list-lables      Lists all defined labels.
 --label <name>     Specify label of configuration.
+--user <name>      Username.
+--password <pw>    Password.
 --host <host>      Specify yggdrasil host.
 --port <port>      Specify yggdrasil port.
 HELP_BODY
