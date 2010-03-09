@@ -68,6 +68,11 @@ sub get {
     }    
 }
 
+sub id {
+    my $self = shift;    
+    return $self->{_id};
+}
+
 sub _get_real_val {
     my $self  = shift;
     my $side  = shift;
@@ -89,8 +94,8 @@ sub participants {
 
     my $parts = $storage->fetch(
 				Relations => {
-					      return => ['id', 'lval', 'rval'],
-					      where  => [ id => $self->{_id} ] },
+					      return => ['relationid', 'lval', 'rval'],
+					      where  => [ relationid => $self->{_id} ] },
 			       );
 
     my @participants;
@@ -163,9 +168,9 @@ sub link :method {
   }
 
   $self->storage()->store( 'Relations',
-			   key => ['id', 'lval', 'rval' ],
+			   key => ['relationid', 'lval', 'rval' ],
 			   fields => {
-			       'id'   => $self->{_id},
+			       'relationid' => $self->id(),
 			       'lval' => $lval->{_id},
 			       'rval' => $rval->{_id} });
 }
@@ -183,7 +188,7 @@ sub _admin_dump {
     my $self = shift;
     my $id   = shift;
 
-    return $self->{storage}->raw_fetch( Relations => { where => [ id => $id ] } );
+    return $self->{storage}->raw_fetch( Relations => { where => [ relationid => $id ] } );
 }
 
 sub _admin_restore {

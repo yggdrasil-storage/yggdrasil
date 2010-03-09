@@ -88,15 +88,16 @@ sub define {
 		    );
         
     $storage->define( "Relations", 
-		      fields   => { 
-				   id   => { type => 'INTEGER' },
+		      fields   => {
+				   id => { type => 'SERIAL' },
+				   relationid => { type => 'INTEGER' },
 				   lval => { type => "INTEGER" },
 				   rval => { type => "INTEGER" },
 				  },
 		      temporal => 1,
 		      nomap    => 1,
 		      hints    => {
-				   id   => { index => 1, foreign => 'MetaRelation', key => 1 },
+				   relationid => { index => 1, foreign => 'MetaRelation', key => 1 },
 				   lval => { foreign => 'Instances', key => 1 },
 				   rval => { foreign => 'Instances', key => 1 },
 				  },
