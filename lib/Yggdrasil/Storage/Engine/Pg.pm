@@ -35,7 +35,11 @@ sub new {
 sub info {
     my $self = shift;
 
-    return sprintf "%s:%s (as %s@%s)", $self->{host}, $self->{port}, $self->{dbuser}, $self->{db};
+    my $engine = ref $self;
+    $engine =~ s/^.*:://;
+
+    return sprintf "$engine storage backend, connected to %s:%s as the user '%s' to the database '%s'.",
+      $self->{host}, $self->{port}, $self->{dbuser}, $self->{db};
 }
 
 sub yggdrasil_is_empty {

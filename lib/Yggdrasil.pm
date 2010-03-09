@@ -136,10 +136,7 @@ sub info {
     my $self = shift;
     my $storage = $self->{storage};
 
-    my $engine = ref $storage;
-    $engine =~ s/^.*:://;
-
-    return sprintf "%s / %s", $engine, $storage->info();
+    return $storage->info();
 }
 
 ###############################################################################
