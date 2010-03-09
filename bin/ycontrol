@@ -1050,3 +1050,12 @@ sub lineparser {
 
     return grep { defined && length } @r;
 }
+
+__DATA__
+ycontrol is a command line interface to directly manipulate Yggdrasil
+structures.
+  
+For help with ycontrol operation, type 'help' at the command prompt, most
+operators are documented directly.  If you have any further questions, 
+please see the Yggdrasil documentation.
+
