@@ -46,6 +46,15 @@ sub _init {
     foreach my $path ( $GLOBAL, $LOCAL ) {
 	$self->_parse_all_configuration( $path );
     }
+
+    $self->{ENV} = Yggdrasil::Common::Config::Instance->new();
+    $self->{ENV}->{enginehost}     = $ENV{YGG_HOST};
+    $self->{ENV}->{enginetype}     = $ENV{YGG_ENGINE};
+    $self->{ENV}->{engineuser}     = $ENV{YGG_USER};
+    $self->{ENV}->{engineport}     = $ENV{YGG_PORT};
+    $self->{ENV}->{enginepassword} = $ENV{YGG_PASSWORD};
+    $self->{ENV}->{enginedb}       = $ENV{YGG_DB};
+    $self->{ENV}->{config}         = '%ENV';
 }
 
 sub _parse_all_configuration {
