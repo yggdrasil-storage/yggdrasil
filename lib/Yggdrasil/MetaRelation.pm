@@ -162,20 +162,24 @@ sub add {
     my $rval  = $params{rval};
     my $label = $params{label};
   
-    $self->{yggdrasil}->{storage}->store( "MetaRelation",
-					  key    => "label",
-					  fields => {
-						   label => $label,
-						     lval  => $lval,
-						     rval  => $rval,
-						     l2r   => $params{l2r},
-						     r2l   => $params{r2l},
-						   
-						     requirement => $params{requirement},				      
-						    });
-  
-    my $ref = $self->{yggdrasil}->{storage}->fetch( 'MetaRelation', { return => 'id', where => [ label => $label ]});
-    return $ref->[0]->{id};
+    my $id = $self->storage()->store( "MetaRelation",
+				      key    => "label",
+				      fields => {
+						 label => $label,
+						 lval  => $lval,
+						 rval  => $rval,
+						 l2r   => $params{l2r},
+						 r2l   => $params{r2l},
+						 
+						 requirement => $params{requirement},				      
+						});
+    
+    my $user = $self->storage()->user();
+    for my $role ( $user->member_of() ) {
+	$role->grant( 'MetaRelation' => 'm', id => $id );
+    }
+
+    return $id;
 }
 
 sub _admin_dump {
