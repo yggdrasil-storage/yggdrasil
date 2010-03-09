@@ -723,8 +723,18 @@ sub relation_info {
     print $status->message(), "\n" and return unless $status->OK();
 
     my ($e1o, $e2o) = $rel->entities();
+    my @pairs = $rel->participants();
     
-    print $label, ": ", $e1o->name(), ", ", $e2o->name(), "\n";    
+    print $label, ": ", $e1o->name(), ", ", $e2o->name(), "\n";
+    if (@pairs) {
+	print "Participants:\n";
+	for my $p (@pairs) {
+	    my ($li, $ri) = @$p;
+	    print join ", ", %$li, "\n";
+	    printf "  %20s <-> %20s\n", $li->id(), $ri->id();
+	}
+    }
+    
 }
 
 # Tick interface
