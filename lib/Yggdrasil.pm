@@ -121,8 +121,9 @@ sub login {
     if ($status->OK()) {
 	#$self->{storage}->{user} = $self->user();
 	return $self->user();
-    }
+    } 
 
+    $status->set( 403, 'Login to Yggdrasil denied.' );
     return;
 }
 
