@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+BEGIN { our $VERSION = '0.03' };
+
 use Getopt::Long;
 
 use FindBin qw($Bin);
@@ -14,9 +16,19 @@ use Text::ParseWords;
 use Crypt::GeneratePassword;
 
 use Yggdrasil;
+use Yggdrasil::Common::CommandLine;
+use Yggdrasil::Common::Config;
+
+my $cmdline = Yggdrasil::Common::CommandLine->new();
+my $label   = $cmdline->get('label') || 'default';
+
+my $c = Yggdrasil::Common::Config->new();
+my $config = $c->get($label);
+die "No such label as $label\n" unless $config;
 
 my ($dbuser, $password, $host, $port, $db, $engine) =
-  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE});
+  ($config->get( 'engineuser' ), $config->get( 'enginepassword' ), $config->get( 'enginehost' ),
+   $config->get( 'engineport' ), $config->get( 'enginedb' ), $config->get( 'enginetype' ));
 
 my $y = new Yggdrasil();
 my $status = $y->get_status();
@@ -32,7 +44,12 @@ $y->connect(
 
 die $status->message() unless $status->OK();
 
-my $iam = $y->login();
+my $iam;
+if ($cmdline->get( 'username' )) {
+    $iam = $y->login( user => $cmdline->get( 'username' ), password => $cmdline->get( 'password' ));    
+} else {
+    $iam = $y->login();
+}
 
 die $status->message() unless $status->OK();
 
@@ -373,7 +390,7 @@ sub help {
 }
 
 sub whoami {
-    print $y->user->id(), ", connected to ", $y->info(), "\n";
+    print $y->user->name(), ", connected to ", $y->info(), "\n";
 }
 
 # Commands
