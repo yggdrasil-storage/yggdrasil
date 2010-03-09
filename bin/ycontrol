@@ -287,6 +287,7 @@ my %cmd;
     },
 
     whoami   => \&whoami,
+    storage  => \&storage_info,
     quit     => sub { exit },
     exit     => sub { exit },
 );
@@ -389,8 +390,12 @@ sub help {
     }
 }
 
-sub whoami {
-    print $y->user->name(), ", connected to ", $y->info(), "\n";
+sub whoami {    
+    print $y->user->name(), "\n";
+}
+
+sub storage_info {
+    print $y->info(), "\n";    
 }
 
 # Commands
