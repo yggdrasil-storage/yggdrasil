@@ -84,18 +84,28 @@ sub get {
     
     my %params = @_;
 
-    my $entity = $params{entity};
+    my $identifier = $params{entity} || $params{id};
+    my @query;
     
-    my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ entity => $entity ],
-							return => [ 'id', 'start', 'stop' ] } );
+    if ($params{entity}) {
+	@query = ('entity' => $params{entity});
+    } elsif ($params{id}) {
+	@query = ('id' => $params{id});
+    } else {
+	$status->set( 503, "Unable to process query format for Entity lookup." );
+	return undef;
+    }
+
+    my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ @query ],
+							return => [ 'id', 'entity', 'start', 'stop' ] } );
     
     unless (defined $aref->[0]->{id}) {
-	$status->set( 404, "Entity '$entity' not found." );
+	$status->set( 404, "Entity '$identifier' not found." );
 	return undef;
     } 
     
     $status->set( 200 );
-    return objectify( name  => $entity,
+    return objectify( name  => $aref->[0]->{entity},
 		      id    => $aref->[0]->{id},
 		      start => $aref->[0]->{start},
 		      stop  => $aref->[0]->{stop},
