@@ -3,8 +3,6 @@ package Yggdrasil::Object;
 use strict;
 use warnings;
 
-use Carp;
-
 sub new {
     my $class = shift;
     if( ref $class ) {
@@ -17,7 +15,7 @@ sub new {
 
     if( @_ % 2 ) { 
 	print "ARGS: (", join(", ", @_), ")\n"; 
-	confess("Odd number of elements in hash assignment");
+	Yggdrasil::fatal("Odd number of elements in hash assignment");
     }
 
     my %params = @_;
@@ -31,7 +29,7 @@ sub yggdrasil {
     my $self = shift;
 
     unless( ref $self ) {
-	confess( "\$self not ref ($self)\n" );
+	Yggdrasil::fatal( "\$self not ref ($self)\n" );
     }
     return $self->{yggdrasil};
 }

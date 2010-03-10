@@ -312,7 +312,6 @@ sub _initialize_config {
 	    
 	}
     } else {
-	use Carp;
 	# At this point, the mapper is just the *name*, not the object.
 	my $mapper_object;
 	if ($mapper_name) {

@@ -717,8 +717,6 @@ sub _get_schema_name {
     my $self = shift;
     my $schema = shift;
 
-    use Carp;
-    unless( $schema ) { confess( "No schema!" ) }
     return $self->cache( 'mapperh2m', $schema );
 }
 
