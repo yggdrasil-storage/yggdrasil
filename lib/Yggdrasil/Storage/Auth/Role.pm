@@ -23,7 +23,8 @@ sub define {
     my $storage = shift;
     my $role    = shift;
 
-    my $rid = $storage->store( $Yggdrasil::Storage::STORAGEAUTHROLE, key => qw/id/, 
+    my $roleschema = $storage->{structure}->get( 'authrole' );
+    my $rid = $storage->store( $roleschema, key => qw/id/, 
 			       fields => { name => $role } );
 
     return unless $rid;
@@ -32,11 +33,11 @@ sub define {
     if( $storage->user() ) {
 	my @roles = $storage->user()->member_of();
 	foreach my $memberrole ( @roles ) {
-	    $memberrole->grant( $Yggdrasil::Storage::STORAGEAUTHROLE => 'm', id => $r->id() );
+	    $memberrole->grant( $roleschema => 'm', id => $r->id() );
 	}
     }
 
-    $r->grant( $Yggdrasil::Storage::STORAGEAUTHROLE => 'm', id => $r->id() );
+    $r->grant( $roleschema => 'm', id => $r->id() );
 
     return $r;
 }
@@ -46,8 +47,9 @@ sub get {
     my $storage = shift;
     my $role    = shift;
 
+    my $roleschema = $storage->{structure}->get( 'authrole' );
     my $rid = $storage->fetch(
-	$Yggdrasil::Storage::STORAGEAUTHROLE => {
+	$roleschema => {
 	    return => 'id',
 	    where  => [ name => $role ]
 	} );
@@ -63,8 +65,9 @@ sub get_all {
     my $class = shift;
     my $storage = shift;
     
+    my $roleschema = $storage->{structure}->get( 'authrole' );
     my $roles = $storage->_fetch(
-	$Yggdrasil::Storage::STORAGEAUTHROLE => {
+	$roleschema => {
 	    return => [ qw/id name/ ]
 	} );
 
@@ -76,13 +79,16 @@ sub get_all {
 sub members :method {
     my $self = shift;
 
+    my $userschema   = $self->{_storage}->{structure}->get( 'authuser' );
+    my $memberschema = $self->{_storage}->{structure}->get( 'authmember' );
+
     my $ret = $self->{_storage}->fetch( 
-	$Yggdrasil::Storage::STORAGEAUTHMEMBER => {
+	$memberschema => {
 	    where => [ roleid => $self->id() ],
 	},
 	
-	$Yggdrasil::Storage::STORAGEAUTHUSER => {
-	    where  => [ id => \qq<$Yggdrasil::Storage::STORAGEAUTHMEMBER.userid> ],
+	$userschema => {
+	    where  => [ id => \qq<$memberschema.userid> ],
 	    return => [ qw/id name/ ],
 	} );
 	
@@ -121,8 +127,10 @@ sub _access :method {
 
     my $storage = $self->{_storage};
 
+    my $storageauthschema = $self->{_storage}->{structure}->get( 'authschema' );
+
     # 1. find authschema for schema
-    my $authschema = $storage->fetch( $Yggdrasil::Storage::STORAGEAUTHSCHEMA =>
+    my $authschema = $storage->fetch( $storageauthschema =>
 				      {
 				       where  => [ usertable => $schema ],
 				       return => 'authtable'
@@ -176,7 +184,9 @@ sub add :method {
     my $self = shift;
     my $user = shift;
 
-    $self->{_storage}->store( $Yggdrasil::Storage::STORAGEAUTHMEMBER, key => [ qw/userid roleid/ ],
+    my $memberschema = $self->{_storage}->{structure}->get( 'authmember' );
+    
+    $self->{_storage}->store( $memberschema, key => [ qw/userid roleid/ ],
 			      fields => { userid => $user->id(),
 					  roleid => $self->id() } );
 
@@ -187,7 +197,8 @@ sub remove :method {
     my $self = shift,
     my $user = shift;
 
-    $self->{_storage}->expire( $Yggdrasil::Storage::STORAGEAUTHMEMBER =>
+    my $memberschema = $self->{_storage}->{structure}->get( 'authmember' );
+    $self->{_storage}->expire( $memberschema =>
 			       userid => $user->id(),
 			       roleid => $self->id() );
 

@@ -48,6 +48,7 @@ lib/Yggdrasil/Relation.pm
 lib/Yggdrasil/Role.pm
 lib/Yggdrasil/Status.pm
 lib/Yggdrasil/Storage.pm
+lib/Yggdrasil/Storage/Structure.pm
 lib/Yggdrasil/Storage/Auth.pm
 lib/Yggdrasil/Storage/Auth/Role.pm
 lib/Yggdrasil/Storage/Auth/User.pm

@@ -24,7 +24,7 @@ sub define {
     my $user    = shift;
     my $pwd     = shift;
 
-    my $uid = $storage->store( $Yggdrasil::Storage::STORAGEAUTHUSER, key => qw/id/,
+    my $uid = $storage->store( $storage->{structure}->get( 'authuser' ), key => qw/id/,
 			       fields => { name => $user, password => $pwd } );
 
     return unless $uid;
@@ -37,7 +37,7 @@ sub get {
     my $user    = shift;
 
     my $uid = $storage->fetch(
-	$Yggdrasil::Storage::STORAGEAUTHUSER => {
+	$storage->{structure}->get( 'authuser' ) => {
 	    return => 'id',
 	    where  => [ name => $user ]
 	} );
@@ -54,7 +54,7 @@ sub get_nobody {
     my $storage = shift;
     
     my $uid = $storage->_fetch(
-	$Yggdrasil::Storage::STORAGEAUTHUSER => {
+	$storage->{structure}->get( 'authuser' ) => {
 	    return => 'id',
 	    where  => [ name => "nobody" ]
 	} );
@@ -71,7 +71,7 @@ sub get_all {
     my $storage = shift;
     
     my $users = $storage->_fetch(
-	$Yggdrasil::Storage::STORAGEAUTHUSER => {
+	$storage->{structure}->get( 'authuser' ) => {
 	    return => [ qw/id name/ ]
 	} );
     
@@ -97,7 +97,7 @@ sub password :method {
     my $self = shift;
 
     my $r = $self->{_storage}->fetch( 
-	$Yggdrasil::Storage::STORAGEAUTHUSER => {
+	$self->{_storage}->{structure}->get( 'authuser' ) => {
 	    return => qw/password/,
 	    where  => [ id => $self->id() ]
 	} );
@@ -109,13 +109,15 @@ sub password :method {
 sub member_of :method {
     my $self = shift;
 
+    my $memberschema = $self->{_storage}->{structure}->get( 'authmember' );
+    my $roleschema   = $self->{_storage}->{structure}->get( 'authrole' );
     my $ret = $self->{_storage}->fetch(
-       $Yggdrasil::Storage::STORAGEAUTHMEMBER => {
+       $memberschema => {
 	  where => [ userid => $self->id() ],
        },
 
-       $Yggdrasil::Storage::STORAGEAUTHROLE => {
-	  where =>  [ id => \qq<$Yggdrasil::Storage::STORAGEAUTHMEMBER.roleid> ],
+       $roleschema => {
+	  where =>  [ id => \qq<$memberschema.roleid> ],
   	  return => [ qw/id name/ ],
        }, );
     
