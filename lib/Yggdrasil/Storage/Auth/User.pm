@@ -24,7 +24,7 @@ sub define {
     my $user    = shift;
     my $pwd     = shift;
 
-    my $uid = $storage->store( $storage->{structure}->get( 'authuser' ), key => qw/id/,
+    my $uid = $storage->store( $storage->get_structure( 'authuser' ), key => qw/id/,
 			       fields => { name => $user, password => $pwd } );
 
     return unless $uid;
@@ -37,7 +37,7 @@ sub get {
     my $user    = shift;
 
     my $uid = $storage->fetch(
-	$storage->{structure}->get( 'authuser' ) => {
+	$storage->get_structure( 'authuser' ) => {
 	    return => 'id',
 	    where  => [ name => $user ]
 	} );
@@ -54,7 +54,7 @@ sub get_nobody {
     my $storage = shift;
     
     my $uid = $storage->_fetch(
-	$storage->{structure}->get( 'authuser' ) => {
+	$storage->get_structure( 'authuser' ) => {
 	    return => 'id',
 	    where  => [ name => "nobody" ]
 	} );
@@ -71,7 +71,7 @@ sub get_all {
     my $storage = shift;
     
     my $users = $storage->_fetch(
-	$storage->{structure}->get( 'authuser' ) => {
+	$storage->get_structure( 'authuser' ) => {
 	    return => [ qw/id name/ ]
 	} );
     
@@ -97,7 +97,7 @@ sub password :method {
     my $self = shift;
 
     my $r = $self->{_storage}->fetch( 
-	$self->{_storage}->{structure}->get( 'authuser' ) => {
+	$self->{_storage}->get_structure( 'authuser' ) => {
 	    return => qw/password/,
 	    where  => [ id => $self->id() ]
 	} );
@@ -109,8 +109,8 @@ sub password :method {
 sub member_of :method {
     my $self = shift;
 
-    my $memberschema = $self->{_storage}->{structure}->get( 'authmember' );
-    my $roleschema   = $self->{_storage}->{structure}->get( 'authrole' );
+    my $memberschema = $self->{_storage}->get_structure( 'authmember' );
+    my $roleschema   = $self->{_storage}->get_structure( 'authrole' );
     my $ret = $self->{_storage}->fetch(
        $memberschema => {
 	  where => [ userid => $self->id() ],

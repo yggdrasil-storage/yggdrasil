@@ -23,7 +23,7 @@ sub define {
     my $storage = shift;
     my $role    = shift;
 
-    my $roleschema = $storage->{structure}->get( 'authrole' );
+    my $roleschema = $storage->get_structure( 'authrole' );
     my $rid = $storage->store( $roleschema, key => qw/id/, 
 			       fields => { name => $role } );
 
@@ -47,7 +47,7 @@ sub get {
     my $storage = shift;
     my $role    = shift;
 
-    my $roleschema = $storage->{structure}->get( 'authrole' );
+    my $roleschema = $storage->get_structure( 'authrole' );
     my $rid = $storage->fetch(
 	$roleschema => {
 	    return => 'id',
@@ -65,7 +65,7 @@ sub get_all {
     my $class = shift;
     my $storage = shift;
     
-    my $roleschema = $storage->{structure}->get( 'authrole' );
+    my $roleschema = $storage->get_structure( 'authrole' );
     my $roles = $storage->_fetch(
 	$roleschema => {
 	    return => [ qw/id name/ ]
@@ -79,8 +79,8 @@ sub get_all {
 sub members :method {
     my $self = shift;
 
-    my $userschema   = $self->{_storage}->{structure}->get( 'authuser' );
-    my $memberschema = $self->{_storage}->{structure}->get( 'authmember' );
+    my $userschema   = $self->{_storage}->get_structure( 'authuser' );
+    my $memberschema = $self->{_storage}->get_structure( 'authmember' );
 
     my $ret = $self->{_storage}->fetch( 
 	$memberschema => {
@@ -127,7 +127,7 @@ sub _access :method {
 
     my $storage = $self->{_storage};
 
-    my $storageauthschema = $self->{_storage}->{structure}->get( 'authschema' );
+    my $storageauthschema = $self->{_storage}->get_structure( 'authschema' );
 
     # 1. find authschema for schema
     my $authschema = $storage->fetch( $storageauthschema =>
@@ -184,7 +184,7 @@ sub add :method {
     my $self = shift;
     my $user = shift;
 
-    my $memberschema = $self->{_storage}->{structure}->get( 'authmember' );
+    my $memberschema = $self->{_storage}->get_structure( 'authmember' );
     
     $self->{_storage}->store( $memberschema, key => [ qw/userid roleid/ ],
 			      fields => { userid => $user->id(),
@@ -197,7 +197,7 @@ sub remove :method {
     my $self = shift,
     my $user = shift;
 
-    my $memberschema = $self->{_storage}->{structure}->get( 'authmember' );
+    my $memberschema = $self->{_storage}->get_structure( 'authmember' );
     $self->{_storage}->expire( $memberschema =>
 			       userid => $user->id(),
 			       roleid => $self->id() );
