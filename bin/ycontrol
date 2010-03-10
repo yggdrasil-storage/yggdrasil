@@ -747,7 +747,6 @@ sub relation_info {
     my ($e1o, $e2o) = $rel->entities();
     my @pairs = $rel->participants();
     
-    print $label, ": ", $e1o->name(), ", ", $e2o->name(), "\n";
     if (@pairs) {
 	print "Participants:\n";
 	for my $p (@pairs) {
