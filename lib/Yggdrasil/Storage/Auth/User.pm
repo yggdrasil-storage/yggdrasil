@@ -24,9 +24,17 @@ sub define {
     my $user    = shift;
     my $pwd     = shift;
 
-    my $uid = $storage->store( $storage->get_structure( 'authuser' ), key => qw/id/,
-			       fields => { name => $user, password => $pwd } );
+    my $uid = $storage->store( $storage->get_structure( 'authuser' ),
+			       key => qw/id/,
+			       fields => { name => $user } );
 
+    $storage->store( $storage->get_structure( 'authuser:password' ),
+		     key => qw/id/,
+		     fields => {
+				id    => $uid,
+				value => $pwd, 
+			       });
+    
     return unless $uid;
     return $class->_new( $storage, $uid, $user );
 }
@@ -81,29 +89,65 @@ sub get_all {
 }
 
 
-sub name :method {
-    my $self = shift;
-
-    return $self->{_name};
-}
-
 sub id :method {
     my $self = shift;
 
     return $self->{_id};
 }
 
+sub name :method {
+    my $self = shift;
+
+    return $self->{_name};
+}
+
 sub password :method {
     my $self = shift;
 
-    my $r = $self->{_storage}->fetch( 
-	$self->{_storage}->get_structure( 'authuser' ) => {
-	    return => qw/password/,
-	    where  => [ id => $self->id() ]
-	} );
+    return $self->_getter_setter( 'password', @_ );
+}
 
-    return unless $r;
-    return $r->[0]->{password};
+sub session :method {
+    my $self = shift;
+
+    return $self->_getter_setter( 'session', @_ );
+}
+
+sub cert :method {
+    my $self = shift;
+
+    return $self->_getter_setter( 'cert', @_ );
+}
+
+sub fullname {
+    my $self = shift;
+    return $self->_getter_setter( 'fullname', @_ );
+}
+
+# Worth noting, this doesn't have to deal with times, even if the
+# structures are temporal.  That temporality exists only to check what
+# has been, not to allow permissions to be used in a temporal fashion.
+sub _getter_setter {
+    my $self = shift;
+    my ($field, $value) = @_;
+
+    my $structure = $self->{_storage}->get_structure( "authuser:$field" );
+    my $r;
+    
+    if (defined $value) {
+	$r = $self->{_storage}->store( $structure,
+				       key    => 'id',
+				       fields => {
+						  id    => $self->id(),
+						  value => $value,
+						 });
+    } 
+
+    $r = $self->{_storage}->fetch( $structure => {
+						  return => 'value',
+						  where  => [ id => $self->id() ],
+						 } );	
+    return $r->[0]->{value};
 }
 
 sub member_of :method {

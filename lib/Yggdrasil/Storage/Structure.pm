@@ -17,6 +17,13 @@ sub new {
 		authuser   => 'Storage_auth_user',
 		authrole   => 'Storage_auth_role',
 		authmember => 'Storage_auth_membership',
+
+		userfields => {
+			       fullname => 'TEXT',
+			       password => 'PASSWORD',
+			       cert     => 'BINARY',
+			       session  => 'TEXT',
+			      },
 	       };
 
     
@@ -48,12 +55,32 @@ sub set {
 sub _getter_setter {
     my $self = shift;
     my ($key, $value) = @_;
+    my $prop;
+    
+    if ($key =~ /^(.*):(.*)/) {
+	$key  = $1;
+	$prop = $2;
+    }
 
     my $structure = $self->{$key};
     Yggdrasil::fatal( "Unknown structure '$key' requested" ) unless $structure;
 
+    if ($prop) {
+	my $fieldhash = $self->get( 'userfields' );
+	Yggdrasil::fatal( "Access to internal structure failed" ) unless $fieldhash->{$prop};
+	return $structure . '_' . $prop if $prop;
+    }
+    
     $self->{$key} = $value if $value;
     return $self->{$key};
+}
+
+sub _initialize_auth {
+    my $self = shift;
+
+    $self->_initialize_schema_auth();
+    $self->_initialize_user_auth();
+    $self->_initialize_user_auth_fields();
 }
 
 # Initalize the mapper cache and, if needed, the schema to store schema
@@ -123,13 +150,6 @@ sub _initialize_ticker {
 }
 
 
-sub _initialize_auth {
-    my $self = shift;
-
-    $self->_initialize_schema_auth();
-    $self->_initialize_user_auth();
-}
-
 sub _initialize_user_auth {
     my $self = shift;
     my $userschema   = $self->get( 'authuser' );
@@ -181,10 +201,10 @@ sub _initialize_user_auth {
     unless ( $self->{storage}->_structure_exists( $userschema ) ) {
 	$self->{storage}->define( $userschema,
 				  nomap  => 1,
+				  temporal => 1,
 				  fields => {
 					     id       => { type => 'SERIAL', null => 0 },
 					     name     => { type => 'TEXT', null => 0 },
-					     password => { type => 'PASSWORD' }
 					    },
 				  auth => {
 					   create =>
@@ -269,6 +289,70 @@ sub _initialize_user_auth {
     
     }
 
+}
+
+# Create fields for the user fields.
+# FIXME, permissions.  
+sub _initialize_user_auth_fields {
+    my $self = shift;
+    my $fieldhash  = $self->get( 'userfields' );
+    
+    for my $fieldname (keys %$fieldhash) {
+	my $type = $fieldhash->{$fieldname};
+	my $schema = $self->get( "authuser:$fieldname" );
+#	my $authrole = $self->get( 'authrole' );
+	
+	unless ( $self->{storage}->_structure_exists( $schema ) ) {
+	    $self->{storage}->define( $schema,
+				      temporal => 1,
+				      nomap  => 1,
+				      fields => {
+						 id    => { type => 'INTEGER', null => 0 },
+						 value => { type => $type, null => 0 },
+						},
+				      hints => { id => { foreign => $self->get( 'authuser' ) } },
+# 				      auth => {
+# 					       create =>
+# 					       [
+# 						':Auth' => {
+# 							    where => [ id  => \qq<$schema.id>,
+# 								       'm' => 1 ],
+# 							   },						
+# 					       ],
+			   
+# 					       fetch => 
+# 					       [
+# 						':Auth' => {
+# 							    where => [ id => \qq<$schema.id>,
+# 								       r  => 1],
+# 							   },
+# 						$authrole => {
+# 							      where => 
+# 							      }
+# 									    },
+						
+# 					       ],
+			   
+# 					       update => 
+# 					       [
+# 						':Auth' => {
+# 							    where => [ id => \qq<$schema.id>,
+# 								       w  => 1 ],
+# 							   },
+# 					       ],
+					       
+# 					       expire =>
+# 					       [
+# 						':Auth' => {
+# 							    where => [ id  => \qq<$schema.id>,
+# 								       'm' => 1 ],
+# 							   },
+# 					       ],
+# 					      }
+				   );
+
+	}
+    }    
 }
 
 sub _initialize_schema_auth {
