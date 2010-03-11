@@ -457,11 +457,11 @@ sub fetch_related {
 
       my $res = $self->storage()->fetch( @schema, { start => $start, stop => $stop } );
 
-      foreach my $r ( @$res ) {
-	  my $obj = $relative->fetch( $r->{visual_id} );
+      foreach my $r ( uniq(map { $_->{visual_id} } @$res) ) {
+	  my $obj = $relative->fetch( $r );
 	  $obj->{_pathlength} = scalar @$path - 1;
       
-	  $result{$r->{visual_id}} = $obj;
+	  $result{ $r } = $obj;
       }
   }
   
@@ -492,8 +492,10 @@ sub _fetch_related {
 
   return $path if $start eq $stop;
 
-  # FIXME, what do we do if we get 403 returned here?  Not that we
-  # will, currently MetaRelation has _global_read_access set to true.  
+  # Fetch links which on either side has $start as it's value. Filter
+  # out the side which does not has $start, and use this as the new
+  # $start, in this way we build up a possible path from $start to
+  # $stop
   my $other = $storage->fetch( 'MetaRelation',
 			       { return => [ qw/lval rval/ ],
 				 where => [ lval => $start,
@@ -501,7 +503,7 @@ sub _fetch_related {
 				 bind => "or"
 			       }, { start => $tstart, stop => $tstop } );
 
-  my @siblings = map { $_->{lval} eq $start ? $_->{rval} : $_->{lval} } @$other;
+  my @siblings = uniq( map { $_->{lval} eq $start ? $_->{rval} : $_->{lval} } @$other );
   foreach my $child ( @siblings ) {
       my $found_path = $self->_fetch_related( $child, $stop, $path, $all, $tstart, $tstop );
       
@@ -509,6 +511,19 @@ sub _fetch_related {
   }
 
   return $all if @$path == 1;
+}
+
+# FIXME: have a distinct/uniq flag we can send with fetch? or why with
+# the new auth stuff do we get so many duplicates?
+sub uniq {
+    return unless @_;
+
+    my @sort = sort @_;
+    my @uniq = shift @sort;
+    for my $e ( @sort ) {
+	push( @uniq, $e ) unless $uniq[-1] eq $e;
+    }
+    return @uniq;
 }
 
 1;
