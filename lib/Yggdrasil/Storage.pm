@@ -115,11 +115,6 @@ sub bootstrap {
     my $status = $self->{status};
     $self->{bootstrap} = 1;
 
-    if( ! $self->{bootstrap} && $self->yggdrasil_is_empty() ) {
-	$status->set( 503, "Yggdrasil has not been bootstrapped" );
-	return;
-    }
-
     # Create default users and roles
     my %roles;
     for my $role ( qw/admin user/ ) {
