@@ -7,6 +7,7 @@ use Storable qw();
 
 use Yggdrasil::Transaction;
 use Yggdrasil::Storage::Mapper;
+use Yggdrasil::Storage::Type;
 use Yggdrasil::Storage::Structure;
 
 use Yggdrasil::Storage::Auth::User;
@@ -15,20 +16,6 @@ use Yggdrasil::Storage::Auth::Role;
 our $TRANSACTION = Yggdrasil::Transaction->create_singleton();
 
 our $ADMIN = undef;
-
-our %TYPES = (
-    TEXT      => 1,
-    VARCHAR   => 255,
-    BOOLEAN   => 1,
-    SET       => 1,
-    INTEGER   => 1,
-    FLOAT     => 1,
-    TIMESTAMP => 1,
-    DATE      => 1,
-    SERIAL    => 1,
-    BINARY    => 1,
-    PASSWORD  => 1,
-	     );
 
 sub new {
     my $class = shift;
@@ -71,6 +58,7 @@ sub new {
 	my $storage = $engine_class->new(@_);
 	$storage->{bootstrap} = $data{bootstrap};
 	$storage->{transaction} = $TRANSACTION;
+	$storage->{type} = new Yggdrasil::Storage::Type();
 	
 	unless (defined $storage) {
 	    $status->set( 500 );
@@ -755,8 +743,16 @@ sub _get_auth_schema_name {
     return $ret->[0]->{authtable};
 }
 
+sub is_valid_type {
+    my $self = shift;
+    
+    return $self->{type}->is_valid_type( @_ );
+}
+
 sub get_defined_types {
-    return keys %TYPES;
+    my $self = shift;
+    
+    return $self->{type}->valid_types();
 }
 
 # Checks and verifies a type, doesn't handle SET yet.  Returns the
@@ -771,14 +767,14 @@ sub _check_valid_type {
     $size = $1 if $type =~ s/\(\d+\)$//;
 
     my $status = $self->get_status();
-    unless ($TYPES{$type}) {
+    unless ($self->{type}->is_valid_type( $type )) {
 	$status->set( 406, "Unknown type '$type'" );
 	return undef;
     }
     
     if (defined $size) {
-	if ($size < 1 || $size > $TYPES{$type}) {
-	    $type = "$type(" . $TYPES{$type} . ")";
+	if ($size < 1 || $size > $self->{type}->is_valid_type( $type )) {
+	    $type = "$type(" . $self->{type}->is_valid_type( $type ) . ")";
 	} else {
 	    $type = "$type($size)";
 	    } 

@@ -216,7 +216,7 @@ sub get_property {
 
 sub get_property_types {
     my $self = shift;
-    return %Yggdrasil::Storage::TYPES;
+    return $self->{storage}->get_defined_types();
 }
 
 ###############################################################################

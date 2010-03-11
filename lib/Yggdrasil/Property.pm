@@ -59,8 +59,7 @@ sub define {
     $params{type} = uc $params{type} || 'TEXT';
     $params{null} = 1 if $params{null} || ! defined $params{null};
 
-    my %valid_properties = $yggdrasil->get_property_types();
-    unless ($valid_properties{$params{type}}) {
+    unless ($storage->is_valid_type( $params{type} )) {
 	my $ptype = $params{type};
 	$status->set( 400, "Unknown property type '$ptype' requested for property '$property'." );
 	return;
