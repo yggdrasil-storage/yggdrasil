@@ -412,7 +412,7 @@ sub user_info {
     printf "%-15s - %s\n", 'Password', $user->password() || '';
     printf "%-15s - %s\n", 'Roles', join ", ", map { $_->name() } $user->member_of();
     
-#    &display_tick( $user->start() );
+    &display_tick( $user->start() );
 }
 
 sub user_password {

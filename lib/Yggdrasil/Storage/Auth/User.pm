@@ -15,7 +15,10 @@ sub _new {
     $self->{_id}      = $id;
     $self->{_storage} = $storage;
 
-    return $self;
+    $self->{_start}   = shift;
+    $self->{_stop}    = shift;
+
+    return $self;    
 }
 
 sub define {
@@ -48,15 +51,17 @@ sub get {
 
     my $uid = $storage->fetch(
 	$storage->get_structure( 'authuser' ) => {
-	    return => 'id',
+	    return => [ qw<id start stop> ],
 	    where  => [ name => $user ]
 	} );
 
     return unless $uid;
-    my $id = $uid->[0]->{id};
+    my $id    = $uid->[0]->{id};
+    my $start = $uid->[0]->{start};
+    my $stop  = $uid->[0]->{stop};
     return unless $id;
 
-    return $class->_new( $storage, $id, $user );
+    return $class->_new( $storage, $id, $user, $start, $stop );
 }
 
 sub get_nobody {
@@ -95,6 +100,11 @@ sub id :method {
     my $self = shift;
 
     return $self->{_id};
+}
+
+sub start {
+    my $self = shift;
+    return $self->{_start};
 }
 
 sub name :method {
