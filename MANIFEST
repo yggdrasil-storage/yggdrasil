@@ -48,7 +48,6 @@ lib/Yggdrasil/Relation.pm
 lib/Yggdrasil/Role.pm
 lib/Yggdrasil/Status.pm
 lib/Yggdrasil/Storage.pm
-lib/Yggdrasil/Storage/Structure.pm
 lib/Yggdrasil/Storage/Auth.pm
 lib/Yggdrasil/Storage/Auth/Role.pm
 lib/Yggdrasil/Storage/Auth/User.pm
@@ -59,6 +58,10 @@ lib/Yggdrasil/Storage/Engine/SQLite.pm
 lib/Yggdrasil/Storage/Mapper.pm
 lib/Yggdrasil/Storage/Mapper/MD5.pm
 lib/Yggdrasil/Storage/Mapper/SHA1.pm
+lib/Yggdrasil/Storage/Structure.pm
+lib/Yggdrasil/Storage/Type.pm
+lib/Yggdrasil/Storage/Type/Filter/MD5.pm
+lib/Yggdrasil/Storage/Type/Filter/SHA.pm
 lib/Yggdrasil/Transaction.pm
 lib/Yggdrasil/User.pm
 lib/Yggdrasil/Utilities.pm

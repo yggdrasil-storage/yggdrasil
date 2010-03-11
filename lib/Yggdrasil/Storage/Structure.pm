@@ -10,6 +10,7 @@ sub new {
     my $self = {
 		mapper      => 'mapname',
 		temporal    => 'temporals',
+		filter      => 'filter',
 		config      => 'config',
 		ticker      => 'ticker',
 		authschema  => 'authschema',
@@ -21,9 +22,12 @@ sub new {
 		_storage    => $params{storage},
 		_userfields => {
 				fullname => 'TEXT',
-				password => 'PASSWORD',
+				password => 'TEXT',
 				cert     => 'BINARY',
 				session  => 'TEXT',
+			       },
+		_filter     => {
+				password => [ sha => 256 ],
 			       },
 	       };
     
@@ -36,6 +40,7 @@ sub init {
     my $self = shift;
     
     $self->_initialize_config();
+    $self->_initialize_filter();
     $self->_initialize_mapper();
     $self->_initialize_ticker();
     $self->_initialize_temporal();
@@ -163,6 +168,37 @@ sub _initialize_ticker {
     }
 }
 
+sub _initialize_filter {
+    my $self = shift;
+    my $schema = $self->get( 'filter' );
+    
+    if ( $self->{_storage}->_structure_exists( $schema ) ) {
+	my %schemafilters;
+	my $listref = $self->{_storage}->fetch( $schema, { return => '*' });
+	for my $f (@$listref) {
+	    my ($schemaname, $filter, $field, $params) =
+	      ( $f->{schemaname}, $f->{filter}, $f->{field}, $f->{params} );
+	    # FIXME, verify filter existence.
+	    push @{$schemafilters{$schemaname}},
+	      { filter => $filter, field => $field, params => $params };
+	}
+
+	for my $schemaname (keys %schemafilters) {
+	    $self->{_storage}->cache( 'filter', $schemaname, \@{$schemafilters{$schemaname}})
+	}	
+    } else {
+	$self->{_storage}->define( $schema,
+				   nomap  => 1,
+				   fields => {
+					      id         => { type => 'SERIAL' },
+					      schemaname => { type => 'TEXT', null => 0 },
+					      filter     => { type => 'TEXT', null => 0 },
+					      field      => { type => 'TEXT', null => 0 },
+					      params    => { type => 'TEXT', null => 0 },
+					     }, );
+	
+    }
+}
 
 sub _initialize_user_auth {
     my $self = shift;
@@ -315,6 +351,8 @@ sub _initialize_user_auth_fields {
 	my $type = $fieldhash->{$fieldname};
 	my $schema = $self->get( "authuser:$fieldname" );
 #	my $authrole = $self->get( 'authrole' );
+	my $filter = $self->internal( 'filter' )->{$fieldname};
+	my @filterfiller = ( filter => $filter );
 	
 	unless ( $self->{_storage}->_structure_exists( $schema ) ) {
 	    $self->{_storage}->define( $schema,
@@ -322,9 +360,13 @@ sub _initialize_user_auth_fields {
 				      nomap  => 1,
 				      fields => {
 						 id    => { type => 'INTEGER', null => 0 },
-						 value => { type => $type, null => 0 },
+						 value => {
+							   type => $type,
+							   null => 0,
+							   @filterfiller,
+							  },
 						},
-				      hints => { id => { foreign => $self->get( 'authuser' ) } },
+				       hints  => { id => { foreign => $self->get( 'authuser' ) } },
 # 				      auth => {
 # 					       create =>
 # 					       [

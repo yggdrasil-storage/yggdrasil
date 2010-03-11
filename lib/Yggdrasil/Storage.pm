@@ -223,6 +223,34 @@ sub define {
 	$data{fields}->{committer} = { type => 'VARCHAR(255)', null => 0 };
     }
 
+    for my $field (keys %{$data{fields}}) {
+	for my $typedata (keys %{$data{fields}->{$field}}) {
+	    if ($typedata eq 'filter') {
+		my $filters = $data{fields}->{$field}->{$typedata};
+		
+		if (ref $filters eq 'ARRAY' ) {
+		    # Pass. Good work!
+		} elsif (ref $filters) {
+		    $status->set( 406, "Malformed filter data format" );
+		    return;
+		} else {
+		    $filters = [ $filters, undef ];
+		}
+
+		my @fieldfilters;
+		for( my $i=0; $i < @$filters; $i += 2 ) {
+		    my ($filter, $params) = ($filters->[$i], $filters->[$i+1]);
+		    
+		    $self->store( $self->get_structure( 'filter' ), key => "schema",
+				  fields => { schemaname => $originalname, filter => $filter,
+					      field  => $field, params => $params });
+		    push @fieldfilters, { filter => $filter, field => $field, params => $params };
+		}
+		$self->cache( 'filter', $originalname, \@fieldfilters);
+	    }
+	}
+    }
+    
     $transaction->log( "Defined $originalname" );
     my $retval = $self->_define( $schema, %data );
 
@@ -295,6 +323,23 @@ sub store {
 	} 
     }
 
+    # Apply filters right away.
+    my $filterset = $self->cache( 'filter', $schema );
+    if ($filterset) {
+	for my $fieldname_to_store (keys %{$params{fields}}) {
+	    for my $filterref (@$filterset) {
+		if ($filterref->{field} eq $fieldname_to_store) {
+		    $params{fields}->{$fieldname_to_store} =
+		      $self->{type}->apply_filter( $filterref->{filter},
+						   'store',
+						   $params{fields}->{$fieldname_to_store},
+						   $filterref->{params},
+						 );
+		}
+	    }	    
+	}
+    }
+    
     # Check if we already have the value
     my $real_schema = $self->_get_schema_name( $schema ) || $schema;
     my $aref = $self->fetch( $real_schema => { where => [ %{$params{fields}} ] } );
@@ -600,7 +645,12 @@ sub authenticate {
 	$user_obj = Yggdrasil::Storage::Auth::User->get( $self, $user );
 
 	if( $user_obj ) {
-	    $pass = $self->get_mapper()->map( $pass );
+	    my $filterset = $self->cache( 'filter', $self->get_structure( 'authuser:password' ) );
+	    if ($filterset) {
+		my ($pwfilter, $params) = ($filterset->[0]->{filter}, $filterset->[0]->{params});
+		$pass = $self->{type}->apply_filter( $pwfilter, 'store', $pass, $params );
+	    }
+	    
 	    my $realpass = $user_obj->password() || '';
 
 	    if (! defined $pass || $pass ne $realpass) {
@@ -742,6 +792,8 @@ sub cache {
 	$cachename = '_mapcachem2h';	
     } elsif ($map eq 'temporal') {
 	$cachename = '_temporalcache';
+    } elsif ($map eq 'filter') {
+	$cachename = '_filtercache';
     } else {
 	Yggdrasil::fatal( "Unknown cache type '$map' requested for populating" );
     }
