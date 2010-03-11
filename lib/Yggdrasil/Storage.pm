@@ -484,7 +484,17 @@ sub _add_auth {
 	my $typebindings = $bindings->{$authtype};
 	next unless $typebindings;
 
-	# 3. Find any references (\q<>) in the bindings to this schema
+	# 3. Assign uniq alias for each auth-table.  FIXME for rand.
+	for( my $j=1; $j<@$typebindings; $j+=2 ) {
+	    my $authschema_constraint = $typebindings->[$j];
+
+	    # Add a new uniq alias.  FIXME for rand.
+	    my $uniq_alias = join("_", "_auth", int(rand()*100_000) );
+	    $authschema_constraint->{_auth_alias} = $uniq_alias;
+	}
+
+	# 4. Find any references (\q<>) in the bindings where clause,
+	#    change this to use any aliases (alias or _auth_alias)
 	my @membership;
 	for( my $j=0; $j<@$typebindings; $j+=2 ) {
 	    my $authschema = $typebindings->[$j];
@@ -494,31 +504,46 @@ sub _add_auth {
 	    next unless $where;
 
 	    for( my $k=1; $k<@$where; $k+=2 ) {
-		next unless ref $where->[$k] eq "SCALAR";
 		my $ref = $where->[$k];
-		my $value = $$ref;
+		next unless ref $ref eq "SCALAR";
 
-		my( $target, $field ) = split m/\./, $value;
-		next unless $target eq $schema;
-
-		if( $schemabindings->{alias} ) {
-		    $target = $schemabindings->{alias};
-		    $value = join(".", $target, $field);
-		    $where->[$k] = \$value;
+		my( $target, $field ) = split m/\./, $$ref;
+		if( $target eq $schema ) {
+		    # The $target references this schema - if this
+		    # schema is defined to use an alias, then we'll
+		    # change the reference to use this schemas alias
+		    # instead.
+		    if( $schemabindings->{alias} ) {
+			$target = $schemabindings->{alias};
+			$where->[$k] = \ join(".", $target, $field);
+		    }
+		} else {
+		    # Change all other schema references to use the
+		    # auth alias created in step 3
+		    my @matches = $self->_find_schema_by_name_or_alias( $target, $typebindings );
+		    $where->[$k] = \ join(".", $matches[0]->{_auth_alias}, $field );
 		}
 	    }
 
-	    my $alias = $authconstraint->{alias};
+	    # Add test for the roles a user is member of.
+	    my $alias = $authconstraint->{_auth_alias};
 	    my $member = {
 			  where => [
 				    userid => $self->user()->id(),
 				    roleid => \qq<$alias.roleid>,
-				   ]
+				   ],
+			  alias => join("_", "_auth", int(rand() * 100_000) ),
 			 };
 
 	    push( @membership, $self->get_structure( 'authmember' ), $member );
-						    
 	}
+
+	# 5. set alias = _auth_alias and remove _auth_alias
+ 	for( my $i=1; $i<@$typebindings; $i+=2 ) {
+ 	    my $constraint = $typebindings->[$i];
+ 	    $constraint->{alias} = $constraint->{_auth_alias};
+ 	    delete $constraint->{_auth_alias};
+ 	}
 
 	push( @authdefs, @$typebindings, @membership );
     }
