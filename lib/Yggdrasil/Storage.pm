@@ -590,6 +590,7 @@ sub authenticate {
 	$user_obj = Yggdrasil::Storage::Auth::User->get( $self, $user );
 
 	if( $user_obj ) {
+	    $pass = $self->get_mapper()->map( $pass );
 	    my $realpass = $user_obj->password() || '';
 
 	    if (! defined $pass || $pass ne $realpass) {

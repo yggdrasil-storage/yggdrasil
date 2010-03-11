@@ -23,6 +23,8 @@ sub define {
     my $storage = shift;
     my $user    = shift;
     my $pwd     = shift;
+    
+    $pwd = $storage->get_mapper()->map( $pwd ) if $pwd;
 
     my $uid = $storage->store( $storage->get_structure( 'authuser' ),
 			       key => qw/id/,
@@ -103,7 +105,8 @@ sub name :method {
 
 sub password :method {
     my $self = shift;
-
+    $_[1] = $self->{_storage}->get_mapper()->map( $_[1] ) if @_ == 2 && defined $_[1];
+    
     return $self->_getter_setter( 'password', @_ );
 }
 

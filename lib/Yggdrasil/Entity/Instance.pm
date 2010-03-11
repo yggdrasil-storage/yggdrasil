@@ -291,6 +291,11 @@ sub property {
 	return undef;
     }
 
+    # Map password fields.
+    if (lc $p->type() eq 'password' && $value) {
+	$value = $storage->get_mapper()->map( $value );
+    }
+    
     my $schemaref = $entity->property_exists( $key );
     my $schema    = $schemaref->{name};
     # Did we get two params, even if one was undef?
