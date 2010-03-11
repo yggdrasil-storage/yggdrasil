@@ -122,8 +122,10 @@ sub bootstrap {
 	$roles{$role} = $r;
     }
 
-    # create nobody
-    my $nobody_role = Yggdrasil::Storage::Auth::Role->define( $self, "nobody" );
+    # create bootstrap and nobody, the order is relevant as bootstrap
+    # is required to be ID1 and nobody is ID2.    
+    my $nobody_role    = Yggdrasil::Storage::Auth::Role->define( $self, "nobody" );
+    my $bootstrap_user = Yggdrasil::Storage::Auth::User->define( $self, "bootstrap", undef );
     my $nobody_user = Yggdrasil::Storage::Auth::User->define( $self, "nobody", undef );
     $nobody_role->add( $nobody_user );
     $nobody_role->grant( $self->get_structure( 'authuser' ) => 'r',
@@ -293,7 +295,7 @@ sub store {
 
     my $uname;
     if( $self->{bootstrap} ) {
-	$uname = $self->{user}?$self->{user}->id():'bootstrap';
+	$uname = $self->{user}?$self->{user}->id():'1';
     } else {
 	$uname = $self->{user}->id();
     }

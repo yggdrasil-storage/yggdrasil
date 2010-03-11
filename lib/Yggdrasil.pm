@@ -81,7 +81,7 @@ sub bootstrap {
 	Yggdrasil::MetaInheritance->define( yggdrasil => $self );
 	
 	my $universal = $self->define_entity( 'UNIVERSAL' );
-
+	$self->get_user( 'bootstrap' )->expire();
 	$status->set( 200, 'Bootstrap successful.');
 	return \%usermap;
     } else {

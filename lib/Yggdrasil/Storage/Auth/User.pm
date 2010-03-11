@@ -137,6 +137,19 @@ sub fullname {
     return $self->_getter_setter( 'fullname', @_ );
 }
 
+sub expire {
+    my $self = shift;
+    $self->{_storage}->expire(
+			      $self->{_storage}->get_structure( "authuser" ),
+			      id => $self->id(),
+			     );
+}
+
+sub delete :method {
+    my $self = shift;
+    return $self->expire();
+}
+
 # Worth noting, this doesn't have to deal with times, even if the
 # structures are temporal.  That temporality exists only to check what
 # has been, not to allow permissions to be used in a temporal fashion.
