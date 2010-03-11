@@ -36,29 +36,17 @@
   keywords, and a check that the user hasn't requested a field with
   those names. (Or other reserved keywords ... are there any?)
 
-* _register_namespace, what do we do if the namespace is already
-  registered?  What is the appropriate behavior?
-
-* Store with SERIAL fields need to handle their IDs automatically, we
-   can't send an ID value, while not doing so creates undefined values
-   in SQL::_store.
-
 * exists / property_exists need to check what time they're being
    checked for, right now they just check current existence.
 
-* Visual_ids are tunique within each hierarchy.
-  If we have Ygg::Person('terjekv'), Ygg::Person::Student( 'terjekv')
-  is the same instance.  
-
 * Relations need to support constraints and labels.
-  define Ygg::Relation $h, $p, as => 'Hostperson';
-  define Ygg::Relation $p, $p,
+  $y->define_relation( $e1, $e2, as => 'mylabel' );
+  $y->bind( $person1, $person2,
                        as    => 'Parent',
-                       where => 'a.birthdate < b.birthdate';
+                       where => 'a.birthdate < b.birthdate');
 
 * Fix relations within the same entity.
-  See above, $p to $p, used as:
-  $parent->link( $child, as => 'Parent' );
+  See above, $p to $p
   This will also check that $parent.birthdate < $child.birthdate due
   to the constraint.
 
@@ -67,11 +55,6 @@
 * Fix auth / permissions on the web interface.
 
 * Make the web interface support editing.
-
-* We could want a "Student" entity that inherits from "Person" and
-  another "Student" entity that does not inherit from "Person" to be
-  two distinct entities. Today all entities are global, would be nice
-  to have "Person::Student" and "Student" as possible entity names.
 
 * Redefine of properties
   What happens if you decide to change the meta information of a
