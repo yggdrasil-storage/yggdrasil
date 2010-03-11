@@ -8,24 +8,23 @@ sub new {
     my %params = @_;
     
     my $self = {
-		storage    => $params{storage},
-		mapper     => 'Storage_mapname',
-		temporal   => 'Storage_temporals',
-		config     => 'Storage_config',
-		ticker     => 'Storage_ticker',
-		authschema => 'Storage_authschema',
-		authuser   => 'Storage_auth_user',
-		authrole   => 'Storage_auth_role',
-		authmember => 'Storage_auth_membership',
+		mapper      => 'Storage_mapname',
+		temporal    => 'Storage_temporals',
+		config      => 'Storage_config',
+		ticker      => 'Storage_ticker',
+		authschema  => 'Storage_authschema',
+		authuser    => 'Storage_auth_user',
+		authrole    => 'Storage_auth_role',
+		authmember  => 'Storage_auth_membership',
 
-		userfields => {
-			       fullname => 'TEXT',
-			       password => 'PASSWORD',
-			       cert     => 'BINARY',
-			       session  => 'TEXT',
-			      },
+		_storage    => $params{storage},
+		_userfields => {
+				fullname => 'TEXT',
+				password => 'PASSWORD',
+				cert     => 'BINARY',
+				session  => 'TEXT',
+			       },
 	       };
-
     
     bless $self, $class;
 
@@ -47,6 +46,12 @@ sub get {
     return $self->_getter_setter( @_ );
 }
 
+sub internal {
+    my $self = shift;
+    my $key  = shift;
+    return $self->_getter_setter( "_$key" );
+}
+
 sub set {
     my $self = shift;
     return $self->_getter_setter( @_ );
@@ -66,7 +71,7 @@ sub _getter_setter {
     Yggdrasil::fatal( "Unknown structure '$key' requested" ) unless $structure;
 
     if ($prop) {
-	my $fieldhash = $self->get( 'userfields' );
+	my $fieldhash = $self->internal( 'userfields' );
 	Yggdrasil::fatal( "Access to internal structure failed" ) unless $fieldhash->{$prop};
 	return $structure . '_' . $prop if $prop;
     }
@@ -89,17 +94,17 @@ sub _initialize_mapper {
     my $self = shift;
     my $schema = $self->get( 'mapper' );
     
-    if ($self->{storage}->_structure_exists( $schema )) {
+    if ($self->{_storage}->_structure_exists( $schema )) {
 	# Populate map cache from existing storagemapper.	
-	my $listref = $self->{storage}->fetch( $schema, { return => '*' } );
+	my $listref = $self->{_storage}->fetch( $schema, { return => '*' } );
 	
 	for my $mappair (@$listref) {
 	    my ( $human, $mapped ) = ( $mappair->{humanname}, $mappair->{mappedname} );
-	    $self->{storage}->cache( 'mapperh2m', $human, $mapped );
-	    $self->{storage}->cache( 'mapperm2h', $mapped, $human );
+	    $self->{_storage}->cache( 'mapperh2m', $human, $mapped );
+	    $self->{_storage}->cache( 'mapperm2h', $mapped, $human );
 	}
     } else {
-	$self->{storage}->define( $schema,
+	$self->{_storage}->define( $schema,
 				  nomap  => 1,
 				  fields => {
 					     humanname  => { type => 'TEXT' },
@@ -115,14 +120,14 @@ sub _initialize_temporal {
     my $self = shift;
     my $schema = $self->get( 'temporal' );
 
-    if ($self->{storage}->_structure_exists( $schema )) {
-	my $listref = $self->{storage}->fetch( $schema, { return => '*' });
+    if ($self->{_storage}->_structure_exists( $schema )) {
+	my $listref = $self->{_storage}->fetch( $schema, { return => '*' });
 	for my $temporalpair (@$listref) {
 	    my ($table, $temporal) = ( $temporalpair->{tablename}, $temporalpair->{temporal} );
-	    $self->{storage}->cache( 'temporal', $table, $temporal );
+	    $self->{_storage}->cache( 'temporal', $table, $temporal );
 	}
     } else {
-	$self->{storage}->define( $schema, 
+	$self->{_storage}->define( $schema, 
 				  nomap  => 1,
 				  fields => {
 					     tablename => { type => 'TEXT' },
@@ -137,8 +142,8 @@ sub _initialize_ticker {
     my $self = shift;
     my $schema = $self->get( 'ticker' );
     
-    unless ( $self->{storage}->_structure_exists( $schema ) ) {
-	$self->{storage}->define( $schema,
+    unless ( $self->{_storage}->_structure_exists( $schema ) ) {
+	$self->{_storage}->define( $schema,
 				  nomap  => 1,
 				  fields => {
 					     id    => { type => 'SERIAL' },
@@ -156,8 +161,8 @@ sub _initialize_user_auth {
     my $roleschema   = $self->get( 'authrole' );
     my $memberschema = $self->get( 'authmember' );
     
-    unless ( $self->{storage}->_structure_exists( $roleschema ) ) {
-	$self->{storage}->define( $roleschema,
+    unless ( $self->{_storage}->_structure_exists( $roleschema ) ) {
+	$self->{_storage}->define( $roleschema,
 				  nomap  => 1,
 				  fields => {
 					     id   => { type => 'SERIAL', null => 0 },
@@ -198,8 +203,8 @@ sub _initialize_user_auth {
 					  } );
     }
 
-    unless ( $self->{storage}->_structure_exists( $userschema ) ) {
-	$self->{storage}->define( $userschema,
+    unless ( $self->{_storage}->_structure_exists( $userschema ) ) {
+	$self->{_storage}->define( $userschema,
 				  nomap  => 1,
 				  temporal => 1,
 				  fields => {
@@ -241,8 +246,8 @@ sub _initialize_user_auth {
 					  } );
     }
 
-    unless ( $self->{storage}->_structure_exists($memberschema) ) {
-	$self->{storage}->define( $memberschema,
+    unless ( $self->{_storage}->_structure_exists($memberschema) ) {
+	$self->{_storage}->define( $memberschema,
 				  nomap  => 1,
 				  fields => {
 					     userid => { type => 'INTEGER', null => 0 },
@@ -295,15 +300,15 @@ sub _initialize_user_auth {
 # FIXME, permissions.  
 sub _initialize_user_auth_fields {
     my $self = shift;
-    my $fieldhash  = $self->get( 'userfields' );
+    my $fieldhash  = $self->internal( 'userfields' );
     
     for my $fieldname (keys %$fieldhash) {
 	my $type = $fieldhash->{$fieldname};
 	my $schema = $self->get( "authuser:$fieldname" );
 #	my $authrole = $self->get( 'authrole' );
 	
-	unless ( $self->{storage}->_structure_exists( $schema ) ) {
-	    $self->{storage}->define( $schema,
+	unless ( $self->{_storage}->_structure_exists( $schema ) ) {
+	    $self->{_storage}->define( $schema,
 				      temporal => 1,
 				      nomap  => 1,
 				      fields => {
@@ -359,8 +364,8 @@ sub _initialize_schema_auth {
     my $self = shift;
     my $schema = $self->get( 'authschema' );
     
-    unless ( $self->{storage}->_structure_exists( $schema ) ) {
-	$self->{storage}->define( $schema,
+    unless ( $self->{_storage}->_structure_exists( $schema ) ) {
+	$self->{_storage}->define( $schema,
 				  nomap  => 1,
 				  fields => {
 					     usertable => { type => 'TEXT',
@@ -378,9 +383,9 @@ sub _initialize_config {
     my $self = shift;
 
     my $schema = $self->get( 'config' );
-    my $mapper_name = $self->{storage}->get_mapper();
-    if ($self->{storage}->_structure_exists( $schema )) {
-	my $listref = $self->{storage}->fetch( $schema, { return => '*' });
+    my $mapper_name = $self->{_storage}->get_mapper();
+    if ($self->{_storage}->_structure_exists( $schema )) {
+	my $listref = $self->{_storage}->fetch( $schema, { return => '*' });
 	for my $temporalpair (@$listref) {
 	    my ($key, $value) = ( $temporalpair->{id}, $temporalpair->{value} );
 	    
@@ -390,7 +395,7 @@ sub _initialize_config {
 	    if (lc $key eq 'mapper') {
 		$self->{logger}->warn( "Ignoring request to use $mapper_name as the mapper, the Storage requires $value" )
 		  if $mapper_name && $mapper_name ne $value;
-		my $mapper = $self->{storage}->set_mapper( $value );
+		my $mapper = $self->{_storage}->set_mapper( $value );
 		return undef unless $mapper;
 	    }
 	    
@@ -399,14 +404,14 @@ sub _initialize_config {
 	# At this point, the mapper is just the *name*, not the object.
 	my $mapper_object;
 	if ($mapper_name) {
-	    $mapper_object = $self->{storage}->set_mapper( $mapper_name );
+	    $mapper_object = $self->{_storage}->set_mapper( $mapper_name );
 	    Yggdrasil::fatal( "Unable to initialize the mapper '$mapper_name'" ) unless $mapper_object;
 	} else {
-	    $mapper_object = $self->{storage}->get_default_mapper();
+	    $mapper_object = $self->{_storage}->get_default_mapper();
 	    Yggdrasil::fatal( "Unable to initialize the default mapper" ) unless $mapper_object;
 	}
 	
-	$self->{storage}->define( $schema,
+	$self->{_storage}->define( $schema,
 				  nomap  => 1,
 				  fields => {
 					     id    => { type => 'VARCHAR(255)' },
@@ -414,15 +419,15 @@ sub _initialize_config {
 					    },
 				  hints  => { id => { key => 1 } },	       
 				);
-	$self->{storage}->store( $schema, key => "id",
+	$self->{_storage}->store( $schema, key => "id",
 				 fields => { id => 'mapstruct', value => $self->get( 'mapper' ) });
-	$self->{storage}->store( $schema, key => "id",
+	$self->{_storage}->store( $schema, key => "id",
 				 fields => { id => 'temporalstruct', value => $self->get( 'temporal' ) });
 	
 	
 	my $mappername = ref $mapper_object;
 	$mappername =~ s/.*::(.*)$/$1/;
-	$self->{storage}->store( $schema, key => "id",
+	$self->{_storage}->store( $schema, key => "id",
 				 fields => { id => 'mapper', value => $mappername });
     }    
 }
@@ -435,7 +440,7 @@ sub _define_auth {
     my $nomap = shift;
 
     my $authschema = join("_", "Storage", "userauth", $originalname);
-    $self->{storage}->define( $authschema,
+    $self->{_storage}->define( $authschema,
 			      fields => {
 					 # FIX: id must be the same type as $schema's id
 					 id     => { type => 'INTEGER', null => 0 },
@@ -472,7 +477,7 @@ sub _define_auth {
 	    if( $authschema_binding eq ":Auth" ) {
 		$real_schema = $authschema;
 	    } elsif( $authschema_binding =~ /:Auth$/ ) {
-		$real_schema = $self->{storage}->_get_auth_schema_name( $authschema_binding );
+		$real_schema = $self->{_storage}->_get_auth_schema_name( $authschema_binding );
 	    }
 
 	    $restrictions->[$i] = $real_schema;
@@ -494,7 +499,7 @@ sub _define_auth {
 		}
 
 
-		my @matches = $self->{storage}->_find_schema_by_name_or_alias( $schemaref, $restrictions );
+		my @matches = $self->{_storage}->_find_schema_by_name_or_alias( $schemaref, $restrictions );
 
 		if( @matches > 1 ) {
 		    die "'$schemaref' is mentioned more than once in the definition of $originalname\n";
@@ -517,18 +522,18 @@ sub _define_auth {
 	    $constraint->{alias} = $constraint->{_auth_alias};
 	    delete $constraint->{_auth_alias};
 	}
-	my @mapped = $self->{storage}->_map_fetch_schema_references( @$restrictions );
+	my @mapped = $self->{_storage}->_map_fetch_schema_references( @$restrictions );
 	$auth->{$action} = \@mapped;
     }
 
     my $bindings = Storable::nfreeze( $auth );
-    $self->{storage}->_store( $self->get( 'authschema' ), 
+    $self->{_storage}->_store( $self->get( 'authschema' ), 
 			      key => [ qw/usertable authtable/ ],
 			      fields => {
 					 usertable => $schema,
 					 authtable => $authschema,
 					 bindings  => $bindings,
-					 committer => $self->{storage}->{bootstrap}?'bootstrap':$self->{storage}->{user}->id(),
+					 committer => $self->{_storage}->{bootstrap}?'bootstrap':$self->{_storage}->{user}->id(),
 			     } );
 }
 
