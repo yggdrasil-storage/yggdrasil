@@ -470,14 +470,6 @@ sub _define_auth {
 	my $restrictions = $auth->{$action};
 	next unless $restrictions;
 
-	for( my $i=1; $i<@$restrictions; $i+=2 ) {
-	    my $authschema_constraint = $restrictions->[$i];
-
-	    # Add a new uniq alias.  FIXME for rand.
-	    my $uniq_alias = join("_", "_auth", int(rand()*100_000) );
-	    $authschema_constraint->{_auth_alias} = $uniq_alias;
-	}	
-
 	for( my $i=0; $i<@$restrictions; $i+=2 ) {
 	    my $authschema_binding    = $restrictions->[$i];
 	    my $authschema_constraint = $restrictions->[$i+1];
@@ -492,8 +484,9 @@ sub _define_auth {
 
 	    $restrictions->[$i] = $real_schema;
 
-	    # Change any \q<Schema.field> to the uniq alias, ie.
-	    # \q<uniq_alias.field>
+	    # Change schema references to this schema if it is mapped
+	    # (so that the structure references the mapped and the
+	    # engine actually finds the schema)
 	    my $where = $authschema_constraint->{where};
 	    next unless ref $where;
 
@@ -503,35 +496,29 @@ sub _define_auth {
 		next unless ref $value eq "SCALAR";
 
 		my( $schemaref, $schemafield ) = split m/\./, $$value;
-		if( $schemaref eq $originalname && ! $nomap ) {
-		    my $mapped_schema = join(".", $schema, $schemafield);
-		    $where->[$f+1] = \$mapped_schema;
+		if( $schemaref eq $originalname ) {
+		    unless( $nomap ) {
+			my $mapped_schema = join(".", $schema, $schemafield);
+			$where->[$f+1] = \$mapped_schema;
+		    }
+
+		    next;
 		}
 
-
+		# This is just for consistency checking - it has no
+		# effect other than occationally dying.
 		my @matches = $self->{_storage}->_find_schema_by_name_or_alias( $schemaref, $restrictions );
 
 		if( @matches > 1 ) {
 		    die "'$schemaref' is mentioned more than once in the definition of $originalname\n";
 		}
 		
-		if( @matches == 0 && $schemaref ne $originalname ) {
+		if( @matches == 0 ) {
 		    die "'$schemaref' is never mentioned in the definition of $originalname\n";
-		}
-		
-		unless( $schemaref eq $originalname ) {
-		    my $new_ref = join(".", $matches[0]->{_auth_alias}, $schemafield );
-		    $where->[$f+1] = \$new_ref;
 		}
 	    }
 	}
 
-	# set alias = _auth_alias and remove _auth_alias
-	for( my $i=1; $i<@$restrictions; $i+=2 ) {
-	    my $constraint = $restrictions->[$i];
-	    $constraint->{alias} = $constraint->{_auth_alias};
-	    delete $constraint->{_auth_alias};
-	}
 	my @mapped = $self->{_storage}->_map_fetch_schema_references( @$restrictions );
 	$auth->{$action} = \@mapped;
     }
