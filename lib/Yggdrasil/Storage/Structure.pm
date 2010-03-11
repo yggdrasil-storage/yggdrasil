@@ -8,15 +8,16 @@ sub new {
     my %params = @_;
     
     my $self = {
-		mapper      => 'Storage_mapname',
-		temporal    => 'Storage_temporals',
-		config      => 'Storage_config',
-		ticker      => 'Storage_ticker',
-		authschema  => 'Storage_authschema',
-		authuser    => 'Storage_auth_user',
-		authrole    => 'Storage_auth_role',
-		authmember  => 'Storage_auth_membership',
+		mapper      => 'mapname',
+		temporal    => 'temporals',
+		config      => 'config',
+		ticker      => 'ticker',
+		authschema  => 'authschema',
+		authuser    => 'auth_user',
+		authrole    => 'auth_role',
+		authmember  => 'auth_membership',
 
+		_prefix     => 'Storage_',
 		_storage    => $params{storage},
 		_userfields => {
 				fullname => 'TEXT',
@@ -62,12 +63,20 @@ sub _getter_setter {
     my ($key, $value) = @_;
     my $prop;
     
+    my $structure;
     if ($key =~ /^(.*):(.*)/) {
 	$key  = $1;
 	$prop = $2;
+	$structure = $self->internal( 'prefix' ) . $self->{$key};
+    } elsif ($key !~ /^_/) {
+	# The key didn't get accessed via internal(), that means we
+	# want a structure, and that means we need to add the storage
+	# prefix to the key.
+	$structure = $self->internal( 'prefix' ) . $key;
+    } else {
+	$structure = $self->{$key};	
     }
 
-    my $structure = $self->{$key};
     Yggdrasil::fatal( "Unknown structure '$key' requested" ) unless $structure;
 
     if ($prop) {
@@ -77,7 +86,7 @@ sub _getter_setter {
     }
     
     $self->{$key} = $value if $value;
-    return $self->{$key};
+    return $structure;
 }
 
 sub _initialize_auth {
@@ -393,7 +402,8 @@ sub _initialize_config {
 	    $self->set( 'temporal', $value ) if lc $key eq 'temporalstruct' && $value && $value =~ /^Storage_/;
 
 	    if (lc $key eq 'mapper') {
-		$self->{logger}->warn( "Ignoring request to use $mapper_name as the mapper, the Storage requires $value" )
+		my $logger = $self->{_storage}->{logger};
+		$logger->warn( "Ignoring request to use $mapper_name as the mapper, the Storage requires $value" )
 		  if $mapper_name && $mapper_name ne $value;
 		my $mapper = $self->{_storage}->set_mapper( $value );
 		return undef unless $mapper;

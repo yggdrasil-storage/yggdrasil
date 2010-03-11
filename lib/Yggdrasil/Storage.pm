@@ -830,6 +830,11 @@ sub get_structure {
     return $self->{structure}->get( $structure );
 }
 
+sub prefix {
+    my $self = shift;
+    return $self->{structure}->internal( 'prefix' );
+}
+
 # Admin interface, not for normal use.
 
 # Require the "admin" parameter to Storage to be set to a true value to access any admin method.

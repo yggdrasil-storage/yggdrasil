@@ -44,9 +44,10 @@ sub info {
 
 sub yggdrasil_is_empty {
     my $self = shift;
+    my $prefix = $self->prefix();
 
     for my $struct ($self->_list_structures()) {
-	return 0 if $struct !~ /Storage_/i;
+	return 0 if $struct !~ /^$prefix/i;
     }
     return 1;
 }
