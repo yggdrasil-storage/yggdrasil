@@ -173,7 +173,7 @@ sub _sql {
 	$sqlinline =~ s/\?/"'$attr'"/e;
     }
     $self->{transaction}->engine( $sqlinline );
-    
+    #print "$sqlinline\n";
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
 	return;
@@ -216,9 +216,6 @@ sub _fetch {
 	($start,$stop) = ( $time->{start}, $time->{stop} );
     }
 
-    # FIXME: This is not beautiful
-    my $join = $schemalist[1]->{join};
-
     my (%fromtables, %temporals, @returns, @temporal_returns, 
 	@wheres, @params, @requested_fields, $counter);
     
@@ -251,7 +248,7 @@ sub _fetch {
 	push( @params, @$p_tmp );
 
 	push @returns, $self->_process_return( $schema, $queryref->{return} );
-	$fromtables{$schema} = [ $counter++, $real_schema];
+	$fromtables{$schema} = [ $counter++, $real_schema, $queryref->{join} ];
 
 	# $temporals{$schema} is to ensure we only treat every schema once.
 	if (!$temporals{$schema} && $self->_schema_is_temporal( $real_schema )) {
@@ -272,15 +269,16 @@ sub _fetch {
     @returns = @requested_fields unless @returns;
     @returns = ('*') unless @returns;
     
-    my $sql = 'SELECT ' . join(", ", @returns, @temporal_returns) . ' FROM ' . $self->_create_from( $join, \%fromtables );
+    # This call destroys %fromtables
+    my $sql = 'SELECT ' . join(", ", @returns, @temporal_returns) . ' FROM ' . $self->_create_from( \%fromtables );
 
     if (@wheres) {
 	$sql .= ' WHERE ';
 	$sql .= join(" and ", @wheres );
     }
 
-#    my ($package, $filename, $line, $subroutine, $hasargs,
-#     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
+    my ($package, $filename, $line, $subroutine, $hasargs,
+     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
 
 #    if ($subroutine =~ /_store/) {
 #	print STDERR "$sql with [" . join(", ", map { defined()?$_:"NULL" } @params) . "]\n";
@@ -317,21 +315,22 @@ sub _raw_fetch {
 # if required.
 sub _create_from {
     my $self = shift;
-    my $isjoin = shift;
     my $tables = shift;
 
-    if( $isjoin) {
+    my @joined = grep { my $struct = $tables->{$_}; 
+			$struct->[2] && $struct->[2] eq "left" } keys %$tables;
+
+    my $leftjoins;
+    if( @joined ) {
 	my @from;
 	my $first = 1;
-	for my $t (sort { $tables->{$a}->[0] <=> $tables->{$b}->[0] } keys %$tables ) {
-
+	for my $t ( @joined ) {
 	    my $alias = $t;
 	    my $real_t  = $tables->{$t}->[1];
 	    my $tablename = $real_t;
 	    if( $alias ne $real_t ) {
 		$tablename = join(" ", $real_t, $alias );
 	    }
-
 
 	    if( $first ) {
 		push @from, $tablename;
@@ -341,23 +340,29 @@ sub _create_from {
 		push( @from, "left join $tablename using(id)" );
 		push( @from, ")" );
 	    }
+
+	    delete $tables->{$t};
 	}
 
-	return join(" ", @from);
-    } else {
-	my @from;
-	foreach my $t ( keys %$tables ) {
-	    my $alias = $t;
-	    my $real_t = $tables->{$t}->[1];
-	    my $tablename = $real_t;
-	    if( $alias ne $real_t ) {
-		$tablename = join(" ", $real_t, $alias );
-	    }
-	    push( @from, $tablename );
-	}
+	$leftjoins = join(" ", @from);
+    } 
 
-	return join(", ", @from);
+    my @from;
+    foreach my $t ( keys %$tables ) {
+	my $alias = $t;
+	my $real_t = $tables->{$t}->[1];
+	my $tablename = $real_t;
+	if( $alias ne $real_t ) {
+	    $tablename = join(" ", $real_t, $alias );
+	}
+	push( @from, $tablename );
     }
+
+    my $joins = join(", ", @from);
+
+    $joins .= ", $leftjoins" if $leftjoins;
+
+    return $joins;
 }
 
 # Store a value in a table.  Insert new values as a new row unless the
