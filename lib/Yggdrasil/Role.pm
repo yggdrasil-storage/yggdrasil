@@ -82,11 +82,11 @@ sub _setter_getter {
 
     my $ro = $self->{_role_obj};
     if( defined $val ) {
-	$ro->set( $key => $val );
+	$ro->set_field( $key => $val );
 	return $val;
     }
 
-    return $ro->get( $key );
+    return $ro->get_field( $key );
 }
 
 sub members {

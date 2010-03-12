@@ -391,7 +391,7 @@ sub help {
 }
 
 sub whoami {    
-    print $y->user->name(), "\n";
+    print $y->user()->username(), "\n";
 }
 
 sub storage_info {
@@ -446,7 +446,6 @@ sub user_role_add {
     
     my $role = $y->get_role( $rolename );
     print "'$rolename', no such role.\n" and return unless $role;
-
     $role->add( $user );
     print "Added the user '$username' to the role '$rolename'.\n";   
 }

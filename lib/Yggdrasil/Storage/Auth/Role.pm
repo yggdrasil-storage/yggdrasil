@@ -76,6 +76,44 @@ sub get_all {
     return map { $class->_new( $storage, $_->{id}, $_->{name} ) } @$roles;
 }
 
+sub description :method {
+    my $self = shift;
+    return $self->_getter_setter( 'description', @_ );
+}
+
+sub get_field {
+    my $self = shift;
+    return $self->_getter_setter( @_ );
+}
+
+sub set_field {
+    my $self = shift;
+    return $self->_getter_setter( @_ );
+}
+
+sub _getter_setter {
+    my $self = shift;
+    my ($field, $value) = @_;
+
+    my $structure = $self->{_storage}->get_structure( "authrole:$field" );
+    my $r;
+    
+    if (defined $value) {
+	$r = $self->{_storage}->store( $structure,
+				       key    => 'id',
+				       fields => {
+						  id    => $self->id(),
+						  value => $value,
+						 });
+    } 
+
+    $r = $self->{_storage}->fetch( $structure => {
+						  return => 'value',
+						  where  => [ id => $self->id() ],
+						 } );	
+    return $r->[0]->{value};
+}
+
 sub members :method {
     my $self = shift;
 

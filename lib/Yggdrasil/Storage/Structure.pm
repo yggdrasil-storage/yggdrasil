@@ -21,13 +21,20 @@ sub new {
 		_prefix     => 'Storage_',
 		_storage    => $params{storage},
 		_userfields => {
-				fullname => 'TEXT',
-				password => 'TEXT',
-				cert     => 'BINARY',
-				session  => 'TEXT',
+				authuser => {
+					     fullname => 'TEXT',
+					     password => 'TEXT',
+					     cert     => 'BINARY',
+					     session  => 'TEXT',
+					    },
+				authrole => {
+					     description => 'TEXT',
+					    },
 			       },
 		_filter     => {
-				password => [ sha => 256 ],
+				authuser => {
+					     password => [ sha => 256 ],
+					    }
 			       },
 	       };
     
@@ -45,6 +52,7 @@ sub init {
     $self->_initialize_ticker();
     $self->_initialize_temporal();
     $self->_initialize_auth();
+    $self->_initialize_fields();
 }
 
 sub get {
@@ -86,7 +94,7 @@ sub _getter_setter {
 
     if ($prop) {
 	my $fieldhash = $self->internal( 'userfields' );
-	Yggdrasil::fatal( "Access to internal structure failed" ) unless $fieldhash->{$prop};
+	Yggdrasil::fatal( "Access to internal structure failed" ) unless $fieldhash->{$key}->{$prop};
 	return $structure . '_' . $prop if $prop;
     }
     
@@ -99,7 +107,6 @@ sub _initialize_auth {
 
     $self->_initialize_schema_auth();
     $self->_initialize_user_auth();
-    $self->_initialize_user_auth_fields();
 }
 
 # Initalize the mapper cache and, if needed, the schema to store schema
@@ -341,33 +348,33 @@ sub _initialize_user_auth {
 
 }
 
-# Create fields for the user fields.
 # FIXME, permissions.  
-sub _initialize_user_auth_fields {
+sub _initialize_fields {
     my $self = shift;
-    my $fieldhash  = $self->internal( 'userfields' );
-    
-    for my $fieldname (keys %$fieldhash) {
-	my $type = $fieldhash->{$fieldname};
-	my $schema = $self->get( "authuser:$fieldname" );
-#	my $authrole = $self->get( 'authrole' );
-	my $filter = $self->internal( 'filter' )->{$fieldname};
-	my @filterfiller = ();
-	@filterfiller = ( filter => $filter ) if $filter;
+    my $structhash = $self->internal( 'userfields' );
+
+    for my $structure (keys %{$structhash}) {
+	for my $fieldname (keys %{$structhash->{$structure}}) {
+	    my $type = $structhash->{$structure}->{$fieldname};
+	    my $schema = $self->get( "$structure:$fieldname" );
+	    #	my $authrole = $self->get( 'authrole' );
+	    my $filter = $self->internal( 'filter' )->{$fieldname};
+	    my @filterfiller = ();
+	    @filterfiller = ( filter => $filter ) if $filter;
 	
-	unless ( $self->{_storage}->_structure_exists( $schema ) ) {
-	    $self->{_storage}->define( $schema,
-				      temporal => 1,
-				      nomap  => 1,
-				      fields => {
-						 id    => { type => 'INTEGER', null => 0 },
-						 value => {
-							   type => $type,
-							   null => 0,
-							   @filterfiller,
-							  },
-						},
-				       hints  => { id => { foreign => $self->get( 'authuser' ) } },
+	    unless ( $self->{_storage}->_structure_exists( $schema ) ) {
+		$self->{_storage}->define( $schema,
+					   temporal => 1,
+					   nomap  => 1,
+					   fields => {
+						      id    => { type => 'INTEGER', null => 0 },
+						      value => {
+								type => $type,
+								null => 0,
+								@filterfiller,
+							       },
+						     },
+					   hints  => { id => { foreign => $self->get( 'authuser' ) } },
 # 				      auth => {
 # 					       create =>
 # 					       [
@@ -406,8 +413,8 @@ sub _initialize_user_auth_fields {
 # 							   },
 # 					       ],
 # 					      }
-				   );
-
+					 );
+	    }
 	}
     }    
 }
