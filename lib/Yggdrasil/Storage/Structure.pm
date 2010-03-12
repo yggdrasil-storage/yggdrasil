@@ -358,7 +358,7 @@ sub _initialize_fields {
 	    my $type = $structhash->{$structure}->{$fieldname};
 	    my $schema = $self->get( "$structure:$fieldname" );
 	    #	my $authrole = $self->get( 'authrole' );
-	    my $filter = $self->internal( 'filter' )->{$fieldname};
+	    my $filter = $self->internal( 'filter' )->{$structure}->{$fieldname};
 	    my @filterfiller = ();
 	    @filterfiller = ( filter => $filter ) if $filter;
 	
