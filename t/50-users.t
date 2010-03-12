@@ -7,10 +7,11 @@ use Test::More;
 
 use lib qw(./t);
 use Yggdrasil::Test::Common '30';
+use Digest::SHA qw|sha256_hex|;
 
 my $Y   = 'Yggdrasil';
 my $Y_U = 'Yggdrasil::User';
-
+my $auth = Yggdrasil::Storage::Auth->new();
 
 my $tester = Yggdrasil::Test::Common->new();
 
@@ -32,7 +33,7 @@ my $r00t = $tester->yggdrasil_define_user( "r00t", password => "123A56" );
 # --- Set/Get password
 my $r = $haxor->password("fubar");
 is( $r, "fubar", "$Y_U->password(): return value was $r" );
-is( $haxor->password(), "fubar", "$Y_U->password(): can change haxor's password" );
+is( $haxor->password(), sha256_hex("fubar"), "$Y_U->password(): can change haxor's password" );
 
 # --- Set/Get fullname
 $r = $r00t->fullname( "Rob T.");

@@ -8,6 +8,8 @@ use Test::More;
 use Yggdrasil;
 use Yggdrasil::Status;
 
+use Digest::SHA qw|sha256_hex|;
+
 our $Y = 'Yggdrasil';
 our $Y_S = 'Yggdrasil::Status';
 our $Y_E = 'Yggdrasil::Entity';
@@ -342,9 +344,9 @@ sub _check_user {
 
     if( $func =~ /^define/ ) {
 	if( defined $data{password} ) {
-	    is( $u->password(), $data{password}, "$prefix: Password matches" );
+	    is( $u->password(), sha256_hex( $data{password} ), "$prefix: Password matches" );
 	} else {
-	    ok( length( $u->password() ) == 12, "$prefix: Got random password" );
+	    ok( length( $u->password() ) >= 12, "$prefix: Got random password" );
 	}
     }
 }

@@ -10,6 +10,7 @@ use Yggdrasil::Storage::Mapper;
 use Yggdrasil::Storage::Type;
 use Yggdrasil::Storage::Structure;
 
+use Yggdrasil::Storage::Auth;
 use Yggdrasil::Storage::Auth::User;
 use Yggdrasil::Storage::Auth::Role;
 
@@ -122,7 +123,8 @@ sub bootstrap {
     my %usermap;
     for my $user ( "root", (getpwuid( $> ) || "default"), keys %users ) {
 	my $pwd = $users{$user};
-	$pwd ||= $self->_generate_password();
+	my $auth = new Yggdrasil::Storage::Auth;
+	$pwd ||= $auth->generate_password();
 
 	my $u = Yggdrasil::Storage::Auth::User->define( $self, $user, $pwd );
 
@@ -142,24 +144,6 @@ sub bootstrap {
     }
 
     return %usermap;
-}
-
-sub _generate_password {
-    my $self = shift;
-    my $randomdevice = "/dev/urandom";
-    my $pwd_length = 12;
-    
-    my $password = "";
-    my $randdev;
-    open( $randdev, $randomdevice ) 
-	|| die "Unable to open random device $randdev: $!\n";
-    until( length($password) == $pwd_length ) {
-        my $byte = getc $randdev;
-        $password .= $byte if $byte =~ /[a-z0-9]/i;
-    }
-    close $randdev;
-
-    return $password;
 }
 
 sub get_status {
@@ -660,7 +644,7 @@ sub authenticate {
 	$session = undef;
     } elsif ($session) {
 	# Lastly, we got a session id - see if we find a user with this session id
-	# $user_obj = Yggdrasil::User->get_with_session( yggdrasil => $self, session => $session );
+	$user_obj = Yggdrasil::Storage::Auth::User->get_with_session( $self->{yggdrasil}->{storage}, $session );
     } elsif (-t && ! defined $user && ! defined $pass) {
 	# First, let see if we're connected to a tty without getting a
 	# username / password, at which point we're already authenticated

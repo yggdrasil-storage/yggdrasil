@@ -46,20 +46,23 @@ sub get {
     my $class   = shift;
     my $storage = shift;
     my $user    = shift;
+    my $idfield = shift || 'name';
 
+    # warn if idfield anything but id or name.
     my $uid = $storage->fetch(
 	$storage->get_structure( 'authuser' ) => {
-	    return => [ qw<id start stop> ],
-	    where  => [ name => $user ]
+	    return => [ qw<id name start stop> ],
+	    where  => [ $idfield => $user ]
 	} );
 
     return unless $uid;
     my $id    = $uid->[0]->{id};
     my $start = $uid->[0]->{start};
     my $stop  = $uid->[0]->{stop};
+    my $name  = $uid->[0]->{name};
     return unless $id;
 
-    return $class->_new( $storage, $id, $user, $start, $stop );
+    return $class->_new( $storage, $id, $name, $start, $stop );
 }
 
 sub get_nobody {
@@ -93,10 +96,23 @@ sub get_all {
     return map { $class->_new( $storage, $_->{id}, $_->{name} ) } @$users;
 }
 
+sub get_by_session {
+    my $class = shift;
+    my $storage = shift;
+    my $session = shift;
+    
+    my $hits = $storage->fetch(
+	$storage->get_structure( 'authuser:session' ) => {
+	    return => 'id',
+	    where  => [ session => $session ]
+	} );
+
+    return unless @$hits == 1;
+    return $class->get( $storage, $hits->[0]->{id}, 'id' );
+}
 
 sub id :method {
     my $self = shift;
-
     return $self->{_id};
 }
 
@@ -107,25 +123,26 @@ sub start {
 
 sub name :method {
     my $self = shift;
-
     return $self->{_name};
+}
+
+sub username :method {
+    my $self = shift;
+    return $self->name();
 }
 
 sub password :method {
     my $self = shift;
-    
     return $self->_getter_setter( 'password', @_ );
 }
 
 sub session :method {
     my $self = shift;
-
     return $self->_getter_setter( 'session', @_ );
 }
 
 sub cert :method {
     my $self = shift;
-
     return $self->_getter_setter( 'cert', @_ );
 }
 
@@ -145,6 +162,16 @@ sub expire {
 sub delete :method {
     my $self = shift;
     return $self->expire();
+}
+
+sub get_field {
+    my $self = shift;
+    return $self->_getter_setter( @_ );
+}
+
+sub set_field {
+    my $self = shift;
+    return $self->_getter_setter( @_ );
 }
 
 # Worth noting, this doesn't have to deal with times, even if the

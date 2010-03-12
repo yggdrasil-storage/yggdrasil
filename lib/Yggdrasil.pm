@@ -113,15 +113,13 @@ sub login {
     }
 
     # we're nobody until authenticated
-    $self->{user} = $self->{storage}->user();
+    $self->{user} = $self->get_user( $self->{storage}->user() );
 
     #my $auth = new Yggdrasil::Auth( yggdrasil => $self );
-    $self->{user} = $self->{storage}->authenticate( %params );
+    my $auth = $self->{storage}->authenticate( %params );
+    $self->{user} = $self->get_user( $auth );
 
-    if ($status->OK()) {
-	#$self->{storage}->{user} = $self->user();
-	return $self->user();
-    } 
+    return $self->user() if $status->OK();
 
     $status->set( 403, 'Login to Yggdrasil denied.' );
     return;
@@ -183,14 +181,14 @@ sub get_user {
     my $self = shift;
     my $user = shift;
 
-    return Yggdrasil::Storage::Auth::User->get( $self->{storage}, $user );
+    return Yggdrasil::User->get( yggdrasil => $self, user => $user );
 }
 
 sub get_role {
     my $self = shift;
     my $role = shift;
 
-    return Yggdrasil::Storage::Auth::Role->get( $self->{storage}, $role );
+    return Yggdrasil::Role->get( yggdrasil => $self, role => $role );
 }
 
 sub get_entity {
@@ -320,12 +318,12 @@ sub exists {
 # to Yggdrasil.
 sub usernames {
     my $self = shift;
-    return map { $_->name() } Yggdrasil::Storage::Auth::User->get_all( $self->{storage} );
+    return map { $_->username() } Yggdrasil::User->get_all( yggdrasil => $self );
 }
 
 sub rolenames {
     my $self = shift;
-    return map { $_->name() } Yggdrasil::Storage::Auth::Role->get_all( $self->{storage} );
+    return map { $_->rolename() } Yggdrasil::Role->get_all( yggdrasil => $self );
 }
 
 # to access defined storage types

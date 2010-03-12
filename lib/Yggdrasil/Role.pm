@@ -9,31 +9,42 @@ use warnings;
 
 use base qw(Yggdrasil::Object);
 
-use Yggdrasil::Entity;
+use Yggdrasil::Storage::Auth::Role;
 
 sub define {
     my $class = shift;
     my $self  = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $meta_role = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthRole' );
-    my $ro = $meta_role->create( $params{role} );
+    my $ro = Yggdrasil::Storage::Auth::Role->define( $self->{yggdrasil}->{storage},
+						     $params{role},
+						   );
+
 
     $self->{_role_obj} = $ro;
-
     return $self;
 }
 
 sub get {
     my $class = shift;
-    my $self = $class->SUPER::new(@_);
+    my $self = $class->SUPER::new( @_ );
     my %params = @_;
 
-    my $meta_role = Yggdrasil::Entity->get( yggdrasil => $self, entity => "MetaAuthRole" );
-    $self->{_role_obj} = $meta_role->fetch( $params{role} );
+    my $ro;
+    if (ref $params{role}) {
+	$ro = $params{role};
+    } else {
+	$ro = Yggdrasil::Storage::Auth::Role->get( $self->{yggdrasil}->{storage}, $params{role} );	
+    }
+    
+    $self->{_role_obj} = $ro;
 
-    return $self if $self->{_role_obj};
-    return;
+    # Status?
+    unless ($self->{_role_obj}) {
+	$self->get_status()->set( 404 );
+	return;
+    }
+    return $self;
 }
 
 sub get_all {
@@ -41,44 +52,27 @@ sub get_all {
     my $self  = $class->SUPER::new( @_ );
     my %params = @_;
 
-    my $meta_role = Yggdrasil::Entity->get( yggdrasil => $self, entity => "MetaAuthRole" );
-
     my @roles;
-    for my $role_obj ( $meta_role->instances() ) {
-	my $role = $class->SUPER::new( @_ );
-	$role->{_role_obj} = $role_obj;
-
-	push( @roles, $role );
+    for my $role_obj ( Yggdrasil::Storage::Auth::Role->get_all( $self->{yggdrasil}->{storage}) ) {
+	push( @roles, $class->get( yggdrasil => $self, role => $role_obj ) );
     }
-
+    
     return @roles;
 }
 
-sub undefine {
-
+sub start {
+    my $self = shift;
+    return $self->{_role_obj}->start();
 }
 
-# FIX1: couldn't we just fetch id and visual_id and make user objects
-#       without having to fetch the visual_id's? What about the
-#       instance's entity method, how does it get an entity object?
-# FIX2: this is ugly
-sub members {
+sub stop {
     my $self = shift;
+    return $self->{_role_obj}->stop();
+}
 
-    my $robj = $self->{_role_obj};
-
-    my $users = $self->storage()->fetch( 
-	Instances =>
-	{ return => [ qw/visual_id/ ], where => [ id => \qq<MetaAuthRolemembership.userid> ] },
-	MetaAuthRolemembership => 
-	{ where => [ roleid => $robj->{_id} ] } );
-
-    # FIXME, fetch does *not* return status code in a sane way.  This
-    # needs to be solved at the SQL layer upon completing a
-    # transaction.
-    # return unless $self->get_status()->OK();
-    
-    return map { Yggdrasil::User->get(yggdrasil => $self, user => $_->{visual_id}) } @$users;
+sub expire {
+    my $self = shift;
+    $self->{_role_obj}->expire();
 }
 
 sub _setter_getter {
@@ -86,15 +80,20 @@ sub _setter_getter {
     my $key  = shift;
     my $val  = shift;
 
-    my $uo = $self->{_role_obj};
+    my $ro = $self->{_role_obj};
     if( defined $val ) {
-	 $uo->set( $key => $val );
-
-	# FIX: if setting the password failed, undef should be returned -- check status
+	$ro->set( $key => $val );
 	return $val;
     }
 
-    return $uo->get( $key );
+    return $ro->get( $key );
+}
+
+sub members {
+    my $self = shift;
+
+    return map { Yggdrasil::User->get(yggdrasil => $self, user => $_ ) }
+      $self->{_role_obj}->members();
 }
 
 sub description {
@@ -106,181 +105,53 @@ sub description {
 
 sub name {
     my $self = shift;
-    
     return $self->id();    
+}
+
+sub rolename {
+    my $self = shift;
+    return $self->id();
 }
 
 sub id {
     my $self = shift;
-    
-    return $self->{_role_obj}->{visual_id};
+    return $self->{_role_obj}->name();
 }
 
 sub grant {
     my $self   = shift;
     my $schema = shift;
-    my $grant  = shift;
 
     # Take either the name, or an object as a parameter.
     $schema = $schema->name() if ref $schema;
-
-#    w => r+w
-#    r => r
-#    c => r+w+c
-#    d => r+w+c+d
-
-    my $read   = 0;
-    my $write  = 0;
-    my $create = 0;
-    my $delete = 0;
-
-    if( $grant =~ /c/ ) {
-	$read   = 1;
-	$write  = 1;
-	$create = 1;
-    }
-    
-    if( $grant =~ /d/ ) {
-	$read   = 1;
-	$write  = 1;
-	$create = 1;
-	$delete = 1;
-    }
-
-    if( $grant =~ /w/ ) {
-	$read  = 1;
-	$write = 1;
-    }
-
-    if( $grant =~ /r/ ) {
-	$read = 1;
-    }
-
-    $self->_set_permissions( read => $read, write => $write,
-			     delete => $delete, create => $create,
-			     schema => $schema );
+    $self->{_role_obj}->grant( $schema, @_ )
 }
 
 sub revoke {
     my $self   = shift;
     my $schema = shift;
-    my $revoke = shift;
 
     # Take either the name, or an object as a parameter.
     $schema = $schema->name() if ref $schema;
-    
-#    w => r+w
-#    r => r
-#    c => r+w+c
-#    d => r+w+c+d
-
-    my $read   = 0;
-    my $write  = 0;
-    my $create = 0;
-    my $delete = 0;
-
-    if( $revoke =~ /c/ ) {
-	$read   = 1;
-	$write  = 1;
-	$create = 0;
-    }
-    
-    if( $revoke =~ /d/ ) {
-	$read   = 1;
-	$write  = 1;
-	$create = 1;
-	$delete = 0;
-    }
-
-    if( $revoke =~ /w/ ) {
-	$read  = 1;
-	$write = 0;
-    }
-
-    if( $revoke =~ /r/ ) {
-	$read   = 0;
-    }
-
-    $self->_set_permissions( read => $read, write => $write,
-			     delete => $delete, create => $create,
-			     schema => $schema );
-}
-
-sub _set_permissions {
-    my $self  = shift;
-    my %param = @_;
-
-    my $robj = $self->{_role_obj};
-    my $storage = $self->{yggdrasil}->{storage};
-
-    my @parts = split m/::/, $param{schema};
-    my $last = pop @parts;
-    my ($e, $p) = (split m/:/, $last, 2);
-    push( @parts, $e );
-    $e = join('::', @parts);
-    
-    # FIX: gah we don't get Host_ip on property ip, but only "ip"
-    #      for the time being we "solve" this by checking for ... casing! YAY!
-#     if( $e !~ /^[A-Z]/ ) {
-# 	# revoke rights for property access
-
-# 	# FIX: we don't do properties yet, because we don't know what bloody entity we belong to
-# 	return;
-
-# 	my $ido = $storage->fetch( MetaProperty => { return => "id",
-# 						     where  => [ property => $p,
-# 								 entity   => \qq<MetaEntity.id> ]
-# 						   },
-# 				   MetaEntity => { where => [ entity => $e ] } );
-# 	my $id = $ido->[0]->{id};
-
-# 	$storage->store( "MetaAuthProperty",
-# 			 key => [ qw/role property/ ],
-# 			 fields => {
-# 				    writeable => $param{write},
-# 				    readable  => $param{read},
-# 				    roleid    => $self->{_id},
-# 				    property  => $id,
-# 				   } );
-	
-	
-#     } else {
-	# revoke rights for entity access
-	my $ido= $storage->fetch( MetaEntity => { return => "id", where => [ entity => $e ] } );
-	my $id = $ido->[0]->{id};
-
-	Yggdrasil::fatal( "Unable to set access to entity '$e', no such entity!" ) unless $id;
-	
-	$storage->store( "MetaAuthEntity",
-			 key => [ qw/roleid entity/ ],
-			 fields => { 
-				    deleteable => $param{delete},
-				    createable => $param{create},
-				    writeable  => $param{write},
-				    readable   => $param{read},
-				    roleid     => $robj->{_id},
-				    entity     => $id,
-				   } );
-	
-#    } 
-
+    $self->{_role_obj}->revoke( $schema, @_ )
 }
 
 sub add {
     my $self = shift;
     my $user = shift;
 
-    # FIX: if user is an object, check that it is indeed an Y::U object
+    if (ref $user && ref $user ne 'Yggdrasil::User') {
+	$self->get_status()->set( 406, "Unexpected user type (" . ref $user .
+				  ") given to role->add(), expected Yggdrasil::User" );
+	return;
+    }
+    
+    $self->get_status()->set( 406, "Unable to resolve the user passed to role->add()" )
+      unless $user;
 
-    my $robj = $self->{_role_obj};
-    my $uobj = $user->{_user_obj};
-
-    $self->{yggdrasil}->{storage}->store( "MetaAuthRolemembership",
-					  key => [ qw/roleid userid/ ],
-					  fields => { roleid => $robj->{_id},
-						      userid => $uobj->{_id},
-						    } );
-
+    # Encapsulation...
+    $self->{_role_obj}->add( $user->{_user_obj} );
+	
     return 1 if $self->get_status()->OK();
     return;
 }
@@ -289,15 +160,18 @@ sub remove {
     my $self = shift;
     my $user = shift;
 
-    # FIX: if user is an object, check that it is indeed an Y::U object
+    if (ref $user && ref $user ne 'Yggdrasil::User') {
+	$self->get_status()->set( 406, "Unexpected user type (" . ref $user .
+				  ") given to role->remove(), expected Yggdrasil::User" );
+	return;
+    }
+    
+    $self->get_status()->set( 406, "Unable to resolve the user passed to role->remove()" )
+      unless $user;
 
-    my $robj = $self->{_role_obj};
-    my $uobj = $user->{_user_obj};
-
-    $self->{yggdrasil}->{storage}->expire( "MetaAuthRolemembership",
-					   roleid => $robj->{_id},
-					   userid => $uobj->{_id} );
-
+    # Encapsulation...
+    $self->{_role_obj}->remove( $user->{_user_obj} );
+	
     return 1 if $self->get_status()->OK();
     return;
 }

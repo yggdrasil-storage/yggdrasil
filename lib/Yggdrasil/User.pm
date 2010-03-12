@@ -9,24 +9,23 @@ use warnings;
 
 use base qw(Yggdrasil::Object);
 
-use Yggdrasil::Entity;
-use Yggdrasil::Role;
+use Yggdrasil::Storage::Auth;
+use Yggdrasil::Storage::Auth::User;
 
 sub define {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
-    my $uo = $meta_user->create( $params{user} );
-
     # --- Generate a password if one was not passed in
-    my $pass = defined $params{password} ? $params{password} : $self->_generate_password();
-
-    $uo->property( password => $pass );
-    
-    $self->{_user_obj} = $uo;
-
+    my $auth = new Yggdrasil::Storage::Auth;
+    my $pass = defined $params{password} ? $params{password} : $auth->generate_password();
+    my $storage_user = Yggdrasil::Storage::Auth::User->define( $self->{yggdrasil}->{storage},
+							       $params{user},
+							       $pass,
+							     );
+ 
+    $self->{_user_obj} = $storage_user;
     return $self;
 }
 
@@ -34,14 +33,22 @@ sub get {
     my $class = shift;
     my $self = $class->SUPER::new( @_ );
     my %params = @_;
+    
+    my $storage_user;
+    if (ref $params{user} eq 'Yggdrasil::Storage::Auth::User') {
+	$storage_user = $params{user};
+    } elsif (ref $params{user}) {
+	Yggdrasil::fatal( "Unexpected reference given to Yggdrasil::User->get()" );
+    } else {
+	$storage_user = Yggdrasil::Storage::Auth::User->get( $self->{yggdrasil}->{storage}, $params{user} );	
+    }
+    
+    $self->{_user_obj} = $storage_user;
 
-    my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
-    $self->{_user_obj} = $meta_user->fetch( $params{'user'} );
-
-    return unless $self->{_user_obj};
-
-    $self->_load_memberships();
-
+    unless ($self->{_user_obj}) {
+	$self->get_status()->set( 404 );
+	return;
+    }
     return $self;
 }
 
@@ -50,14 +57,9 @@ sub get_all {
     my $self  = $class->SUPER::new( @_ );
     my %params = @_;
 
-    my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
-
     my @users;
-    for my $user_obj ( $meta_user->instances() ) {
-	my $user = $class->SUPER::new( @_ );
-	$user->{_user_obj} = $user_obj;
-
-	push( @users, $user );
+    for my $user_obj ( Yggdrasil::Storage::Auth::User->get_all( $self->{yggdrasil}->{storage}) ) {
+	push( @users, $class->get( yggdrasil => $self, user => $user_obj ) );
     }
     
     return @users;
@@ -65,32 +67,17 @@ sub get_all {
 
 sub start {
     my $self = shift;
-    return $self->{_user_obj}->{_start};
+    return $self->{_user_obj}->start();
 }
 
 sub stop {
     my $self = shift;
-    return $self->{_user_obj}->{_stop};
+    return $self->{_user_obj}->stop();
 }
 
-sub get_with_session {
-    my $class = shift;
-    my $self = $class->SUPER::new( @_ );
-    my %params = @_;
-
-    my $meta_user = Yggdrasil::Entity->get( yggdrasil => $self, entity => 'MetaAuthUser' );
-    my @hits = $meta_user->search( session => $params{session} );
-    
-    return unless @hits == 1;
-
-    $self->{_user_obj} = $hits[0];
-    $self->_load_memberships();
-
-    return $self;
-}
-
-sub undefine {
-    # undefs a user
+sub expire {
+    my $self = shift;
+    $self->{_user_obj}->expire();
 }
 
 sub _setter_getter {
@@ -100,13 +87,11 @@ sub _setter_getter {
 
     my $uo = $self->{_user_obj};
     if( defined $val ) {
-	 $uo->set( $key => $val );
-
-	# FIX: if setting the password failed, undef should be returned -- check status
+	$uo->set_field( $key => $val );
 	return $val;
     }
 
-    return $uo->get( $key );
+    return $uo->get_field( $key );
 }
 
 sub password {
@@ -123,12 +108,6 @@ sub session {
     return $self->_setter_getter( session => $value );
 }
 
-sub username {
-    my $self = shift;
-
-    return $self->id();
-}
-
 sub fullname {
     my $self = shift;
     my $value = shift;
@@ -136,88 +115,28 @@ sub fullname {
     return $self->_setter_getter( fullname => $value );
 }
 
+sub cert {
+    my $self = shift;
+    my $value = shift;
+
+    return $self->_setter_getter( cert => $value );
+}
+ 
+sub username {
+    my $self = shift;
+    return $self->id();
+}
+
 sub id {
     my $self = shift;
-
-    return $self->{_user_obj}->{visual_id};
+    return $self->{_user_obj}->name();
 }
 
-# FIX: since Auth->can() asks for User->member_of, which calles
-# Storage->fetch which calls Auth->can() which calles User->member_of
-# .... etc. we need to cache role membership
-sub _load_memberships {
-    my $self = shift;
-
-    my @roles = $self->member_of();
-    $self->{_roles} = \@roles;
-}
-
-sub get_cached_member_of {
-    my $self = shift;
-
-    return @{ $self->{_roles} };
-}
-
-# FIX1: couldn't we just fetch id and visual_id and make user objects
-#       without having to fetch the visual_id's? What about the
-#       instance's entity method, how does it get an entity object?
-# FIX2: this is ugly
-# FIX3: get_roles does mostly the same stuff, but as a class method
-#       and it calls _fetch (why?) - possible to consolidate the two?
 sub member_of {
     my $self = shift;
+    my @r = $self->{_user_obj}->member_of();
 
-    my $uobj = $self->{_user_obj};
-
-    my $roles = $self->storage()->fetch(
-	Instances => {
-		     return => [ qw/visual_id/ ], 
-		     where => [ id => \qq<MetaAuthRolemembership.roleid> ]
-		    },
-	MetaAuthRolemembership => { where => [ userid => $uobj->{_id} ] } );
-    # FIX fetch does *not* return status code in a sane way.  This
-    # needs to be solved at the SQL layer upon completing a
-    # transaction.
-    # return unless $self->get_status()->OK();
-    return map { Yggdrasil::Role->get(yggdrasil => $self, role => $_->{visual_id}) } @$roles;
-}
-
-# This is awefully ugly.  FIXME.
-sub get_roles {
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    my %params = @_;
-
-    my $user = $params{user};
-#    my $self = shift;
-    
-    #my $u = $self->{_user_obj};
-    my $idref = $self->storage()->_fetch(MetaAuthRolemembership => { where => [ userid => \qq{Instances.id} ],
-								     return => 'roleid' },
-					 Instances => { where => [ visual_id => $user ]});
-
-    my $roref = $self->storage()->_fetch(Instances => { where => [ id => $idref->[0]->{roleid} ],
-						       return => 'visual_id' });
-
-    return Yggdrasil::Role->get( yggdrasil => $self, roleid => $roref->[0]->{visual_id} );
-}
-
-sub _generate_password {
-    my $self = shift;
-    my $randomdevice = "/dev/urandom";
-    my $pwd_length = 12;
-    
-    my $password = "";
-    my $randdev;
-    open( $randdev, $randomdevice ) 
-	|| die "Unable to open random device $randdev: $!\n";
-    until( length($password) == $pwd_length ) {
-        my $byte = getc $randdev;
-        $password .= $byte if $byte =~ /[a-z0-9]/i;
-    }
-    close $randdev;
-
-    return $password;
+    return map { Yggdrasil::Role->get( yggdrasil => $self, role => $_ ) } @r;
 }
 
 1;
