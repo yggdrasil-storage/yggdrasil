@@ -352,7 +352,8 @@ sub _initialize_user_auth_fields {
 	my $schema = $self->get( "authuser:$fieldname" );
 #	my $authrole = $self->get( 'authrole' );
 	my $filter = $self->internal( 'filter' )->{$fieldname};
-	my @filterfiller = ( filter => $filter );
+	my @filterfiller = ();
+	@filterfiller = ( filter => $filter ) if $filter;
 	
 	unless ( $self->{_storage}->_structure_exists( $schema ) ) {
 	    $self->{_storage}->define( $schema,
