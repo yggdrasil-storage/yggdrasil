@@ -381,7 +381,7 @@ sub tick {
     if( $self->{bootstrap} ) {
 	$c = 'bootstrap'
     } else {
-	$c = $self->{user}->id();
+	$c = $self->{user}->name();
     }
     
     my $schema = $self->_get_schema_name($self->get_structure( 'ticker' )) || $self->get_structure( 'ticker' );
