@@ -24,7 +24,12 @@ my $label   = $cmdline->get('label') || 'default';
 
 my $c = Yggdrasil::Common::Config->new();
 my $config = $c->get($label);
-die "No such label as $label\n" unless $config;
+
+unless ($config) {
+    $config = $c->get('ENV');
+    die "No such label as $label and falling back to ENV failed\n"
+	unless $config->get( 'engineuser' );
+}
 
 my ($dbuser, $password, $host, $port, $db, $engine) =
   ($config->get( 'engineuser' ), $config->get( 'enginepassword' ), $config->get( 'enginehost' ),
