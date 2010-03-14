@@ -2,8 +2,9 @@
 
 * Provide a larger test suite.
 
-* Transactions.  They must be "requested" by Yggdrasil and handled by
-   the storage layer as best possible.
+* Transactions.  Implement engine transactions on top of what storage
+  provides, and at the same time control access.  The engine log needs
+  to be under lock and key.
 
 * Historic information.
 
@@ -51,8 +52,6 @@
   to the constraint.
 
 * Define a proper syntax for constraints.
-
-* Fix auth / permissions on the web interface.
 
 * Make the web interface support editing.
 
