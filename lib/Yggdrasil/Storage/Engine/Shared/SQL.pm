@@ -277,8 +277,8 @@ sub _fetch {
 	$sql .= join(" and ", @wheres );
     }
 
-    my ($package, $filename, $line, $subroutine, $hasargs,
-     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
+#    my ($package, $filename, $line, $subroutine, $hasargs,
+#     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
 
 #    if ($subroutine =~ /_store/) {
 #	print STDERR "$sql with [" . join(", ", map { defined()?$_:"NULL" } @params) . "]\n";
