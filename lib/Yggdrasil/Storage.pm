@@ -14,6 +14,8 @@ use Yggdrasil::Storage::Auth;
 use Yggdrasil::Storage::Auth::User;
 use Yggdrasil::Storage::Auth::Role;
 
+use Digest::MD5 qw(md5_hex);
+
 our $TRANSACTION = Yggdrasil::Transaction->create_singleton();
 
 our $ADMIN = undef;
@@ -643,8 +645,8 @@ sub authenticate {
 	}
 	$session = undef;
     } elsif ($session) {
-	# Lastly, we got a session id - see if we find a user with this session id
-	$user_obj = Yggdrasil::Storage::Auth::User->get_with_session( $self->{yggdrasil}->{storage}, $session );
+	# Lastly, we got a session id - see if we find a user with this session id	
+	$user_obj = Yggdrasil::Storage::Auth::User->get_by_session( $self, $session );
     } elsif (-t && ! defined $user && ! defined $pass) {
 	# First, let see if we're connected to a tty without getting a
 	# username / password, at which point we're already authenticated
@@ -656,11 +658,11 @@ sub authenticate {
 
     if( $user_obj ) {
 	$self->{user} = $user_obj;
-	#unless( $session ) {
-	#    $session = md5_hex(time() * $$ * rand(time() + $$));
-	#    $user_obj->session( $session );
-	#}
-	#$self->{session} = $session;
+	unless ($session) {
+	    $session = md5_hex(time() * $$ * rand(time() + $$));
+	    $user_obj->session( $session );
+	}
+	$self->{session} = $session;
 	$status->set( 200 );
     } else {
 	$status->set( 403 );

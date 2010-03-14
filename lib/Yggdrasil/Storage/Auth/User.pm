@@ -104,7 +104,7 @@ sub get_by_session {
     my $hits = $storage->fetch(
 	$storage->get_structure( 'authuser:session' ) => {
 	    return => 'id',
-	    where  => [ session => $session ]
+	    where  => [ value => $session ]
 	} );
 
     return unless @$hits == 1;
