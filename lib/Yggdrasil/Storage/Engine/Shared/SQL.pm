@@ -270,7 +270,7 @@ sub _fetch {
     @returns = ('*') unless @returns;
     
     # This call destroys %fromtables
-    my $sql = 'SELECT ' . join(", ", @returns, @temporal_returns) . ' FROM ' . $self->_create_from( \%fromtables );
+    my $sql = 'SELECT DISTINCT ' . join(", ", @returns, @temporal_returns) . ' FROM ' . $self->_create_from( \%fromtables );
 
     if (@wheres) {
 	$sql .= ' WHERE ';
