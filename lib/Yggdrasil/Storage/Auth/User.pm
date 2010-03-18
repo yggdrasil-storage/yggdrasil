@@ -197,6 +197,16 @@ sub _getter_setter {
     return $r->[0]->{value};
 }
 
+sub is_a_member_of {
+    my $self = shift;
+    my $rolename = shift;
+
+    for my $role ($self->member_of()) {
+	return $role if $role->name() eq $rolename;
+    }
+    return undef;
+}
+
 sub member_of :method {
     my $self = shift;
 
