@@ -156,7 +156,10 @@ sub bootstrap {
 				 id => $u->id() );
 	}
 
-	$self->{user} = $u if $user eq "root";
+	if ($user eq "root") {
+	    $u->fullname( 'root' );
+	    $self->{user} = $u;
+	}
 	$usermap{$user} = $pwd;
     }
 
