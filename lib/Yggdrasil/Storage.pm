@@ -18,8 +18,6 @@ use Digest::MD5 qw(md5_hex);
 
 our $TRANSACTION = Yggdrasil::Transaction->create_singleton();
 
-our $ADMIN = undef;
-
 sub new {
     my $class = shift;
     my $self  = {};
@@ -74,10 +72,7 @@ sub new {
 	}
 
 	$storage->{status} = $status;
-
 	$storage->{mapper} = $data{mapper};
-	$ADMIN  = $data{admin};
-	
 	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
 
 	# Structure the internals of Storage.  Creates structure if
@@ -897,7 +892,8 @@ sub prefix {
 # Require the "admin" parameter to Storage to be set to a true value to access any admin method.
 sub _admin_verify {
     my $self = shift;
-    die( "Administrative interface unavailable without explicit request." ) unless $ADMIN;
+    die( "Administrative interface unavailable without explicit request." )
+      unless $self->{user}->is_a_member_of( 'admin' );
 }
 
 # Returns a list of all the structures, guarantees nothing about the order.
