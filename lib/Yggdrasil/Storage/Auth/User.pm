@@ -65,28 +65,25 @@ sub get {
     return $class->_new( $storage, $id, $name, $start, $stop );
 }
 
+sub get_bootstrap {
+    my $class   = shift;
+    my $storage = shift;
+    
+    return $class->_new( $storage, 1, 'bootstrap', 1 );
+}
+
 sub get_nobody {
     my $class = shift;
     my $storage = shift;
     
-    my $uid = $storage->_fetch(
-	$storage->get_structure( 'authuser' ) => {
-	    return => 'id',
-	    where  => [ name => "nobody" ]
-	} );
-
-    return unless $uid;
-    my $id = $uid->[0]->{id};
-    return unless $id;
-
-    return $class->_new( $storage, $id, "nobody" );
+    return $class->_new( $storage, 2, "nobody" );
 }
 
 sub get_all {
     my $class = shift;
     my $storage = shift;
     
-    my $users = $storage->_fetch(
+    my $users = $storage->fetch(
 	$storage->get_structure( 'authuser' ) => {
 	    return => [ qw/id name/ ]
 	} );

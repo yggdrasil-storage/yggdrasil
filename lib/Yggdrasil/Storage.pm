@@ -59,7 +59,12 @@ sub new {
 	}
 	
 	my $storage = $engine_class->new(@_);
-	$storage->{bootstrap} = $data{bootstrap};
+	if ($data{bootstrap}) {
+	    $storage->_set_bootstrap_user( $storage );
+	} else {
+	    $storage->_set_default_user("nobody");
+	}
+
 	$storage->{transaction} = $TRANSACTION;
 	$storage->{type} = new Yggdrasil::Storage::Type();
 	
@@ -80,7 +85,6 @@ sub new {
 	$storage->{structure} = new Yggdrasil::Storage::Structure( storage => $storage );
 	$storage->{structure}->init();
 	
-	$storage->_set_default_user("nobody");
 	return $storage;
     }
 }
@@ -91,6 +95,19 @@ sub _set_default_user {
 
     my $u = Yggdrasil::Storage::Auth::User->get_nobody( $self );
     $self->{user} = $u;
+}
+
+sub _set_bootstrap_user {
+    my $self = shift;
+    my $user = shift;
+
+    my $u = Yggdrasil::Storage::Auth::User->get_bootstrap( $self );
+    $self->{user} = $u;
+}
+
+sub _is_bootstrapping {
+    my $self = shift;
+    return $self->{user}->id() == 1;
 }
 
 sub user {
@@ -104,7 +121,6 @@ sub bootstrap {
     my %users = @_;
 
     my $status = $self->{status};
-    $self->{bootstrap} = 1;
 
     # Create default users and roles
     my %roles;
@@ -117,7 +133,12 @@ sub bootstrap {
     # is required to be ID1 and nobody is ID2.    
     my $nobody_role    = Yggdrasil::Storage::Auth::Role->define( $self, "nobody" );
     my $bootstrap_user = Yggdrasil::Storage::Auth::User->define( $self, "bootstrap", undef );
-    my $nobody_user = Yggdrasil::Storage::Auth::User->define( $self, "nobody", undef );
+    my $nobody_user    = Yggdrasil::Storage::Auth::User->define( $self, "nobody", undef );
+
+    $nobody_role->description( 'System role' );
+    $bootstrap_user->fullname( 'Bootstrapper extraordinare' );
+    $nobody_user->fullname( 'Mr. Nobody' );
+
     $nobody_role->add( $nobody_user );
     $nobody_role->grant( $self->get_structure( 'authuser' ) => 'r',
 			 id => $nobody_user->id() );
@@ -138,12 +159,19 @@ sub bootstrap {
 
 	    $nobody_role->grant( $self->get_structure( 'authuser' ) => 'r', 
 				 id => $u->id() );
-
 	}
 
 	$self->{user} = $u if $user eq "root";
 	$usermap{$user} = $pwd;
     }
+
+    # Give admin users access to read about the system users.
+    $roles{admin}->grant( $self->get_structure( 'authuser' ) => 'r',
+			  id => $nobody_user->id() );
+    $roles{admin}->grant( $self->get_structure( 'authrole' ) => 'r',
+			  id => $nobody_role->id() );
+    $roles{admin}->grant( $self->get_structure( 'authuser' ) => 'r',
+			  id => $bootstrap_user->id() );
 
     return %usermap;
 }
@@ -174,14 +202,6 @@ sub define {
     my $originalname = $schema;
     my $status = $self->get_status();
 
-    unless ($self->{bootstrap}) {
-	my( $parent ) = $schema =~ /^(.*)::/ || "UNIVERSAL";
-	if (! $self->can( operation => 'define', targets => [ $parent ] )) {
-	    $status->set( 403, "You are not permitted to create the structure '$schema' under '$parent'." );
-	    return;
-	} 
-    }
-    
     for my $fieldhash (values %{$data{fields}}) {	
 	my $type = uc $fieldhash->{type};
 	if ($type eq 'SERIAL' && $fieldhash->{null}) {
@@ -292,22 +312,9 @@ sub store {
     my %params = @_;
 
     my $status = $self->get_status();
-
     my $transaction = $TRANSACTION->init( path => 'store' );
 
-    my $uname;
-    if( $self->{bootstrap} ) {
-	$uname = $self->{user}?$self->{user}->id():'1';
-    } else {
-	$uname = $self->{user}->id();
-    }
-
-    unless ($self->{bootstrap}) {
-	if (! $self->can( operation => 'store', targets => [ $schema ], data => \%params )) {
-	    $status->set( 403 );
-	    return;
-	} 
-    }
+    my $uname = $self->{user}->id();
 
     # Apply filters right away.
     my $filterset = $self->cache( 'filter', $schema );
@@ -344,7 +351,6 @@ sub store {
 	$params{fields}->{committer} = $uname;
     }
 
-
     # Expire the old value
     my %keys;
     my $key = $params{key};
@@ -366,7 +372,7 @@ sub store {
     my $r = $self->_store( $real_schema, tick => $tick, %params );
     my $user = $self->user();
     
-    if ($user) {	
+    unless ($self->_is_bootstrapping()) {	
 	for my $role ( $user->member_of() ) {	    
 	    $role->grant( $real_schema => 'm', id => $r );
 	}
@@ -378,13 +384,7 @@ sub store {
 
 sub tick {
     my $self = shift;
-
-    my $c;
-    if( $self->{bootstrap} ) {
-	$c = 'bootstrap'
-    } else {
-	$c = $self->{user}->name();
-    }
+    my $c = $self->{user}->name();
     
     my $schema = $self->_get_schema_name($self->get_structure( 'ticker' )) || $self->get_structure( 'ticker' );
     return $self->_store( $schema, fields => { committer => $c } );
@@ -476,7 +476,7 @@ sub fetch {
     $transaction->log( "Fetch: " . join( ', ', @schemas_looked_at) );
 
     my @schemadefs = @_;
-    unless ($self->{bootstrap}) {
+    unless ($self->_is_bootstrapping()) {
 	# Add auth bindings to query
 	my @authdefs = $self->_add_auth( "fetch", @schemadefs );
 	push( @schemadefs, @authdefs );
