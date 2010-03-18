@@ -426,9 +426,20 @@ sub user_password {
     my $user = $y->get_user( $username );
     print "'$username', no such user.\n" and return unless $user;
 
-    my $pass = Crypt::GeneratePassword::word( 6, 10 );
+    my $pass;
+    my $display_pass;
+    if ($username eq $y->user()->username()) {
+	$pass = _read_password();
+	unless ($pass) {
+	    print "Passwords not entered correctly, aborting.\n";
+	    return;
+	}
+    } else {
+	$pass = Crypt::GeneratePassword::word( 6, 10 );
+	$display_pass = 1;
+    }
     $user->password( $pass );
-    print "New password for '$username' is '$pass'.\n";
+    printf "New password for '$username' is %s.\n", $display_pass?"'$pass'":'active';
 }
 
 sub user_fullname {
@@ -1052,6 +1063,28 @@ sub lineparser {
     }
 
     return grep { defined && length } @r;
+}
+
+sub _read_password {
+    my ($tries, $counter) = (0, 0);
+    my @pass = ('x', 'y');
+    
+    while ($tries < 3 && $pass[0] ne $pass[1]) {
+	print "Passwords didn't match, try again.\n" if $tries && $counter == 0;
+	printf "%s: ", $counter==0?"Password":'Repeat password';
+	system("stty -echo");
+	chop($pass[$counter] = <>);
+	print "\n";
+	system("stty echo");
+	return $pass[0] if $pass[0] eq $pass[1];
+	if ($counter == 1) {
+	    $counter = 0;
+	    $tries++;
+	} else {
+	    $counter++;
+	}
+    }
+    return undef;
 }
 
 __DATA__
