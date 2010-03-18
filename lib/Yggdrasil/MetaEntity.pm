@@ -137,11 +137,6 @@ sub add {
     my $name = $params{entity};
     
     my $id = $self->{yggdrasil}->{storage}->store( "MetaEntity", key => "entity", fields => { entity => $name } );
-
-    my $user = $self->storage()->user();
-    for my $role ( $user->member_of() ) {
-	$role->grant( 'MetaEntity' => 'm', id => $id );
-    }
 }
 
 sub _admin_dump {
