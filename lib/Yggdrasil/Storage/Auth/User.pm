@@ -38,6 +38,13 @@ sub define {
 				value => $pwd, 
 			       });
     
+    # specifically grant rights to nobody role
+    my $nobody_role = Yggdrasil::Storage::Auth::Role->get_nobody( $storage );
+    $nobody_role->grant( $storage->get_structure( 'authuser' ), 
+			 'r', id => $uid );
+    $nobody_role->grant( $storage->get_structure( 'authuser:password' ),
+			 'r', id => $uid );
+
     return unless $uid;
     return $class->_new( $storage, $uid, $user );
 }

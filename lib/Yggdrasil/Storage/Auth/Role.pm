@@ -61,6 +61,14 @@ sub get {
     return $class->_new( $storage, $id, $role )
 }
 
+sub get_nobody {
+    my $class   = shift;
+    my $storage = shift;
+
+    # FIX: 3? 
+    return $class->_new( $storage, 3, "nobody" );
+}
+
 sub get_all {
     my $class = shift;
     my $storage = shift;
@@ -165,7 +173,7 @@ sub _access :method {
 
     my $storage = $self->{_storage};
 
-    my $storageauthschema = $self->{_storage}->get_structure( 'authschema' );
+    my $storageauthschema = $storage->get_structure( 'authschema' );
 
     # 1. find authschema for schema
     my $authschema = $storage->fetch( $storageauthschema =>
