@@ -216,6 +216,7 @@ sub _initialize_user_auth {
     unless ( $self->{_storage}->_structure_exists( $roleschema ) ) {
 	$self->{_storage}->define( $roleschema,
 				  nomap  => 1,
+				  temporal => 1,
 				  fields => {
 					     id   => { type => 'SERIAL', null => 0 },
 					     name => { type => 'TEXT', null => 0 },
