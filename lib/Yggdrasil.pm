@@ -27,6 +27,13 @@ use Yggdrasil::Debug;
 
 our $VERSION = '0.10';
 
+$SIG{__DIE__} = sub {
+    $Carp::CarpLevel = 1;
+    print "\nERROR: $_[0]\n\n";
+    print "TRACEBACK:\n";
+    confess();
+};
+
 sub yggdrasil {
     my $self = shift;
 
@@ -112,7 +119,6 @@ sub login {
     # we're nobody until authenticated
     $self->{user} = $self->get_user( $self->{storage}->user() );
 
-    #my $auth = new Yggdrasil::Auth( yggdrasil => $self );
     my $auth = $self->{storage}->authenticate( %params );
     $self->{user} = $self->get_user( $auth );
 
