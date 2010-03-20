@@ -302,12 +302,11 @@ sub _initialize_user_auth {
     unless ( $self->{_storage}->_structure_exists($memberschema) ) {
 	$self->{_storage}->define( $memberschema,
 				  nomap  => 1,
+				  temporal => 1,
 				  fields => {
 					     userid => { type => 'INTEGER', null => 0 },
 					     roleid => { type => 'INTEGER', null => 0 },
 					    },
-				  temporal => 1,
-				  nomap    => 1,
 				  hints    => {
 					       userid => { foreign => $userschema },
 					       roleid => { foreign => $roleschema },
