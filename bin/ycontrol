@@ -543,7 +543,11 @@ sub entity_create {
     print "'$entity' already exists ($e).\n" and return if $e;
 
     my $eobj = $y->define_entity( $entity );
-    print "'$entity' created.\n";
+    if( $y->get_status()->OK() ) {
+	print "'$entity' created.\n";
+    } else {
+	print $y->get_status()->message, "\n";
+    }
 }
 
 
