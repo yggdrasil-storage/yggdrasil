@@ -336,7 +336,9 @@ sub store {
     my $aref = $self->fetch( $real_schema => { where => [ %{$params{fields}} ] } );
     if( @$aref ) {
 	$status->set( 202, "Value(s) already set" );
-	return 1;
+	# FIX: what if the key is a composite key?
+	my $key = $params{key};
+	return $aref->[0]->{$key};
     }
 
     # Tick
