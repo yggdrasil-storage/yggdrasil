@@ -6,14 +6,13 @@ use warnings;
 use base qw(Yggdrasil::Object);
 
 use Yggdrasil::Entity::Instance;
-
 use Yggdrasil::MetaEntity;
-use Yggdrasil::MetaInheritance;
-
 use Yggdrasil::Property;
 
 use Yggdrasil::Utilities qw|get_times_from|;
-  
+
+our $UNIVERSAL = "UNIVERSAL";
+
 sub define {
     my $class  = shift;
     my $self   = $class->SUPER::new( @_ );
@@ -25,45 +24,40 @@ sub define {
     my $fqn = $parent ? join('::', $parent, $name) : $name;
 
     my @entities = split m/::/, $fqn;
-    if (@entities > 1) {
-	$name   = pop @entities;
-	$parent = join('::', @entities);
 
-	if ($self->{yggdrasil}->{strict}) { # How about $self->strict() 
-                                            # (with strict() living in Y::Object)
-	    if( ! Yggdrasil::Entity->get( yggdrasil => $self, entity => $parent)  ) {
-	    #if (! $self->{yggdrasil}->get_entity( $parent )) {
-		my $status = $self->get_status();
-		$status->set( 400, "Unable to access parent entity $parent." );
-		return;
-	    }
-	} else {
-	    # print " ** Create $fqn\n";
+    # Name is always the last part of Parent1::Parent2::Child
+    $name   = pop @entities;
+
+    # Parent name is Parent1::Parent2
+    $parent = @entities ? join('::', @entities) : undef;
+    
+    # In cases where we have no parent and we're not talking about
+    # UNIVERSAL, then our parent should be UNIVERSAL, eg. if name ==
+    # "Student" etc. UNIVERSAL should not be parent of UNIVERSAL
+    $parent = $UNIVERSAL if ! $parent && $name ne $UNIVERSAL;
+
+    my $parent_id = undef;
+    my $status = $self->get_status();
+
+    if( defined $parent ) {
+	my $pentity = Yggdrasil::Entity->get( yggdrasil => $self,
+					      entity    => $parent );
+
+	unless( $pentity ) {
+	    $status->set( 400, "Unable to access parent entity $parent." );
+	    return;
 	}
+
+	$parent_id = $pentity->{_id};
     }
-    $self->{name} = $fqn;
 
     # --- Add to MetaEntity, noop if it exists.
-    Yggdrasil::MetaEntity->add( yggdrasil => $self, entity => $fqn );
-    #$self->_meta_add($fqn);
-
-    my $status = $self->get_status();
+    Yggdrasil::MetaEntity->add( yggdrasil => $self,
+				entity    => $fqn,
+				parent    => $parent_id );
     return unless $status->OK();
 
-    $self = __PACKAGE__->get( yggdrasil => $self, entity => $fqn );
-
-    # --- Update MetaInheritance  
-    if( defined $parent ) {
-	$parent = __PACKAGE__->get( yggdrasil => $self, entity => $parent );
-	Yggdrasil::MetaInheritance->add( yggdrasil => $self, child => $self, parent => $parent );
-	#$self->_add_inheritance( $fqn, $parent );
-    } else {
-	# warnings, this does update, which sets status.
-	#$self->_expire_inheritance( $fqn );
-	Yggdrasil::MetaInheritance->expire( yggdrasil => $self, entity => $self );
-    }
-
-    return $self;
+    return __PACKAGE__->get( yggdrasil => $self, entity => $fqn );
 }
 
 # get an entity
@@ -97,7 +91,7 @@ sub get {
     }
 
     my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ @query ],
-							return => [ 'id', 'entity', 'start', 'stop' ] } );
+							return => [ 'id', 'entity', 'parent', 'start', 'stop' ] } );
     
     unless (defined $aref->[0]->{id}) {
 	$status->set( 404, "Entity '$identifier' not found." );
@@ -105,10 +99,11 @@ sub get {
     } 
     
     $status->set( 200 );
-    return objectify( name  => $aref->[0]->{entity},
-		      id    => $aref->[0]->{id},
-		      start => $aref->[0]->{start},
-		      stop  => $aref->[0]->{stop},
+    return objectify( name      => $aref->[0]->{entity},
+		      parent    => $aref->[0]->{parent},
+		      id        => $aref->[0]->{id},
+		      start     => $aref->[0]->{start},
+		      stop      => $aref->[0]->{stop},
 		      yggdrasil => $self->{yggdrasil},
 		    );
 }
@@ -220,6 +215,13 @@ sub name {
     return $self->{name};
 }
 
+sub parent {
+    my $self = shift;
+
+    return unless $self->{parent};
+    return __PACKAGE__->get( id => $self->{parent} );
+}
+
 # Handle property definition and deletion
 sub define_property {
     my $self = shift;
@@ -248,13 +250,20 @@ sub property_exists {
     my @ancestors = $self->ancestors($start, $stop);
     
     # Check to see if the property exists.
-    foreach my $e ( $self->name(), @ancestors ) {
-	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
-							      entity => $e,
-							    ]},
-				   'MetaProperty', { return => [ 'property', 'start', 'stop' ],
-						     where => [ property => $property ] },
-				   { start => $start, stop => $stop });
+    foreach my $e ( @ancestors ) {
+	my $aref = $storage->fetch(
+	    MetaEntity => { 
+		where => [ entity => $e ],
+	    },
+	    MetaProperty => { 
+		return => [ 'property', 'start', 'stop' ],
+		where  => [ 
+		    property => $property,
+		    entity   => \q<MetaEntity.id>,
+		    ]
+	    },
+
+	    { start => $start, stop => $stop });
 
 	# The property name might be "0".
 	return { name  => join(":", $e, $property ),
@@ -271,16 +280,19 @@ sub properties {
 
     my $storage = $self->{yggdrasil}->{storage};
     my @ancestors = $self->ancestors($start, $stop);
-
     my %properties;
-    
-    foreach my $e ( $self->name(), @ancestors ) {
-	my $aref = $storage->fetch('MetaEntity', { where => [ id     => \qq{MetaProperty.entity},
-							      entity => $e,
-							    ]},
-				   'MetaProperty', 
-				    { return => 'property' },
-				    { start  => $start, stop => $stop });
+
+    foreach my $e ( @ancestors ) {
+	my $aref = $storage->fetch(
+	    MetaEntity => {
+		where => [ entity => $e ]
+	    },
+	    MetaProperty => {
+		return => 'property',
+		where  => [ entity => \q<MetaEntity.id> ]
+	    },
+
+	    { start  => $start, stop => $stop });
 
 
 	for my $p (@$aref) {
@@ -289,7 +301,7 @@ sub properties {
 	    if ($e eq $self->name()) {
 		$eobj = $self;
 	    } else {
-		$eobj = Yggdrasil::Entity::objectify( name => $e, yggdrasil => $self->{yggdrasil} );
+		$eobj = __PACKAGE__->get( entity => $e, yggdrasil => $self->{yggdrasil} );
 	    }
 	    
 	    $properties{ $p->{property} } = Yggdrasil::Property::objectify( name      => $p->{property},
@@ -311,8 +323,8 @@ sub ancestors {
     my %seen = ( $self->{_id} => 1 );
 
     my $storage = $self->storage();
-    my $r = $storage->fetch( MetaInheritance => { return => "parent", where => [ child => $self->{_id} ] },
-			     MetaEntity => { return => "entity", where => [ id => \q<MetaInheritance.parent> ] },
+    my $r = $storage->fetch( MetaEntity => { return => [qw/entity parent/],
+					     where  => [ id => $self->{_id} ] },
 			     { start => $start, stop => $stop });
     
     while( @$r ) {
@@ -323,8 +335,8 @@ sub ancestors {
 	$seen{$parent} = 1;
 	push( @ancestors, $name );
 
-	$r = $storage->fetch( MetaInheritance => { return => "parent", where => [ child => $parent ] },
-			      MetaEntity => { return => "entity", where => [ id => \q<MetaInheritance.parent> ] },
+	$r = $storage->fetch( MetaEntity => { return => [qw/entity parent/],
+					      where => [ id => $parent ] },
 			      { start => $start, stop => $stop } );
     }
 

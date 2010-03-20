@@ -14,7 +14,6 @@ use Carp;
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
-use Yggdrasil::MetaInheritance;
 
 use Yggdrasil::Storage;
 use Yggdrasil::Entity;
@@ -77,7 +76,6 @@ sub bootstrap {
 	Yggdrasil::MetaEntity->define( yggdrasil => $self );
 	Yggdrasil::MetaRelation->define( yggdrasil => $self );
 	Yggdrasil::MetaProperty->define( yggdrasil => $self );
-	Yggdrasil::MetaInheritance->define( yggdrasil => $self );
 	
 	my $universal = $self->define_entity( 'UNIVERSAL' );
 	$self->get_user( 'bootstrap' )->expire();

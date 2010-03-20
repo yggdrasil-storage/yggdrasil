@@ -14,7 +14,7 @@ sub define {
     $storage->define( "MetaEntity",
 		      fields     => {
 				     id     => { type => 'SERIAL' },
-				     parent => { type => 'INTEGER' },
+				     parent => { type => 'INTEGER', null => 1 },
 				     entity => { type => "VARCHAR(255)", null => 0 },
 				    },
 		      temporal   => 1,
@@ -134,9 +134,14 @@ sub add {
     my $self   = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $name = $params{entity};
+    my $name   = $params{entity};
+    my $parent = $params{parent};
     
-    my $id = $self->{yggdrasil}->{storage}->store( "MetaEntity", key => "entity", fields => { entity => $name } );
+    my $id = $self->{yggdrasil}->{storage}->store( "MetaEntity", key => [qw/entity parent/],
+						   fields => { 
+						       entity => $name,
+						       parent => $parent,
+						   } );
 }
 
 sub _admin_dump {

@@ -243,8 +243,8 @@ sub _get_meta {
     my $storage = $self->{yggdrasil}->{storage};
     my @ancestors = $entity->ancestors($start, $stop);
 
-    foreach my $e ( $self, @ancestors ) {
-	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e->{entity}->name() ]},
+    foreach my $e ( @ancestors ) {
+	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e ] },
 				  'MetaProperty',{ return => $meta,
 						   where  => [ entity   => \qq{MetaEntity.id},
 							       property => $property ]},

@@ -36,7 +36,6 @@ lib/Yggdrasil/Interface/WWW/Container.pm
 lib/Yggdrasil/Meta.pm
 lib/Yggdrasil/MetaAuth.pm
 lib/Yggdrasil/MetaEntity.pm
-lib/Yggdrasil/MetaInheritance.pm
 lib/Yggdrasil/MetaProperty.pm
 lib/Yggdrasil/MetaRelation.pm
 lib/Yggdrasil/Object.pm
