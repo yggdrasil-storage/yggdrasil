@@ -125,6 +125,11 @@ my %cmd;
 	    _role => \&role_description,
 	},
 
+	create => {
+	    _help => "Create new role",
+	    _role => \&role_create,
+	},
+
 	grant => {
 	    _help => "Grant role privileges for an entity",
 
@@ -860,6 +865,19 @@ sub role_description {
 
     $robj->description( $desc );
     print "New description for '$role' is '$desc'.\n";
+}
+
+sub role_create {
+    my ($role_command, $create_command, $rname) = @_;
+
+    print "'$rname', already taken.\n" and return if $y->get_role( $rname );
+
+    my $desc = $term->readline(" Description > ");
+    print "'$desc' is invalid.\n" and return unless defined $desc;
+
+    my $robj = $y->define_role( $rname );
+    $robj->description( $desc );
+    print "Role '$rname' created.\n";
 }
 
 sub role_grant {
