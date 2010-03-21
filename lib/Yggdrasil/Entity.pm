@@ -115,6 +115,7 @@ sub objectify {
     $obj->{_id}    = $params{id};
     $obj->{_start} = $params{start};
     $obj->{_stop}  = $params{stop};
+    $obj->{parent}   = $params{parent};
     return $obj;
 }
 
@@ -218,7 +219,7 @@ sub parent {
     my $self = shift;
 
     return unless $self->{parent};
-    return __PACKAGE__->get( id => $self->{parent} );
+    return __PACKAGE__->get( id => $self->{parent}, yggdrasil => $self );
 }
 
 # Handle property definition and deletion
