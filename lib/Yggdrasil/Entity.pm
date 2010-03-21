@@ -34,11 +34,10 @@ sub define {
     # In cases where we have no parent and we're not talking about
     # UNIVERSAL, then our parent should be UNIVERSAL, eg. if name ==
     # "Student" etc. UNIVERSAL should not be parent of UNIVERSAL
-    $parent = $UNIVERSAL if ! $parent && $name ne $UNIVERSAL;
+    $parent = $UNIVERSAL if ! defined $parent && $name ne $UNIVERSAL;
 
     my $parent_id = undef;
     my $status = $self->get_status();
-
     if( defined $parent ) {
 	my $pentity = Yggdrasil::Entity->get( yggdrasil => $self,
 					      entity    => $parent );
