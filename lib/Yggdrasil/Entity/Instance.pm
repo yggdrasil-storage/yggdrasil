@@ -35,6 +35,7 @@ sub create {
     my $eid = $idref->[0]->{id};
 
     $self->{_id} = $self->storage()->store( Instances => 
+					    key => qw/visual_id/,
 					    fields => { visual_id => $vid,
 							entity    => $eid } );
 
