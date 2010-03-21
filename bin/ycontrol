@@ -147,15 +147,8 @@ my %cmd;
 		},
 	    },
 
-	    create => {
-		_help => "Grant role create privileges for an entity",
-		_role => {
-		    _entity => \&role_grant,
-		},
-	    },
-
-	    delete => {
-		_help => "Grant role delete privileges for an entity",
+	    modify => {
+		_help => "Grant role modify privileges for an entity",
 		_role => {
 		    _entity => \&role_grant,
 		},
@@ -179,20 +172,12 @@ my %cmd;
 		},
 	    },
 
-	    create => {
-		_help => "Revoke role create privileges for an entity",
+	    modify => {
+		_help => "Revoke role modify privileges for an entity",
 		_role => {
 		    _entity => \&role_revoke,
 		},
 	    },
-
-	    delete => {
-		_help => "Revoke role delete privileges for an entity",
-		_role => {
-		    _entity => \&role_revoke,
-		},
-	    },
-
 	}
     },
     
@@ -904,16 +889,15 @@ sub grant_revoke {
     my %tag = (
 	read   => 'r',
 	write  => 'w',
-	create => 'c',
-	delete => 'd',
+	modify => 'm',
     );
     print "'$privilege', no such privilege.\n" and return unless $tag{$privilege};
 
     if( $type eq "grant" ) {
-	$robj->grant( $eobj, $tag{$privilege} );
+	$robj->grant( MetaEntity => $tag{$privilege}, id => $eobj->{_id} );
 	print "Granted role '$role' $privilege privileges to $entity\n"; 
     } elsif( $type eq "revoke" ) {
-	$robj->revoke( $eobj, $tag{$privilege} );
+	$robj->revoke( MetaEntity => $tag{$privilege}, id => $eobj->{_id} );
 	print "Revoked role '$role' $privilege privileges to $entity\n"; 
     } else {
 	print "'$type', no such type.\n";
