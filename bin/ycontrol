@@ -224,6 +224,12 @@ my %cmd;
 		_instance => \&instance_info,
 	    },
 	},
+	expire => {
+	    _help   => "Expire an instance",
+	    _entity => {
+		_instance => \&instance_expire,
+	    },
+	},
 	set => {
 	    _help   => "Edit the property of an instance",
 	    _entity => {
@@ -601,6 +607,18 @@ sub instance_info {
     }
 
     &display_tick( $iobj->start() );
+}
+
+sub instance_expire {
+    my ($instance_command, $info_command, $entity, $instance) = @_;
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+    
+    my $iobj = $eobj->fetch( $instance );
+    print "'$instance', no such instance in $entity.\n" and return unless $iobj;
+
+    $iobj->delete();
+    print $status->message(), "\n";
 }
 
 sub instance_edit {

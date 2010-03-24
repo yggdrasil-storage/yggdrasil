@@ -103,13 +103,22 @@ sub fetch {
     }
 }
 
+# FIXME, return values from expire / _expire.  There are none.  Also,
+# should we have a "make property name"-method?
 sub delete :method {
-    my $class  = shift;
-    my $self   = $class->SUPER::new(@_);
-    my %params = @_;
+    my $self = shift;
 
-    # FIX: write this method
-    #      expire the instance (as well as all it's property values?)
+    my $storage = $self->storage();
+    my $entity  = $self->entity();
+
+    # Expire all properties
+    for my $prop ($entity->properties()) {
+	$storage->expire( $entity->name() . ':' . $prop->name(), id => $self->{_id} );	
+    }
+    
+    # Expire the instance itself.
+    $storage->expire( 'Instances', id => $self->{_id} );
+    $self->get_status()->set( '200', $self->id() . " has been expired." );
 }
 
 sub _get_id {
