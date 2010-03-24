@@ -64,6 +64,8 @@
 * Inhertited relations, what happens when relations are broken?  Do the
   active relations expire?  
 
-* Overloading properties?
-  If I have a UNIVERSAL property 'count' as INTEGER, shouldn't a
-  subclass be allowed to create 'count' as a differnt type?
+* Overloading properties?  NO, we need to ensure that types are
+  propagated correctly throughout the inheritance tree so it's
+  possible to treat instances of any subclass as the parent class.
+
+* Return values from expire / _expire...
