@@ -446,20 +446,21 @@ sub _expire {
 
     return unless $self->_schema_is_temporal( $schema );
 
+    my $status = $self->get_status();
     my $nullopr = $self->_null_comparison_operator();
-
-    my @sets;
 	
+    my @sets;
+
     for my $key (keys %params) {
 	push @sets, "$key = ?";
-	# Dear gods, FIXME.  Let's send proper queries to expire.
 	unless (defined $params{$key}) {
-#	    print "$tick for $schema but $key is undef\n";
-	    return;
+	    $status->set( 400, "Expire for $schema at tick $tick, but $key is not defined" );
+	    return;	    
 	}
     }
     my $keys = join " and ", @sets;
 
+    $status->set( 200 );
     $self->_sql( "UPDATE $schema SET stop = ? WHERE stop $nullopr NULL and $keys", $tick, values %params );
 }
 

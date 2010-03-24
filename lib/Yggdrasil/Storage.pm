@@ -695,11 +695,16 @@ sub expire {
     my $schema = shift;
     
     my $real_schema = $self->_get_schema_name( $schema ) || $schema;
-    return unless $self->_schema_is_temporal($real_schema);
+
+    unless ($self->_schema_is_temporal( $real_schema )) {
+	$self->get_status()->set( 406, "Expire of a non-temporal value attempted" );
+	return;
+    }
 
     # Tick
     my $tick = $self->tick();
 
+    # Do not test return values, just pass them back to the caller.
     $self->_expire( $real_schema, $tick, @_ );
 }
 

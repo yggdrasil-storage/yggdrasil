@@ -618,7 +618,11 @@ sub instance_expire {
     print "'$instance', no such instance in $entity.\n" and return unless $iobj;
 
     $iobj->delete();
-    print $status->message(), "\n";
+    if ($status->OK()) {
+	print "Instance " . $iobj->id() . " in " . $eobj->name() . " has been expired\n";
+    } else {
+	print $status->message(), "\n";
+    }
 }
 
 sub instance_edit {

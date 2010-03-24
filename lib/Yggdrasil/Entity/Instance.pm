@@ -103,22 +103,30 @@ sub fetch {
     }
 }
 
-# FIXME, return values from expire / _expire.  There are none.  Also,
-# should we have a "make property name"-method?
+# FIXME, return values from expire / _expire.  What do we do with
+# multiple calls like the loop for properties?  We can only send one
+# return value back to userland... This should be a singular
+# transaction, right?  Rollback on failure?
 sub delete :method {
     my $self = shift;
 
     my $storage = $self->storage();
     my $entity  = $self->entity();
+    my $status  = $self->get_status();
 
     # Expire all properties
     for my $prop ($entity->properties()) {
-	$storage->expire( $entity->name() . ':' . $prop->name(), id => $self->{_id} );	
+	$storage->expire( join(':', $entity->name(), $prop->name()), id => $self->{_id} );	
     }
     
     # Expire the instance itself.
     $storage->expire( 'Instances', id => $self->{_id} );
-    $self->get_status()->set( '200', $self->id() . " has been expired." );
+    if ($status->OK()) {
+	return 1;
+    } else {
+	return undef;
+    }
+    
 }
 
 sub _get_id {
