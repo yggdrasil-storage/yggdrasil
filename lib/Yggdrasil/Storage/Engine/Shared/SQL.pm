@@ -169,8 +169,8 @@ sub _sql {
     # Transaction information.
     my $sqlinline = $sql;
     for my $attr ( @attr ) {
-	$attr = defined $attr ? $attr : "NULL";
-	$sqlinline =~ s/\?/"'$attr'"/e;
+	my $value = defined $attr ? $attr : "NULL";
+	$sqlinline =~ s/\?/"'$value'"/e;
     }
     $self->{transaction}->engine( $sqlinline );
     #print "$sqlinline\n";
