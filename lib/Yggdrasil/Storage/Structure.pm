@@ -43,16 +43,25 @@ sub new {
     return $self;
 }
 
+sub bootstrap {
+    my $self = shift;
+
+    $self->_bootstrap_config();
+    $self->_bootstrap_filter();
+    $self->_bootstrap_mapper();
+    $self->_bootstrap_ticker();
+    $self->_bootstrap_temporal();
+    $self->_bootstrap_auth();
+    $self->_bootstrap_fields();
+}
+
 sub init {
     my $self = shift;
     
     $self->_initialize_config();
     $self->_initialize_filter();
     $self->_initialize_mapper();
-    $self->_initialize_ticker();
     $self->_initialize_temporal();
-    $self->_initialize_auth();
-    $self->_initialize_fields();
 }
 
 sub get {
@@ -102,11 +111,11 @@ sub _getter_setter {
     return $structure;
 }
 
-sub _initialize_auth {
+sub _bootstrap_auth {
     my $self = shift;
 
-    $self->_initialize_schema_auth();
-    $self->_initialize_user_auth();
+    $self->_bootstrap_schema_auth();
+    $self->_bootstrap_user_auth();
 }
 
 # Initalize the mapper cache and, if needed, the schema to store schema
@@ -124,15 +133,19 @@ sub _initialize_mapper {
 	    $self->{_storage}->cache( 'mapperh2m', $human, $mapped );
 	    $self->{_storage}->cache( 'mapperm2h', $mapped, $human );
 	}
-    } else {
-	$self->{_storage}->define( $schema,
-				  nomap  => 1,
-				  fields => {
-					     humanname  => { type => 'TEXT' },
-					     mappedname => { type => 'TEXT' },
-					    },
-				);
-    }
+    } 
+}
+
+sub _bootstrap_mapper {
+    my $self = shift;
+
+    $self->{_storage}->define( $self->get( 'mapper' ),
+			       nomap  => 1,
+			       fields => {
+					  humanname  => { type => 'TEXT' },
+					  mappedname => { type => 'TEXT' },
+					 },
+			     );
 }
 
 # Initalize and cache what schemas are temporal, created required
@@ -147,32 +160,32 @@ sub _initialize_temporal {
 	    my ($table, $temporal) = ( $temporalpair->{tablename}, $temporalpair->{temporal} );
 	    $self->{_storage}->cache( 'temporal', $table, $temporal );
 	}
-    } else {
-	$self->{_storage}->define( $schema, 
-				  nomap  => 1,
-				  fields => {
-					     tablename => { type => 'TEXT' },
-					     temporal  => { type => 'BOOLEAN' },
-					    },
-				);
     }
-    
 }
 
-sub _initialize_ticker {
+sub _bootstrap_temporal {
     my $self = shift;
-    my $schema = $self->get( 'ticker' );
+
+    $self->{_storage}->define( $self->get( 'temporal' ),
+			       nomap  => 1,
+			       fields => {
+					  tablename => { type => 'TEXT' },
+					  temporal  => { type => 'BOOLEAN' },
+					 },
+			     );
+}
+
+sub _bootstrap_ticker {
+    my $self = shift;
     
-    unless ( $self->{_storage}->_structure_exists( $schema ) ) {
-	$self->{_storage}->define( $schema,
-				  nomap  => 1,
-				  fields => {
-					     id    => { type => 'SERIAL' },
-					     stamp => { type => 'TIMESTAMP', 
-							null => 0,
-							default => "current_timestamp" },
-					    }, );
-    }
+    $self->{_storage}->define( $self->get( 'ticker' ),
+			       nomap  => 1,
+			       fields => {
+					  id    => { type => 'SERIAL' },
+					  stamp => { type => 'TIMESTAMP', 
+						     null => 0,
+						     default => "current_timestamp" },
+					 }, );
 }
 
 sub _initialize_filter {
@@ -193,163 +206,158 @@ sub _initialize_filter {
 	for my $schemaname (keys %schemafilters) {
 	    $self->{_storage}->cache( 'filter', $schemaname, \@{$schemafilters{$schemaname}})
 	}	
-    } else {
-	$self->{_storage}->define( $schema,
-				   nomap  => 1,
-				   fields => {
-					      id         => { type => 'SERIAL' },
-					      schemaname => { type => 'TEXT', null => 0 },
-					      filter     => { type => 'TEXT', null => 0 },
-					      field      => { type => 'TEXT', null => 0 },
-					      params    => { type => 'TEXT', null => 0 },
-					     }, );
-	
     }
 }
 
-sub _initialize_user_auth {
+sub _bootstrap_filter {
+    my $self = shift;
+
+    $self->{_storage}->define( $self->get( 'filter' ),
+			       nomap  => 1,
+			       fields => {
+					  id         => { type => 'SERIAL' },
+					  schemaname => { type => 'TEXT', null => 0 },
+					  filter     => { type => 'TEXT', null => 0 },
+					  field      => { type => 'TEXT', null => 0 },
+					  params     => { type => 'TEXT', null => 0 },
+					 } );
+}
+
+sub _bootstrap_user_auth {
     my $self = shift;
     my $userschema   = $self->get( 'authuser' );
     my $roleschema   = $self->get( 'authrole' );
     my $memberschema = $self->get( 'authmember' );
     
-    unless ( $self->{_storage}->_structure_exists( $roleschema ) ) {
-	$self->{_storage}->define( $roleschema,
-				  nomap  => 1,
-				  temporal => 1,
-				  fields => {
-					     id   => { type => 'SERIAL', null => 0 },
-					     name => { type => 'TEXT', null => 0 },
-					    },
-				  auth => {
-					   create =>
-					   [
-					    ':Auth' => {
-							where => [ id  => \qq<$roleschema.id>,
-								   'm' => 1 ],
-						       },
-					   ],
-			   
-					   fetch => 
-					   [
-					    ':Auth' => {
-							where => [ id => \qq<$roleschema.id>,
-								   r  => 1],
-						       },
-					   ],
-			   
-					   update => 
-					   [
-					    ':Auth' => {
-							where => [ id => \qq<$roleschema.id>,
-								   w  => 1 ],
-						       },
-					   ],
+    $self->{_storage}->define( $roleschema,
+			       nomap  => 1,
+			       temporal => 1,
+			       fields => {
+					  id   => { type => 'SERIAL', null => 0 },
+					  name => { type => 'TEXT', null => 0 },
+					 },
+			       auth => {
+					create =>
+					[
+					 ':Auth' => {
+						     where => [ id  => \qq<$roleschema.id>,
+								'm' => 1 ],
+						    },
+					],
+					
+					fetch => 
+					[
+					 ':Auth' => {
+						     where => [ id => \qq<$roleschema.id>,
+								r  => 1],
+						    },
+					],
+					
+					update => 
+					[
+					 ':Auth' => {
+						     where => [ id => \qq<$roleschema.id>,
+								w  => 1 ],
+						    },
+					],
+					
+					expire =>
+					[
+					 ':Auth' => {
+						     where => [ id  => \qq<$roleschema.id>,
+								'm' => 1 ],
+						    },
+					],
+				       } );
 
-					   expire =>
-					   [
-					    ':Auth' => {
-							where => [ id  => \qq<$roleschema.id>,
-								   'm' => 1 ],
-						       },
-					   ],
-					  } );
-    }
+    $self->{_storage}->define( $userschema,
+			       nomap  => 1,
+			       temporal => 1,
+			       fields => {
+					  id       => { type => 'SERIAL', null => 0 },
+					  name     => { type => 'TEXT', null => 0 },
+					 },
+			       auth => {
+					create =>
+					[
+					 ':Auth' => {
+						     where => [ id  => \qq<$userschema.id>,
+								'm' => 1 ],
+						    },
+					],
+					
+					fetch => 
+					[
+					 ':Auth' => {
+						     where => [ id => \qq<$userschema.id>,
+								r  => 1],
+						    },
+					],
+					
+					update => 
+					[
+					 ':Auth' => {
+						     where => [ id => \qq<$userschema.id>,
+								w  => 1 ],
+						    },
+					],
+					
+					expire =>
+					[
+					 ':Auth' => {
+						     where => [ id  => \qq<$userschema.id>,
+								'm' => 1 ],
+						    },
+					],
+				       } );
 
-    unless ( $self->{_storage}->_structure_exists( $userschema ) ) {
-	$self->{_storage}->define( $userschema,
-				  nomap  => 1,
-				  temporal => 1,
-				  fields => {
-					     id       => { type => 'SERIAL', null => 0 },
-					     name     => { type => 'TEXT', null => 0 },
-					    },
-				  auth => {
-					   create =>
-					   [
-					    ':Auth' => {
-							where => [ id  => \qq<$userschema.id>,
-								   'm' => 1 ],
-						       },
-					   ],
-			   
-					   fetch => 
-					   [
-					    ':Auth' => {
-							where => [ id => \qq<$userschema.id>,
-								   r  => 1],
-						       },
-					   ],
-			   
-					   update => 
-					   [
-					    ':Auth' => {
-							where => [ id => \qq<$userschema.id>,
-								   w  => 1 ],
-						       },
-					   ],
-
-					   expire =>
-					   [
-					    ':Auth' => {
-							where => [ id  => \qq<$userschema.id>,
-								   'm' => 1 ],
-						       },
-					   ],
-					  } );
-    }
-
-    unless ( $self->{_storage}->_structure_exists($memberschema) ) {
-	$self->{_storage}->define( $memberschema,
-				  nomap  => 1,
-				  temporal => 1,
-				  fields => {
-					     userid => { type => 'INTEGER', null => 0 },
-					     roleid => { type => 'INTEGER', null => 0 },
-					    },
-				  hints    => {
-					       userid => { foreign => $userschema },
-					       roleid => { foreign => $roleschema },
-					      },
-				  auth     => {
-					       create => 
-					       [
-						qq<$roleschema:Auth> => 
-						{
-						 where => [ id  => \qq<$memberschema.roleid>,
-							    'm' => 1 ],
-						},
-					       ],
-					       fetch  => 
-					       [
-						qq<$roleschema:Auth> => 
-						{
-						 where => [ id => \qq<$memberschema.roleid>,
-							    r  => 1, ],
-						},
-						qq<$userschema:Auth> =>
-						{
-						 where => [ id => \qq<$memberschema.userid>,
-							    r  => 1, ],
-						}
-					       ],
-					       update => undef,
-					       expire => 
-					       [
-						qq<$roleschema:Auth> =>
-						{
-						 where => [ id  => \qq<$memberschema.roleid>,
-							    'm' => 1, ],
-						},
-					       ]
-					      } );
-    
-    }
-
+    $self->{_storage}->define( $memberschema,
+			       nomap  => 1,
+			       temporal => 1,
+			       fields => {
+					  userid => { type => 'INTEGER', null => 0 },
+					  roleid => { type => 'INTEGER', null => 0 },
+					 },
+			       hints    => {
+					    userid => { foreign => $userschema },
+					    roleid => { foreign => $roleschema },
+					   },
+			       auth     => {
+					    create => 
+					    [
+					     qq<$roleschema:Auth> => 
+					     {
+					      where => [ id  => \qq<$memberschema.roleid>,
+							 'm' => 1 ],
+					     },
+					    ],
+					    fetch  => 
+					    [
+					     qq<$roleschema:Auth> => 
+					     {
+					      where => [ id => \qq<$memberschema.roleid>,
+							 r  => 1, ],
+					     },
+					     qq<$userschema:Auth> =>
+					     {
+					      where => [ id => \qq<$memberschema.userid>,
+							 r  => 1, ],
+					     }
+					    ],
+					    update => undef,
+					    expire => 
+					    [
+					     qq<$roleschema:Auth> =>
+					     {
+					      where => [ id  => \qq<$memberschema.roleid>,
+							 'm' => 1, ],
+					     },
+					    ]
+					   } );
 }
 
 # FIXME, permissions.  
-sub _initialize_fields {
+sub _bootstrap_fields {
     my $self = shift;
     my $structhash = $self->internal( 'userfields' );
 
@@ -362,19 +370,18 @@ sub _initialize_fields {
 	    my @filterfiller = ();
 	    @filterfiller = ( filter => $filter ) if $filter;
 	
-	    unless ( $self->{_storage}->_structure_exists( $schema ) ) {
-		$self->{_storage}->define( $schema,
-					   temporal => 1,
-					   nomap  => 1,
-					   fields => {
-						      id    => { type => 'INTEGER', null => 0 },
-						      value => {
-								type => $type,
-								null => 0,
-								@filterfiller,
-							       },
-						     },
-					   hints  => { id => { foreign => $self->get( 'authuser' ) } },
+	    $self->{_storage}->define( $schema,
+				       temporal => 1,
+				       nomap  => 1,
+				       fields => {
+						  id    => { type => 'INTEGER', null => 0 },
+						  value => {
+							    type => $type,
+							    null => 0,
+							    @filterfiller,
+							   },
+						 },
+				       hints  => { id => { foreign => $self->get( 'authuser' ) } },
 # 				      auth => {
 # 					       create =>
 # 					       [
@@ -413,26 +420,23 @@ sub _initialize_fields {
 # 							   },
 # 					       ],
 # 					      }
-					 );
-	    }
+				     );
 	}
-    }    
-}
+    }
+}    
 
-sub _initialize_schema_auth {
+sub _bootstrap_schema_auth {
     my $self = shift;
     my $schema = $self->get( 'authschema' );
     
-    unless ( $self->{_storage}->_structure_exists( $schema ) ) {
-	$self->{_storage}->define( $schema,
-				  nomap  => 1,
-				  fields => {
-					     usertable => { type => 'TEXT',
-							    null => 0 },
-					     authtable => { type => 'TEXT',
-							    null => 0 },
-					     bindings  => { type => 'BINARY' } } );
-    }
+    $self->{_storage}->define( $self->get( 'authschema' ),
+			       nomap  => 1,
+			       fields => {
+					  usertable => { type => 'TEXT',
+							 null => 0 },
+					  authtable => { type => 'TEXT',
+							 null => 0 },
+					  bindings  => { type => 'BINARY' } } );
 }
 
 # Initialize the STORAGE config, this structure is required to be
@@ -460,36 +464,46 @@ sub _initialize_config {
 	    }
 	    
 	}
+    }
+}
+
+sub _bootstrap_config {
+    my $self = shift;
+
+    my $schema = $self->get( 'config' );
+
+    # At this point, the mapper is just the *name*, not the object.
+    my $mapper_name = $self->{_storage}->get_mapper();
+    my $mapper_object;
+    if ($mapper_name) {
+	$mapper_object = $self->{_storage}->set_mapper( $mapper_name );
+	Yggdrasil::fatal( "Unable to initialize the mapper '$mapper_name'" ) 
+	  unless $mapper_object;
     } else {
-	# At this point, the mapper is just the *name*, not the object.
-	my $mapper_object;
-	if ($mapper_name) {
-	    $mapper_object = $self->{_storage}->set_mapper( $mapper_name );
-	    Yggdrasil::fatal( "Unable to initialize the mapper '$mapper_name'" ) unless $mapper_object;
-	} else {
-	    $mapper_object = $self->{_storage}->get_default_mapper();
-	    Yggdrasil::fatal( "Unable to initialize the default mapper" ) unless $mapper_object;
-	}
+	$mapper_object = $self->{_storage}->get_default_mapper();
+	Yggdrasil::fatal( "Unable to initialize the default mapper" ) 
+	  unless $mapper_object;
+    }
 	
-	$self->{_storage}->define( $schema,
-				  nomap  => 1,
-				  fields => {
-					     id    => { type => 'VARCHAR(255)' },
-					     value => { type => 'TEXT' },				  
-					    },
-				  hints  => { id => { key => 1 } },	       
-				);
-	$self->{_storage}->store( $schema, key => "id",
-				 fields => { id => 'mapstruct', value => $self->get( 'mapper' ) });
-	$self->{_storage}->store( $schema, key => "id",
-				 fields => { id => 'temporalstruct', value => $self->get( 'temporal' ) });
+    $self->{_storage}->define( $self->get( 'config' ),
+			       nomap  => 1,
+			       fields => {
+					  id    => { type => 'VARCHAR(255)' },
+					  value => { type => 'TEXT' },				  
+					 },
+			       hints  => { id => { key => 1 } },	       
+			     );
+
+    $self->{_storage}->store( $schema, key => "id",
+			      fields => { id => 'mapstruct', value => $self->get( 'mapper' ) });
+
+    $self->{_storage}->store( $schema, key => "id",
+			      fields => { id => 'temporalstruct', value => $self->get( 'temporal' ) });
 	
-	
-	my $mappername = ref $mapper_object;
-	$mappername =~ s/.*::(.*)$/$1/;
-	$self->{_storage}->store( $schema, key => "id",
-				 fields => { id => 'mapper', value => $mappername });
-    }    
+    my $mappername = ref $mapper_object;
+    $mappername =~ s/.*::(.*)$/$1/;
+    $self->{_storage}->store( $schema, key => "id",
+			      fields => { id => 'mapper', value => $mappername });
 }
 
 sub _define_auth {

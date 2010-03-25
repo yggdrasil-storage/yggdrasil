@@ -75,8 +75,7 @@ sub new {
 	$storage->{mapper} = $data{mapper};
 	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
 
-	# Structure the internals of Storage.  Creates structure if
-	# needed, otherwise it's just read.
+	# Structure the internals of Storage. Reads the Storage_* structures.
 	$storage->{structure} = new Yggdrasil::Storage::Structure( storage => $storage );
 	$storage->{structure}->init();
 	
@@ -116,6 +115,9 @@ sub bootstrap {
     my %users = @_;
 
     my $status = $self->{status};
+
+    # Create main infrastructure
+    $self->{structure}->bootstrap();
 
     # Create default users and roles
     my %roles;
