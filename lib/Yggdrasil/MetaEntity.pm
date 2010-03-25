@@ -23,15 +23,6 @@ sub define {
 				     parent => { foreign => 'MetaEntity' },
 				    },
 		      auth       => {
-				     # Write access to parent required.
-				     create => [
-						':Auth' => {
-							    where => [
-								      id    => \qq<MetaEntity.parent>,
-								      w     => 1,
-								     ],
-							   },
-					       ],
 				     # get an entity.  Read self to access.
 				     fetch  => [
 						':Auth' => {
@@ -128,6 +119,24 @@ sub define {
 		      
 		    );
 }    
+
+sub define_create_auth {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my $storage = $self->{yggdrasil}->{storage};
+
+    $storage->set_auth( MetaEntity =>
+			# Write access to parent required.
+			create => [
+				   ':Auth' => {
+					       where => [
+							 id    => \qq<MetaEntity.parent>,
+							 w     => 1,
+							],
+					      },
+				  ],
+		      );
+}
 
 sub add {
     my $class  = shift;

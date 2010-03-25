@@ -83,8 +83,13 @@ sub bootstrap {
 	Yggdrasil::MetaEntity->define( yggdrasil => $self );
 	Yggdrasil::MetaRelation->define( yggdrasil => $self );
 	Yggdrasil::MetaProperty->define( yggdrasil => $self );
-	
+
+	# MetaEntity was created without 'create' auth rules in order
+	# for UNIVERSAL to be created. We then proceed to add 'create'
+	# auth rules for MetaEntity now that we have a root entity
 	my $universal = $self->define_entity( 'UNIVERSAL' );
+	Yggdrasil::MetaEntity->define_create_auth( yggdrasil => $self );
+
 	$self->get_user( 'bootstrap' )->expire();
 	$status->set( 200, 'Bootstrap successful.');
 	return \%usermap;
