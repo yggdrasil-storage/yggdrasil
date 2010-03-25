@@ -331,9 +331,14 @@ sub ancestors {
 	my $parent = $r->[0]->{parent};
 	my $name   = $r->[0]->{entity};
 
-	last if $seen{$parent};
-	$seen{$parent} = 1;
+	if( $parent ) {
+	    last if $seen{$parent};
+	    $seen{$parent} = 1;
+	}
+
 	push( @ancestors, $name );
+
+	last unless $parent;
 
 	$r = $storage->fetch( MetaEntity => { return => [qw/entity parent/],
 					      where => [ id => $parent ] },
