@@ -377,6 +377,11 @@ sub _bootstrap_fields {
 	    my @filterfiller = ();
 	    @filterfiller = ( filter => $filter ) if $filter;
 	
+	    my $null = 0;
+	    if( $fieldname eq "password" ) {
+		$null = 1;
+	    }
+
 	    $self->{_storage}->define( $schema,
 				       temporal => 1,
 				       nomap  => 1,
@@ -384,7 +389,7 @@ sub _bootstrap_fields {
 						  id    => { type => 'INTEGER', null => 0 },
 						  value => {
 							    type => $type,
-							    null => 0,
+							    null => $null,
 							    @filterfiller,
 							   },
 						 },
@@ -445,7 +450,8 @@ sub _bootstrap_schema_auth {
 							 null => 0 },
 					  type      => { type => 'TEXT',
 						         null => 0 },
-					  bindings  => { type => 'BINARY' } } );
+					  bindings  => { type => 'BINARY',
+							 null => 1 } } );
 }
 
 # Initialize the STORAGE config, this structure is required to be
