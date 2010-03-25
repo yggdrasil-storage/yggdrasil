@@ -506,18 +506,15 @@ sub _add_auth {
 	my $ret = $self->_fetch( $self->get_structure( 'authschema' ) =>
 				 {
 				  return => 'bindings',
-				  where  => [ usertable => $schema ]
+				  where  => [ usertable => $schema, type => $authtype ]
 				 } );
 	next unless $ret;
 
 	my $frozen_bindings = $ret->[0]->{bindings};
-	my $bindings = Storable::thaw( $frozen_bindings );
-
-	# 2. What auth-bindings to apply (Fetch/Create/Expire etc.)
-	my $typebindings = $bindings->{$authtype};
+	my $typebindings = Storable::thaw( $frozen_bindings );
 	next unless $typebindings;
 
-	# 3. Assign uniq alias for each auth-table.  FIXME for rand.
+	# 2. Assign uniq alias for each auth-table.  FIXME for rand.
 	for( my $j=1; $j<@$typebindings; $j+=2 ) {
 	    my $authschema_constraint = $typebindings->[$j];
 
@@ -526,7 +523,7 @@ sub _add_auth {
 	    $authschema_constraint->{_auth_alias} = $uniq_alias;
 	}
 
-	# 4. Find any references (\q<>) in the bindings where clause,
+	# 3. Find any references (\q<>) in the bindings where clause,
 	#    change this to use any aliases (alias or _auth_alias)
 	my @membership;
 	for( my $j=0; $j<@$typebindings; $j+=2 ) {
@@ -571,7 +568,7 @@ sub _add_auth {
 	    push( @membership, $self->get_structure( 'authmember' ), $member );
 	}
 
-	# 5. set alias = _auth_alias and remove _auth_alias
+	# 4. set alias = _auth_alias and remove _auth_alias
  	for( my $i=1; $i<@$typebindings; $i+=2 ) {
  	    my $constraint = $typebindings->[$i];
  	    $constraint->{alias} = $constraint->{_auth_alias};
@@ -811,6 +808,83 @@ sub _get_auth_schema_name {
 			     } );
     
     return $ret->[0]->{authtable};
+}
+
+
+sub set_auth {
+    my $self   = shift;
+    my $schema = shift;
+    my $action = shift;
+    my $restrictions = shift;
+
+    my $authschema = $self->{structure}->construct_userauth_from_schema( $schema );
+    my $realschema = $self->_get_schema_name( $schema ) || $schema;
+
+    if( $restrictions ) {
+	for( my $i=0; $i<@$restrictions; $i+=2 ) {
+	    my $authschema_binding    = $restrictions->[$i];
+	    my $authschema_constraint = $restrictions->[$i+1];
+
+	    # Change Foo:Auth, :Auth etc. to the real auth table
+	    my $real_auth_schema = $authschema_binding;
+	    if( $authschema_binding eq ":Auth" ) {
+		$real_auth_schema = $authschema;
+	    } elsif( $authschema_binding =~ /:Auth$/ ) {
+		$real_auth_schema = $self->_get_auth_schema_name( $authschema_binding );
+	    }
+
+	    $restrictions->[$i] = $real_auth_schema;
+
+	    # Change schema references to this schema if it is mapped
+	    # (so that the structure references the mapped and the
+	    # engine actually finds the schema)
+	    my $where = $authschema_constraint->{where};
+	    next unless ref $where;
+
+	    for( my $f=0; $f<@$where; $f+=2 ) {
+		my $field = $where->[$f];
+		my $value = $where->[$f+1];
+		next unless ref $value eq "SCALAR";
+
+		my( $schemaref, $schemafield ) = split m/\./, $$value;
+		if( $schemaref eq $schema ) {
+		    # if these are ne, it means that the schema is mapped
+		    if( $schema ne $realschema ) {
+			my $mapped_schema = join(".", $realschema, $schemafield);
+			$where->[$f+1] = \$mapped_schema;
+		    }
+
+		    next;
+		}
+
+		# This is just for consistency checking - it has no
+		# effect other than occationally dying.
+		my @matches = $self->_find_schema_by_name_or_alias( $schemaref, $restrictions );
+
+		if( @matches > 1 ) {
+		    die "'$schemaref' is mentioned more than once in the definition of $schema\n";
+		}
+		
+		if( @matches == 0 ) {
+		    die "'$schemaref' is never mentioned in the definition of $schema\n";
+		}
+	    }
+	}
+
+	my @mapped = $self->_map_fetch_schema_references( @$restrictions );
+	$restrictions = \@mapped;
+    }
+
+    my $bindings = $restrictions ? Storable::nfreeze( $restrictions ) : undef;
+    $self->_store( $self->{structure}->get( 'authschema' ), 
+			      key => [ qw/usertable authtable type/ ],
+			      fields => {
+					 usertable => $realschema,
+					 authtable => $authschema,
+					 type      => $action,
+					 bindings  => $bindings,
+					 committer => $self->{bootstrap}?'bootstrap':$self->{user}->id(),
+			     } );
 }
 
 sub is_valid_type {

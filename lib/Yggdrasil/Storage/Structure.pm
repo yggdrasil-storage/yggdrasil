@@ -80,6 +80,13 @@ sub set {
     return $self->_getter_setter( @_ );
 }
 
+sub construct_userauth_from_schema {
+    my $self = shift;
+    my $schema = shift;
+
+    return join("_", "Storage", "userauth", $schema);
+}
+
 sub _getter_setter {
     my $self = shift;
     my ($key, $value) = @_;
@@ -423,7 +430,7 @@ sub _bootstrap_fields {
 				     );
 	}
     }
-}    
+}
 
 sub _bootstrap_schema_auth {
     my $self = shift;
@@ -436,6 +443,8 @@ sub _bootstrap_schema_auth {
 							 null => 0 },
 					  authtable => { type => 'TEXT',
 							 null => 0 },
+					  type      => { type => 'TEXT',
+						         null => 0 },
 					  bindings  => { type => 'BINARY' } } );
 }
 
@@ -513,7 +522,7 @@ sub _define_auth {
     my $auth = shift;
     my $nomap = shift;
 
-    my $authschema = join("_", "Storage", "userauth", $originalname);
+    my $authschema = $self->construct_userauth_from_schema( $originalname );
     $self->{_storage}->define( $authschema,
 			      fields => {
 					 # FIX: id must be the same type as $schema's id
@@ -529,74 +538,9 @@ sub _define_auth {
 					roleid => { foreign => $self->get( 'authrole' ) },
 				       } );
     
-
     for my $action ( keys %$auth ) {
-	my $restrictions = $auth->{$action};
-	next unless $restrictions;
-
-	for( my $i=0; $i<@$restrictions; $i+=2 ) {
-	    my $authschema_binding    = $restrictions->[$i];
-	    my $authschema_constraint = $restrictions->[$i+1];
-
-	    # Change Foo:Auth, :Auth etc. to the real auth table
-	    my $real_schema = $authschema_binding;
-	    if( $authschema_binding eq ":Auth" ) {
-		$real_schema = $authschema;
-	    } elsif( $authschema_binding =~ /:Auth$/ ) {
-		$real_schema = $self->{_storage}->_get_auth_schema_name( $authschema_binding );
-	    }
-
-	    $restrictions->[$i] = $real_schema;
-
-	    # Change schema references to this schema if it is mapped
-	    # (so that the structure references the mapped and the
-	    # engine actually finds the schema)
-	    my $where = $authschema_constraint->{where};
-	    next unless ref $where;
-
-	    for( my $f=0; $f<@$where; $f+=2 ) {
-		my $field = $where->[$f];
-		my $value = $where->[$f+1];
-		next unless ref $value eq "SCALAR";
-
-		my( $schemaref, $schemafield ) = split m/\./, $$value;
-		if( $schemaref eq $originalname ) {
-		    unless( $nomap ) {
-			my $mapped_schema = join(".", $schema, $schemafield);
-			$where->[$f+1] = \$mapped_schema;
-		    }
-
-		    next;
-		}
-
-		# This is just for consistency checking - it has no
-		# effect other than occationally dying.
-		my @matches = $self->{_storage}->_find_schema_by_name_or_alias( $schemaref, $restrictions );
-
-		if( @matches > 1 ) {
-		    die "'$schemaref' is mentioned more than once in the definition of $originalname\n";
-		}
-		
-		if( @matches == 0 ) {
-		    die "'$schemaref' is never mentioned in the definition of $originalname\n";
-		}
-	    }
-	}
-
-	my @mapped = $self->{_storage}->_map_fetch_schema_references( @$restrictions );
-	$auth->{$action} = \@mapped;
+	$self->{_storage}->set_auth( $originalname, $action => $auth->{$action} );
     }
-
-    my $bindings = Storable::nfreeze( $auth );
-    $self->{_storage}->_store( $self->get( 'authschema' ), 
-			      key => [ qw/usertable authtable/ ],
-			      fields => {
-					 usertable => $schema,
-					 authtable => $authschema,
-					 bindings  => $bindings,
-					 committer => $self->{_storage}->{bootstrap}?'bootstrap':$self->{_storage}->{user}->id(),
-			     } );
 }
-
 
 1;
