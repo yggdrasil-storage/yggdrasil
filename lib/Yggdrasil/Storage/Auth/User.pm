@@ -28,7 +28,7 @@ sub define {
     my $pwd     = shift;
     
     my $uid = $storage->store( $storage->get_structure( 'authuser' ),
-			       key => qw/id/,
+			       key => qw/name/,
 			       fields => { name => $user } );
 
     $storage->store( $storage->get_structure( 'authuser:password' ),

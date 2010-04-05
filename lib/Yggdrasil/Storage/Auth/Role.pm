@@ -24,7 +24,7 @@ sub define {
     my $role    = shift;
 
     my $roleschema = $storage->get_structure( 'authrole' );
-    my $rid = $storage->store( $roleschema, key => qw/id/, 
+    my $rid = $storage->store( $roleschema, key => qw/name/, 
 			       fields => { name => $role } );
 
     return unless $rid;
