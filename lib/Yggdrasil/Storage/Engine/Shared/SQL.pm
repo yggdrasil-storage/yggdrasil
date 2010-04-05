@@ -401,6 +401,11 @@ sub _store {
     $self->_sql( $sql, values %$fields, @tick_val );
     my $r = $self->_last_insert_id( $schema );
 
+    unless( $r ) {
+	# FIX: can we safely assume "id"? No we can not.
+	$r = $fields->{id};
+    }
+
     my $status = $self->get_status();
     $status->set( 200, "Value(s) set" );
     return $r;
