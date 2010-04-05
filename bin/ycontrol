@@ -279,10 +279,10 @@ my %cmd;
     tick => {
 	_help => "Tick related commands",
 	info  => {
-	    _TICK => \&tick_info,
+	    _TICK_ => \&tick_info,
 	    },
 	intime => {
-	    _DATE => \&ticks_in_time,
+	    _DATE_ => \&ticks_in_time,
             },
 	current => \&tick_current,
     },
@@ -312,6 +312,11 @@ my %cmd_handler = (
     _relationlabel => \&expand_label,
 
     _tickstamp => \&expand_tick,
+
+    _PROPERTYNAME_ => sub { return ("<propertyname>") },
+    _INSTANCENAME_ => sub { return ("<instancename>") },
+    _TICK_         => sub { return ("<ticknumber>") },
+    _DATE_         => sub { return ("<isodate>") },
     );
 
 my $prompt = " > ";
