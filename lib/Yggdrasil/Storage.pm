@@ -126,6 +126,11 @@ sub bootstrap {
 	$roles{$role} = $r;
     }
 
+    # Grant admin role access to users/roles
+    $self->store( $self->get_structure( 'authaccess' ),
+		  key => qw/roleid/, fields => { roleid => $roles{admin}->id() } );
+		  
+
     # create bootstrap and nobody, the order is relevant as bootstrap
     # is required to be ID1 and nobody is ID2.    
     my $nobody_role    = Yggdrasil::Storage::Auth::Role->define( $self, "nobody" );
@@ -141,7 +146,14 @@ sub bootstrap {
 			 id => $nobody_user->id() );
 
     my %usermap;
-    for my $user ( "root", (getpwuid( $> ) || "default"), keys %users ) {
+
+    # Ensure that the default user and root are created, retaining their
+    # assigned passwords if any are given.
+    my $me = getpwuid( $> ) || 'default';
+    $users{$me}    = undef unless $users{$me};
+    $users{'root'} = undef unless $users{'root'};
+
+    for my $user ( keys %users ) {
 	my $pwd = $users{$user};
 	my $auth = new Yggdrasil::Storage::Auth;
 	$pwd ||= $auth->generate_password();
@@ -247,7 +259,7 @@ sub define {
 		for( my $i=0; $i < @$filters; $i += 2 ) {
 		    my ($filter, $params) = ($filters->[$i], $filters->[$i+1]);
 		    
-		    $self->store( $self->get_structure( 'filter' ), key => "schema",
+		    $self->store( $self->get_structure( 'filter' ), key => "schemaname",
 				  fields => { schemaname => $originalname, filter => $filter,
 					      field  => $field, params => $params });
 		    push @fieldfilters, { filter => $filter, field => $field, params => $params };
@@ -275,7 +287,7 @@ sub define {
 	}
 
 	if( $data{auth} ) {
-	    $self->{structure}->_define_auth( $schema, $originalname, $data{auth}, $data{nomap} );
+	    $self->{structure}->_define_auth( $schema, $originalname, $data{auth}, $data{nomap}, $data{authschema} );
 	}
     }
     
@@ -332,15 +344,75 @@ sub store {
 	    }	    
 	}
     }
-    
-    # Check if we already have the value
+
+    # build key/value mapping of keys that are supposed to uniqly
+    # identify the entry we (are going to) work on.
+    my %keys;
+    my $key = $params{key};
+    if( ref $key eq 'ARRAY' ) {
+	for my $k (@$key) {
+	    $keys{$k} = $params{fields}->{$k};
+	}
+    } else {
+	$keys{$key} = $params{fields}->{$key};
+    }
+
+    # Check if the entry exists
     my $real_schema = $self->_get_schema_name( $schema ) || $schema;
-    my $aref = $self->fetch( $real_schema => { where => [ %{$params{fields}} ] } );
+    my $aref = $self->_fetch( $real_schema => { where => [ %keys ] } );
+
+    my $update = 0;
     if( @$aref ) {
-	$status->set( 202, "Value(s) already set" );
-	# FIX: what if the key is a composite key?
-	my $key = $params{key};
-	return $aref->[0]->{$key};
+	# An entry exists - we have to check if the values for the
+	# entry are the same as those we are trying to set
+	my $values = $aref->[0];
+	my $fields = $params{fields};
+	my $equal  = 1;
+	foreach my $field ( keys %$fields ) {
+	    if( ! exists $values->{$field} || $fields->{$field} ne $values->{$field} ) { 
+		# FIX: "ne"? should use a proper equality test, !=,
+		# ne, other?
+		$equal = 0;
+		last;
+	    }
+	}
+
+	# We have to do this even if equal==1 in order to figure out a
+	# proper status response
+	my $can = $self->can( update => $real_schema, $fields );
+
+	if( $equal ) {
+	    # Trying to update an entry with values that already are
+	    # current
+	    if( $can ) { 
+		$status->set( 202, "Value(s) already set" );
+
+		# FIX: what if the key is a composite key?
+		return $aref->[0]->{$key};
+	    }
+	    else { 
+		$status->set( 403, "Forbidden" ); 
+		return;
+	    }
+	} else {
+	    # New values
+	    unless( $can ) {
+		# ... but not the proper rights
+		$status->set( 403, "Forbidden" );
+		return;
+	    }
+
+	    # note for later that we should perform an update
+	    $update = 1;
+	}
+    } else {
+	# An entry does not exists - check to see if we are allowed to
+	# create stuff
+	my $can = $self->can( create => $real_schema, $params{fields} );
+	unless( $can ) {
+	    $status->set( 403, "Forbidden" );
+	    return;
+	}
     }
 
     # Tick
@@ -353,18 +425,8 @@ sub store {
 	$params{fields}->{committer} = $uname;
     }
 
-    # Expire the old value
-    my %keys;
-    my $key = $params{key};
-    if( $key ) {
-	if( ref $key eq 'ARRAY' ) {
-	    for my $k (@$key) {
-		$keys{$k} = $params{fields}->{$k};
-	    }
-	} else {
-	    $keys{$key} = $params{fields}->{$key};
-	}
-
+    # If we are updating, expire the old value
+    if( $update ) {
 	$transaction->log( "Expire: $schema " . join( ", ", map { defined()?$_:"" } %keys ) );
 	$self->_expire( $real_schema, $tick, %keys );
     }
@@ -375,13 +437,14 @@ sub store {
     my $user = $self->user();
     
     unless ($self->_is_bootstrapping()) {	
-	for my $role ( $user->member_of() ) {	    
-	    $role->grant( $real_schema => 'm', id => $r );
+	if( $self->cache( 'hasauthschema', $schema ) ) {
+	    for my $role ( $user->member_of() ) {
+		$role->grant( $real_schema => 'm', id => $r );
+	    }
 	}
     }    
 
     return $r;
-
 }
 
 sub tick {
@@ -480,7 +543,7 @@ sub fetch {
     my @schemadefs = @_;
     unless ($self->_is_bootstrapping()) {
 	# Add auth bindings to query
-	my @authdefs = $self->_add_auth( "fetch", @schemadefs );
+	my @authdefs = $self->_add_auth( "fetch", \@schemadefs );
 	push( @schemadefs, @authdefs );
     }
 
@@ -493,14 +556,15 @@ sub fetch {
 }
 
 sub _add_auth {
-    my $self = shift;
-    my $authtype = shift;
-    my @schemadefs = @_;
+    my $self       = shift;
+    my $authtype   = shift;
+    my $schemadefs = shift;
+    my $map        = shift;
     
     my @authdefs;
-    for( my $i=0; $i<@schemadefs; $i+=2 ) {
-	my $schema = $schemadefs[$i];
-	my $schemabindings = $schemadefs[$i+1];
+    for( my $i=0; $i<@$schemadefs; $i+=2 ) {
+	my $schema = $schemadefs->[$i];
+	my $schemabindings = $schemadefs->[$i+1];
 
 	# 1. Find auth-bindings for this schema
 	my $ret = $self->_fetch( $self->get_structure( 'authschema' ) =>
@@ -537,24 +601,40 @@ sub _add_auth {
 		my $ref = $where->[$k];
 		next unless ref $ref eq "SCALAR";
 
+		# ref is either a string with the pattern
+		# "tablename.fieldname" or the name of a parameter we
+		# are to fetch from the map if the latter is the case,
+		# ref does not contain the character "."
 		my( $target, $field ) = split m/\./, $$ref;
-		if( $target eq $schema ) {
-		    # The $target references this schema - if this
-		    # schema is defined to use an alias, then we'll
-		    # change the reference to use this schemas alias
-		    # instead.
-		    if( $schemabindings->{alias} ) {
-			$target = $schemabindings->{alias};
-			$where->[$k] = \ join(".", $target, $field);
+		
+		if( defined $field ) {
+		    if( $target eq $schema ) {
+			# The $target references this schema - if this
+			# schema is defined to use an alias, then we'll
+			# change the reference to use this schemas alias
+			# instead.
+			if( $schemabindings->{alias} ) {
+			    $target = $schemabindings->{alias};
+			    $where->[$k] = \ join(".", $target, $field);
+			}
+		    } else {
+			# Change all other schema references to use the
+			# auth alias created in step 3
+			my @matches = $self->_find_schema_by_name_or_alias( $target, $typebindings );
+			$where->[$k] = \ join(".", $matches[0]->{_auth_alias}, $field );
 		    }
 		} else {
-		    # Change all other schema references to use the
-		    # auth alias created in step 3
-		    my @matches = $self->_find_schema_by_name_or_alias( $target, $typebindings );
-		    $where->[$k] = \ join(".", $matches[0]->{_auth_alias}, $field );
+		    # target holds the name of the parameter we are to
+		    # fetch from the map
+		    unless( $map || ! exists $map->{$target} ) { 
+			# FIX: complain about not being able to substitute
+			return;
+		    }
+		    
+		    $where->[$k] = $map->{$target};
 		}
-	    }
-
+	    }	    
+	    
 	    # Add test for the roles a user is member of.
 	    my $alias = $authconstraint->{_auth_alias};
 	    my $member = {
@@ -564,7 +644,7 @@ sub _add_auth {
 				   ],
 			  alias => join("_", "_auth", int(rand() * 100_000) ),
 			 };
-
+	    
 	    push( @membership, $self->get_structure( 'authmember' ), $member );
 	}
 
@@ -579,6 +659,43 @@ sub _add_auth {
     }
 
     return @authdefs;
+}
+
+sub can {
+    my $self   = shift;
+    my $type   = shift;
+    my $schema = shift;
+    my $map    = shift;
+
+#    print "Entering can( $type, $schema, { ", join(", ", map { "$_ => $map->{$_}" } keys %$map ), " }\n";
+
+    return 1 if $self->_is_bootstrapping();
+
+    my @schemadefs = ( $schema => {} );
+    if( $type ne "create" ) {
+	# we can use the map as basis for a select for data that
+	# exists, but we can't use it as a basis for a select for data
+	# not yet in existance
+	@schemadefs = ( $schema => { where => [ %$map ] } );
+    }
+
+    my @authdefs = $self->_add_auth( $type, \@schemadefs, $map );
+    return 1 unless @authdefs;
+
+    if( $type eq "create" ) {
+	# clear out our dummy schemadefs
+	@schemadefs = ();
+    }
+
+    my $r = $self->_fetch( @schemadefs, @authdefs );
+
+    if( @$r ) {
+#	print " -> Yes we can!\n";
+	return 1;
+    } else {
+#	print " -> No we can not!\n";
+	return;
+    }
 }
 
 sub _map_fetch_schema_references {
@@ -626,7 +743,7 @@ sub authenticate {
     my $user_obj;
 
     if (defined $user && defined $pass) {
-	# Otherwise, we got both a username and a password.
+	# First, we got both a username and a password.
 	$user_obj = Yggdrasil::Storage::Auth::User->get( $self, $user );
 
 	if( $user_obj ) {
@@ -635,7 +752,7 @@ sub authenticate {
 		my ($pwfilter, $params) = ($filterset->[0]->{filter}, $filterset->[0]->{params});
 		$pass = $self->{type}->apply_filter( $pwfilter, 'store', $pass, $params );
 	    }
-	    
+
 	    my $realpass = $user_obj->password() || '';
 
 	    if (! defined $pass || $pass ne $realpass) {
@@ -644,10 +761,10 @@ sub authenticate {
 	}
 	$session = undef;
     } elsif ($session) {
-	# Lastly, we got a session id - see if we find a user with this session id	
+	# Or, we got a session id - see if we find a user with this session id	
 	$user_obj = Yggdrasil::Storage::Auth::User->get_by_session( $self, $session );
     } elsif (-t && ! defined $user && ! defined $pass) {
-	# First, let see if we're connected to a tty without getting a
+	# Lastly, let see if we're connected to a tty without getting a
 	# username / password, at which point we're already authenticated
 	# and we don't want to touch the session.  $> is effective UID.
 	my $uname = (getpwuid($>))[0];
@@ -668,15 +785,6 @@ sub authenticate {
     }
 
     return $user_obj;
-}
-
-
-# Ask Auth if an action can be performed on a target.  Returns true / false.
-sub can {
-    my $self = shift;
-
-    return 1;
-#    return $self->{auth}->can( @_ );
 }
 
 sub raw_fetch {
@@ -784,6 +892,8 @@ sub cache {
 	$cachename = '_temporalcache';
     } elsif ($map eq 'filter') {
 	$cachename = '_filtercache';
+    } elsif ($map eq 'hasauthschema') {
+	$cachename = '_hasauthschema';
     } else {
 	Yggdrasil::fatal( "Unknown cache type '$map' requested for populating" );
     }
@@ -847,6 +957,16 @@ sub set_auth {
 		next unless ref $value eq "SCALAR";
 
 		my( $schemaref, $schemafield ) = split m/\./, $$value;
+
+		# If value does not contain a ".", then it's not a
+		# schema reference, but should be a field reference.
+		# Check if the field exists
+		# FIX actually check if field exists
+		unless( defined $schemafield ) {
+		    next;
+		}
+
+		# Here we should be working with a schema reference
 		if( $schemaref eq $schema ) {
 		    # if these are ne, it means that the schema is mapped
 		    if( $schema ne $realschema ) {

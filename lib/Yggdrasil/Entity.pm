@@ -51,9 +51,16 @@ sub define {
     }
 
     # --- Add to MetaEntity, noop if it exists.
-    Yggdrasil::MetaEntity->add( yggdrasil => $self,
-				entity    => $fqn,
-				parent    => $parent_id );
+    my %entity_params = (
+			 yggdrasil => $self,
+			 entity    => $fqn,
+			);
+
+    if( defined $parent_id ) {
+	$entity_params{parent} = $parent_id;
+    }
+
+    Yggdrasil::MetaEntity->add( %entity_params );
     return unless $status->OK();
 
     return __PACKAGE__->get( yggdrasil => $self, entity => $fqn );

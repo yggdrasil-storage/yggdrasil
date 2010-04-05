@@ -22,6 +22,7 @@ sub define {
 		      hints      => {
 				     parent => { foreign => 'MetaEntity' },
 				    },
+		      authschema => 1,
 		      auth       => {
 				     # get an entity.  Read self to access.
 				     fetch  => [
@@ -69,12 +70,13 @@ sub define {
 		      hints    => {
 				   entity => { foreign => 'MetaEntity' },
 				  },
+		      authschema => 1,
 		      auth => {
 			       # Create instance, require write access to entity.
 			       create => [
 					  'MetaEntity:Auth' => { 
 								where => [
-									  id    => \qq<Instances.entity>,
+									  id    => \qq<entity>,
 									  w     => 1,
 									 ],
 							       },
@@ -124,13 +126,12 @@ sub define_create_auth {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
     my $storage = $self->{yggdrasil}->{storage};
-
     $storage->set_auth( MetaEntity =>
 			# Write access to parent required.
 			create => [
 				   ':Auth' => {
 					       where => [
-							 id    => \qq<MetaEntity.parent>,
+							 id    => \qq<parent>,
 							 w     => 1,
 							],
 					      },
@@ -143,14 +144,11 @@ sub add {
     my $self   = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $name   = $params{entity};
-    my $parent = $params{parent};
-    
+    my $fields = { entity => $params{entity} };
+    $fields->{parent} = $params{parent} if exists $params{parent};
+
     my $id = $self->{yggdrasil}->{storage}->store( "MetaEntity", key => [qw/entity parent/],
-						   fields => { 
-						       entity => $name,
-						       parent => $parent,
-						   } );
+						   fields => $fields );
 }
 
 sub _admin_dump {

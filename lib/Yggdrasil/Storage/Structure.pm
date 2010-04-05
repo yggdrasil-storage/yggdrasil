@@ -8,15 +8,17 @@ sub new {
     my %params = @_;
     
     my $self = {
-		mapper      => 'mapname',
-		temporal    => 'temporals',
-		filter      => 'filter',
-		config      => 'config',
-		ticker      => 'ticker',
-		authschema  => 'authschema',
-		authuser    => 'auth_user',
-		authrole    => 'auth_role',
-		authmember  => 'auth_membership',
+		mapper        => 'mapname',
+		temporal      => 'temporals',
+		filter        => 'filter',
+		config        => 'config',
+		ticker        => 'ticker',
+		authschema    => 'authschema',
+		authaccess    => 'auth_access',
+		authuser      => 'auth_user',
+		authrole      => 'auth_role',
+		authmember    => 'auth_membership',
+		hasauthschema => 'hasauthschema',
 
 		_prefix     => 'Storage_',
 		_storage    => $params{storage},
@@ -62,6 +64,7 @@ sub init {
     $self->_initialize_filter();
     $self->_initialize_mapper();
     $self->_initialize_temporal();
+    $self->_initialize_hasauthschema();
 }
 
 sub get {
@@ -121,6 +124,7 @@ sub _getter_setter {
 sub _bootstrap_auth {
     my $self = shift;
 
+    $self->_bootstrap_hasauthschema();
     $self->_bootstrap_schema_auth();
     $self->_bootstrap_user_auth();
 }
@@ -230,12 +234,83 @@ sub _bootstrap_filter {
 					 } );
 }
 
+
+sub _initialize_hasauthschema {
+    my $self = shift;
+    my $schema = $self->get( 'hasauthschema' );
+
+    if ($self->{_storage}->_structure_exists( $schema )) {
+	my $listref = $self->{_storage}->fetch( $schema, { return => '*' });
+	for my $authpair (@$listref) {
+	    my ($table, $auth) = ( $authpair->{tablename}, $authpair->{hasauth} );
+	    $self->{_storage}->cache( 'hasauthschema', $table, $auth );
+	}
+    }
+}
+
+sub _bootstrap_hasauthschema {
+    my $self = shift;
+
+    $self->{_storage}->define( $self->get( 'hasauthschema' ),
+			       nomap  => 1,
+			       fields => {
+					  tablename => { type => 'TEXT' },
+					  hasauth   => { type => 'BOOLEAN' },
+					 },
+			     );
+}
+
+
+
 sub _bootstrap_user_auth {
     my $self = shift;
+    my $accessschema = $self->get( 'authaccess' );
     my $userschema   = $self->get( 'authuser' );
     my $roleschema   = $self->get( 'authrole' );
     my $memberschema = $self->get( 'authmember' );
     
+    $self->{_storage}->define(
+	$accessschema,
+	    nomap => 1,
+	    temporal => 1,
+	    fields => {
+		roleid => { type => 'INTEGER', null => 0 },
+	    },
+	    hints => {
+		roleid => { foreign => $roleschema },
+	    },
+	    authschema => 1,
+	    auth => {
+		create =>
+		    [
+		     ':Auth' => {
+			 where => [ roleid => \qq<$accessschema.roleid>,
+				    'm' => 1 ]
+		     }
+		    ],
+		fetch => 
+		    [
+		     ':Auth' => {
+			 where => [ roleid => \qq<$accessschema.roleid>,
+				    'r' => 1 ]
+		     }
+		    ],
+		update => 
+		    [
+		     ':Auth' => {
+			 where => [ roleid => \qq<$accessschema.roleid>,
+				    'w' => 1 ],
+		     }
+		    ],
+		expire => 
+		    [
+		     ':Auth' => {
+			 where => [ roleid => \qq<$accessschema.roleid>,
+				    'm' => 1 ],
+		     },
+		    ]
+	    }, );
+
     $self->{_storage}->define( $roleschema,
 			       nomap  => 1,
 			       temporal => 1,
@@ -243,13 +318,13 @@ sub _bootstrap_user_auth {
 					  id   => { type => 'SERIAL', null => 0 },
 					  name => { type => 'TEXT', null => 0 },
 					 },
+			       authschema => 1,
 			       auth => {
 					create =>
 					[
-					 ':Auth' => {
-						     where => [ id  => \qq<$roleschema.id>,
-								'm' => 1 ],
-						    },
+					 qq<$memberschema> => {
+							       where => [ roleid => 1 ],
+							      }
 					],
 					
 					fetch => 
@@ -284,13 +359,13 @@ sub _bootstrap_user_auth {
 					  id       => { type => 'SERIAL', null => 0 },
 					  name     => { type => 'TEXT', null => 0 },
 					 },
+			       authschema => 1,
 			       auth => {
 					create =>
 					[
-					 ':Auth' => {
-						     where => [ id  => \qq<$userschema.id>,
-								'm' => 1 ],
-						    },
+					 qq<$memberschema> => {
+							       where => [ roleid => 1 ],
+							      }
 					],
 					
 					fetch => 
@@ -329,14 +404,13 @@ sub _bootstrap_user_auth {
 					    userid => { foreign => $userschema },
 					    roleid => { foreign => $roleschema },
 					   },
+			       authschema => 0,
 			       auth     => {
 					    create => 
 					    [
-					     qq<$roleschema:Auth> => 
-					     {
-					      where => [ id  => \qq<$memberschema.roleid>,
-							 'm' => 1 ],
-					     },
+					     qq<$memberschema> => {
+								   where => [ roleid => 1 ],
+								  }
 					    ],
 					    fetch  => 
 					    [
@@ -527,8 +601,20 @@ sub _define_auth {
     my $originalname = shift;
     my $auth = shift;
     my $nomap = shift;
+    my $create_auth_schema = shift;
+
+    for my $action ( keys %$auth ) {
+	$self->{_storage}->set_auth( $originalname, $action => $auth->{$action} );
+    }
+
+    return unless $create_auth_schema;
 
     my $authschema = $self->construct_userauth_from_schema( $originalname );
+
+    $self->{_storage}->cache( 'hasauthschema', $schema, 1 );
+    $self->{_storage}->store( $self->get( 'hasauthschema' ), key => 'tablename',
+			      fields => { tablename => $schema, hasauth => 1 } );
+
     $self->{_storage}->define( $authschema,
 			      fields => {
 					 # FIX: id must be the same type as $schema's id
@@ -544,9 +630,6 @@ sub _define_auth {
 					roleid => { foreign => $self->get( 'authrole' ) },
 				       } );
     
-    for my $action ( keys %$auth ) {
-	$self->{_storage}->set_auth( $originalname, $action => $auth->{$action} );
-    }
 }
 
 1;

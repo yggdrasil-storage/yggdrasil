@@ -19,13 +19,13 @@ sub define {
 		      temporal => 1,
 		      nomap    => 1,
 		      hints    => { entity => { foreign => 'MetaEntity', index => 1 }, },
-		      
+		      authschema => 1,
 		      auth => {
 			       # Create a new property.
 			       create => [
 					  'MetaEntity:Auth' => {
 								where => [
-									  id  => \qq<MetaProperty.entity>,
+									  id  => \qq<entity>,
 									  'm' => 1,
 									 ],
 							       },

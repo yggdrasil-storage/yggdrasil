@@ -84,7 +84,7 @@ sub define {
 		      
 		      temporal => 1,
 		      hints => { id => { index => 1, foreign => 'Instances', key => 1 } },
-
+		      authschema => 1,
 		      auth => {			       
 			       create => undef,
 			       fetch => [ 

@@ -26,6 +26,7 @@ sub define {
 				   lval => { index => 1, foreign => 'MetaEntity' },
 				   rval => { index => 1, foreign => 'MetaEntity' },
 				  },
+		      authschema => 1,
 		      auth => {
 			       # To create a Relation between two entities one must have
 			       # permissions to modify both entites.  The order of E1 / E2 is
@@ -33,13 +34,13 @@ sub define {
 			       create => [					  
 					  'MetaEntity:Auth' => {
 								where => [
-									  id  => \q<MetaRelation.lval>,
+									  id  => \q<lval>,
 									  'm' => 1,
 									 ],
 							       },
 					  'MetaEntity:Auth' => {
 								where => [
-									  id  => \qq<MetaRelation.rval>,
+									  id  => \qq<rval>,
 									  'm' => 1,
 									 ],
 							       },
@@ -101,19 +102,20 @@ sub define {
 				   lval => { foreign => 'Instances', key => 1 },
 				   rval => { foreign => 'Instances', key => 1 },
 				  },
+		      authschema => 1,
 		      auth => {
 			       # Create a new link.
 			       create => [
 					  'Instances:Auth' => {
-							       id  => \qq<Relations.lval>,
+							       id  => \qq<lval>,
 							       'm' => 1,
 							      },
 					  'Instances:Auth' => {
-							       id  => \qq<Relations.rval>,
+							       id  => \qq<rval>,
 							       'm' => 1,
 							      },
 					  'MetaRelation:Auth' => { 
-								  id => \qq<Relations.id>,
+								  id => \qq<id>,
 								  w  => 1,
 								 },
 					 ],
