@@ -191,7 +191,7 @@ my %cmd;
 
 	create => {
 	    _help   => "Create new entity",
-	    _entity => \&entity_create,
+	    _ENTITYNAME_ => \&entity_create,
 	},
     },
 
@@ -313,6 +313,7 @@ my %cmd_handler = (
 
     _tickstamp => \&expand_tick,
 
+    _ENTITYNAME_   => sub { return ("<entityname>") },
     _PROPERTYNAME_ => sub { return ("<propertyname>") },
     _INSTANCENAME_ => sub { return ("<instancename>") },
     _TICK_         => sub { return ("<ticknumber>") },
