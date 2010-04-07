@@ -379,7 +379,7 @@ sub store {
 
 	# We have to do this even if equal==1 in order to figure out a
 	# proper status response
-	my $can = $self->can( update => $real_schema, $fields );
+	my $can = $self->can( update => $real_schema, \%keys );
 
 	if( $equal ) {
 	    # Trying to update an entry with values that already are
@@ -408,7 +408,7 @@ sub store {
     } else {
 	# An entry does not exists - check to see if we are allowed to
 	# create stuff
-	my $can = $self->can( create => $real_schema, $params{fields} );
+	my $can = $self->can( create => $real_schema, \%keys );
 	unless( $can ) {
 	    $status->set( 403, "Forbidden" );
 	    return;
@@ -436,7 +436,7 @@ sub store {
     my $r = $self->_store( $real_schema, tick => $tick, %params );
     my $user = $self->user();
     
-    unless ($self->_is_bootstrapping()) {	
+    unless ($self->_is_bootstrapping()) {
 	if( $self->cache( 'hasauthschema', $schema ) ) {
 	    for my $role ( $user->member_of() ) {
 		$role->grant( $real_schema => 'm', id => $r );
@@ -797,6 +797,7 @@ sub raw_fetch {
 }
 
 # expire ( $schema, $indexfield, $key )
+# FIXME, handle multiple keys
 sub expire {
     my $self   = shift;
     my $schema = shift;
@@ -805,6 +806,13 @@ sub expire {
 
     unless ($self->_schema_is_temporal( $real_schema )) {
 	$self->get_status()->set( 406, "Expire of a non-temporal value attempted" );
+	return;
+    }
+
+    # can?
+    my $able = $self->can( expire => $real_schema, { @_ } );
+    unless ($able) {
+	$self->get_status()->set( 403 );
 	return;
     }
 
@@ -942,6 +950,10 @@ sub set_auth {
 	    } elsif( $authschema_binding =~ /:Auth$/ ) {
 		$real_auth_schema = $self->_get_auth_schema_name( $authschema_binding );
 	    }
+
+	    # Should real_auth_schema be mapped?
+	    my $mapped = $self->_get_schema_name( $real_auth_schema );
+	    $real_auth_schema = $mapped if $mapped;
 
 	    $restrictions->[$i] = $real_auth_schema;
 
