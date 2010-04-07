@@ -603,33 +603,38 @@ sub _define_auth {
     my $nomap = shift;
     my $create_auth_schema = shift;
 
+
+    if( $create_auth_schema ) {
+	my $authschema = $self->construct_userauth_from_schema( $originalname );
+
+	$self->{_storage}->cache( 'hasauthschema', $originalname, 1 );
+	$self->{_storage}->store( $self->get( 'hasauthschema' ), 
+				  key => 'tablename',
+				  fields => { tablename => $originalname,
+					      hasauth   => 1 } );
+	
+	$self->{_storage}->define( $authschema,
+				   fields => {
+					      # FIX: id must be the same type as $schema's id
+					      id     => { type => 'INTEGER', null => 0 },
+					      roleid => { type => 'INTEGER', null => 0 },
+					      w      => { type => 'BOOLEAN' },
+					      r      => { type => 'BOOLEAN' },
+					      'm'    => { type => 'BOOLEAN' },
+					     },
+				   nomap => $nomap,
+				   hints => {
+					     id     => { foreign => $schema },
+					     roleid => { foreign => $self->get( 'authrole' ) },
+					    } );
+    }
+
     for my $action ( keys %$auth ) {
 	$self->{_storage}->set_auth( $originalname, $action => $auth->{$action} );
     }
 
-    return unless $create_auth_schema;
 
-    my $authschema = $self->construct_userauth_from_schema( $originalname );
 
-    $self->{_storage}->cache( 'hasauthschema', $schema, 1 );
-    $self->{_storage}->store( $self->get( 'hasauthschema' ), key => 'tablename',
-			      fields => { tablename => $schema, hasauth => 1 } );
-
-    $self->{_storage}->define( $authschema,
-			      fields => {
-					 # FIX: id must be the same type as $schema's id
-					 id     => { type => 'INTEGER', null => 0 },
-					 roleid => { type => 'INTEGER', null => 0 },
-					 w      => { type => 'BOOLEAN' },
-					 r      => { type => 'BOOLEAN' },
-					 'm'    => { type => 'BOOLEAN' },
-					},
-			      nomap => $nomap,
-			      hints => {
-					id     => { foreign => $schema },
-					roleid => { foreign => $self->get( 'authrole' ) },
-				       } );
-    
 }
 
 1;
