@@ -86,7 +86,14 @@ sub define {
 		      hints => { id => { index => 1, foreign => 'Instances', key => 1 } },
 		      authschema => 1,
 		      auth => {			       
-			       create => undef,
+			       create => [
+					  'Instances:Auth' => {
+							       where => [
+									 id => \q<id>,
+									 'm' => 1,
+],
+							      }
+					 ],
 			       fetch => [ 
 					 ':Auth' => {
 						     where => [
@@ -117,7 +124,7 @@ sub define {
     
     # --- Add to MetaProperty
     # Why isn't this in Y::MetaProperty?
-    $storage->store("MetaProperty", key => "id",
+    $storage->store("MetaProperty", key => [qw/entity property/],
 		    fields => { entity   => $idref->[0]->{id},
 				property => $property,
 				type     => $params{type},
