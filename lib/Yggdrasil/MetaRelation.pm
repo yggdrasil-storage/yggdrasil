@@ -166,7 +166,7 @@ sub add {
     my $label = $params{label};
   
     my $id = $self->storage()->store( "MetaRelation",
-				      key    => "label",
+				      key    => [ qw/label lval rval/],
 				      fields => {
 						 label => $label,
 						 lval  => $lval,
