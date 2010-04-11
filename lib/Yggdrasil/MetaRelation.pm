@@ -115,7 +115,7 @@ sub define {
 							       'm' => 1,
 							      },
 					  'MetaRelation:Auth' => { 
-								  id => \qq<id>,
+								  id => \qq<relationid>,
 								  w  => 1,
 								 },
 					 ],
@@ -135,7 +135,7 @@ sub define {
 							      },
 					  'MetaRelation:Auth' => { 
 								  where => [
-									    id => \qq<Relations.id>,
+									    id => \qq<Relations.relationid>,
 									    w  => 1,
 									   ],
 								 },
@@ -144,7 +144,7 @@ sub define {
 			       fetch => [
 					 ':Auth' => {
 						     where => [
-							       id => \qq<Relations.id>,
+							       id => \qq<Relations.relationid>,
 							       r  => 1,
 							      ],
 						    },
