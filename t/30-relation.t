@@ -119,5 +119,5 @@ $p_t->link( $girls{Sandy}, $phones{'555-Sandy'} );
 @v = $tester->fetch_related( $girls{Sandy}, $phone, [qw/555-1234 555-9999 555-Sandy/] );
 
 # --- Sandy drops new phone into the toilet
-$p_p->unlink( $girls{Sandy}, $phones{'555-Sandy'} );
+$p_t->unlink( $girls{Sandy}, $phones{'555-Sandy'} );
 @v = $tester->fetch_related( $girls{Sandy}, $phone, [qw/555-1234 555-9999/] );
