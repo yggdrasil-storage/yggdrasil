@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+
 use strict;
 use warnings;
 
@@ -10,15 +11,10 @@ use lib qq($Bin/../lib);
 use Yggdrasil;
 
 use Yggdrasil::Common::Config;
-use Yggdrasil::Common::CommandLine ("foo=s", "bar:s");
-				    
-use XML::Twig;
-use IO::Socket;
-# use IO::Socket::SSL;
+use Yggdrasil::Common::CommandLine;
 
-# 1. cmdline arg
-# 2. config
-# 3. program defaults
+use POE::Component::Server::Yggdrasil;
+
 my $cmdline = Yggdrasil::Common::CommandLine->new();
 
 my $label = $cmdline->get('label') || 'default';
@@ -26,117 +22,23 @@ my $label = $cmdline->get('label') || 'default';
 my $c = Yggdrasil::Common::Config->new();
 my $config = $c->get($label);
 die "No such label as $label\n" unless $config;
+die "Not a functional server label '$label'" unless $config->get('daemonhost');
 
-our $HOST = $config->get('daemonhost') || 'localhost';
-our $PORT = $config->get('daemonport') || 33221;
+# $y->connect( 
+# 	    user      => $config->get( 'engineuser' ),
+# 	    password  => $config->get( 'enginepassword' ),
+# 	    host      => $config->get( 'enginehost' ),
+# 	    port      => $config->get( 'engineport' ),
+# 	    db        => $config->get( 'enginedb' ),
+# 	    engine    => $config->get( 'enginetype' ),
+# 	   );
 
-my $server = IO::Socket::INET->new( LocalAddr => $HOST,
-				    LocalPort => $PORT,
-				    Listen    => 5,
-				    Proto     => 'tcp',
-				    ReuseAddr => 1 );
-
-unless( $server ) {
-    die( "$0 failed to bind to $HOST:$PORT." .
-	 "$@\n" );
-}
-
-print "Waiting for connections on $HOST:$PORT ...\n";
-
-while( my $client = $server->accept() ) {
-    my $pid = fork;
-
-    if( $pid ) {
-	# --- Parent
-	print "* Got client - forking $pid\n";
-	$client->close();
-	next;
-    }
-
-    handle_client($client);
-}
-
-sub handle_client {
-    my $client = shift;
-
-    print $client "HELO\n";
-
-    my ($user, $password, $connected, $toread, $buffer);
-    my $parser = new XML::Twig(
-			       twig_roots   => { 'start' => \&handle_start,
-						 'end'   => \&handle_end,
-					       }
-			      );
-    while( my $line = <$client> ) {
-	chomp $line;
-	$line =~ s/\r//;
-	
-	if( $line =~ m<quit|end|exit>i ) {
-	    print " $$ closing connection\n";
-	    $client->close();
-	    exit;
-	}
-
-	my $y = new Yggdrasil();
-	my $status = $y->get_status();	
-	
-	if ($line =~ /^USER: (.*)/) {
-	    $user = $1;
-	} elsif ($line =~ /^PASSWORD: (.*)/) {
-	    $password = $1;
-	}
-
-	if ($user && $password && !$connected) {
-	    $y->connect( 
-			user      => $config->get( 'engineuser' ),
-			password  => $config->get( 'enginepassword' ),
-			host      => $config->get( 'enginehost' ),
-			port      => $config->get( 'engineport' ),
-			db        => $config->get( 'enginedb' ),
-			engine    => $config->get( 'enginetype' ),
-		       );
-	    
-	    if ($status->OK()) {
-		$y->login( user => $user, password => $password );
-		if ($status->OK()) {
-		    print $client "Login accepted, welcome to Yggdrasil\n";
-		    $connected = 1;
-		} else {
-		    print $client "Login failed: ", $status->message(), "\n";
-		    $client->close();
-		}
-	    } else {
-		print $client "Connect failed: ", $status->message(), "\n";
-	    }
-	} elsif ($toread && $toread > 0) {
-	    $buffer .= "$line\n";
-	    $toread--;
-	}
-	    
-	if ($connected && !$toread) {
-	    if ($buffer) {
-		print "Buffer was:\n$buffer";
-		undef $buffer;
-	    }
-	    
-	    if ($line =~ /^Length: (\d+)/) {		
-		$toread = $1;
-		print $client "Expecting $toread lines of data...\n";
-	    }
-	} 
-    }
-
-    print " $$ closing anyway!\n";
-    exit;
-}
-
-sub handle_start {
-    print "*** START ***\n", @_, "\n";
-}
-
-sub handle_end {
-    print "*** END ***\n", @_, "\n";
-}
+my $self = POE::Component::Server::Yggdrasil->spawn(
+	    address => $config->get('daemonhost'),
+	    port    => $config->get('daemonport'),
+);
+print "Foo\n";
+POE::Kernel->run();
 
 __DATA__
 help here
