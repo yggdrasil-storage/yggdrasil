@@ -27,12 +27,12 @@ use Yggdrasil::Debug;
 
 our $VERSION = '0.10';
 
-$SIG{__DIE__} = sub {
-    $Carp::CarpLevel = 1;
-    print "\nERROR: $_[0]\n\n";
-    print "TRACEBACK:\n";
-    confess();
-};
+# $SIG{__DIE__} = sub {
+#     $Carp::CarpLevel = 1;
+#     print "\nERROR: $_[0]\n\n";
+#     print "TRACEBACK:\n";
+#     confess();
+# };
 
 sub yggdrasil {
     my $self = shift;
