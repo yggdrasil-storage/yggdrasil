@@ -8,7 +8,8 @@ use IO::Socket::INET; # For constants
 
 use lib qw|/hom/terjekv/lib/perl/lib/perl5/site_perl/|;
 
-use POE qw( Wheel::SocketFactory Wheel::ReadWrite Filter::Line Driver::SysRW );
+use POE qw( Wheel::SocketFactory Wheel::ReadWrite Filter::XML Filter::Line Driver::SysRW );
+use POE::Filter::XML::Node;
 use POE::Component::SSLify qw( Server_SSLify SSLify_Options );
 
 use FindBin qw($Bin);
@@ -97,7 +98,7 @@ sub _accept_new_client {
     
     my $wheel = POE::Wheel::ReadWrite->new(
 	   Handle => $socket,
-	   Filter => POE::Filter::Line->new(),
+           Filter => POE::Filter::Line->new(),					   
            InputEvent => '_client_input',
            ErrorEvent => '_client_error',
     );
@@ -119,13 +120,41 @@ sub _client_input {
     confess "No wheel ID" unless $self->{Clients}->{$wheel_id};
     confess "No wheel for $wheel_id" unless $self->{Clients}->{$wheel_id}->{Wheel};
 
-    print "Command from " . $self->{Clients}->{$wheel_id}->{peerport} . " ($wheel_id) was '$input'\n";
-    $self->{Clients}->{$wheel_id}->{Wheel}->put( 'Ack' );   
+    my $client = $self->{Clients}->{$wheel_id};
+    # If we haven't set a protocol yet, expect it to be issued.
+    unless ($client->{protocol}) {
+	if ($input =~ /^protocol: xml$/i) {
+	    $client->{Wheel}->set_input_filter( POE::Filter::XML->new(
+								      'NOTSTREAMING' => 1,
+								      'CALLBACK'     => \&_parsing_error,
+								     ));
+	    $client->{protocol} = 'xml';
+	    $client->{Wheel}->put( 'Switching to XML' );
+	} else {
+	    $client->{Wheel}->put( 'Unknown command' );
+	}
+	return;
+    }
+    
+    print "Command from " . $self->{Clients}->{$wheel_id}->{peerport} . " ($wheel_id) was \n";
+    print $input->toString();
+    print "\n";
+    
+    my $node = POE::Filter::XML::Node->new('yggdrasil');
+    $node->appendTextChild('return', '200');
+    $self->{Clients}->{$wheel_id}->{Wheel}->put( $node->toString() );
 }
 
 sub _client_error {
     my ($self, $wheel_id) = @_[OBJECT,ARG3];
     delete $self->{Clients}->{$wheel_id};
+}
+
+# This needs to be handled better, there is no recovery.  There are no args.  Hang up?
+sub _parsing_error {
+    my ($kernel, $object) = @_[KERNEL,OBJECT];
+    print "PARSING ERROR\n";
+    print join ", ", $object, $kernel; print "\n";
 }
 
 1;
