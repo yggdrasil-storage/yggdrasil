@@ -6,17 +6,23 @@ use strict;
 use Carp;
 use IO::Socket::INET; # For constants
 
+use FindBin qw($Bin);
+
 use lib qw|/hom/terjekv/lib/perl/lib/perl5/site_perl/|;
+use lib qw|$Bin/../lib|;
+
+use Yggdrasil;
 
 use POE qw( Wheel::SocketFactory Wheel::ReadWrite Filter::XML Filter::Line Driver::SysRW );
 use POE::Filter::XML::Node;
 use POE::Component::SSLify qw( Server_SSLify SSLify_Options );
 
-use FindBin qw($Bin);
+use POE::Component::Server::Yggdrasil::Interface;
 
 sub spawn {
     my $package = shift;
     confess "Uneven parameter list" if @_ % 2;
+    my %params = @_;
 
     my $self = bless {}, $package;
 
@@ -30,11 +36,16 @@ sub spawn {
 	$self->{ssl} = 1;
     }
      
-    my %params = @_;
-
-    $self->{alias}   = defined $params{alias} || 'Yggdrasil Daemon v.X';
-    $self->{port}    = $params{port} || 59999;
-    $self->{address} = $params{address} || 'localhost';
+    $self->{alias}     = defined $params{alias} || 'Yggdrasil Daemon v.X';
+    $self->{port}      = $params{port} || 59999;
+    $self->{address}   = $params{address} || 'localhost';
+    
+    $self->{engineuser}     = $params{euser};
+    $self->{enginepassword} = $params{epassword};
+    $self->{enginehost}     = $params{ehost};
+    $self->{engineport}     = $params{eport};
+    $self->{enginedb}       = $params{edb};
+    $self->{enginetype}     = $params{eengine};
     
     POE::Session->create(
 	 object_states => [
@@ -58,7 +69,7 @@ sub spawn {
 
 sub _server_start {
     my ($kernel, $self) = @_[KERNEL,OBJECT];
-#    $kernel->alias_set( $self->{alias} );
+    $kernel->alias_set( $self->{alias} );
 
     $self->{Listener} =
       POE::Wheel::SocketFactory->new(
@@ -82,7 +93,7 @@ sub _server_close {
 
     delete $self->{Listener};
     delete $self->{Clients};
-#    $kernel->alias_remove( $self->{alias} );
+    $kernel->alias_remove( $self->{alias} );
 }
 
 sub _accept_new_client {
@@ -123,26 +134,81 @@ sub _client_input {
     my $client = $self->{Clients}->{$wheel_id};
     # If we haven't set a protocol yet, expect it to be issued.
     unless ($client->{protocol}) {
-	if ($input =~ /^protocol: xml$/i) {
-	    $client->{Wheel}->set_input_filter( POE::Filter::XML->new(
-								      'NOTSTREAMING' => 1,
-								      'CALLBACK'     => \&_parsing_error,
-								     ));
-	    $client->{protocol} = 'xml';
-	    $client->{Wheel}->put( 'Switching to XML' );
-	} else {
-	    $client->{Wheel}->put( 'Unknown command' );
-	}
+	_handle_line_input( $self, $client, $input );
 	return;
     }
+
+    if ($client->{protocol} eq 'xml') {
+	print "Command from " . $client->{peerport} . " ($wheel_id) was \n";
+	print $input->toString();
+	print "\n";
+
+	my $return = $client->{interface}->process(
+						   mode   => 'xml',
+						   data   => $input->toString(),
+						   client => $client,
+						  );
+	print "Query returns:\n$return\n";
+	$client->{Wheel}->put( $return );
+    }
     
-    print "Command from " . $self->{Clients}->{$wheel_id}->{peerport} . " ($wheel_id) was \n";
-    print $input->toString();
-    print "\n";
+#    my $node = POE::Filter::XML::Node->new('yggdrasil');
+#    $node->appendTextChild('return', '200');
+
+#    $self->{Clients}->{$wheel_id}->{Wheel}->put( $node->toString() );
+}
+
+sub _handle_line_input {
+    my ($server, $client, $input) = @_;
     
-    my $node = POE::Filter::XML::Node->new('yggdrasil');
-    $node->appendTextChild('return', '200');
-    $self->{Clients}->{$wheel_id}->{Wheel}->put( $node->toString() );
+    if ($input =~ /^protocol: xml$/i) {
+	if ($client->{authenticated}) {
+	    $client->{Wheel}->set_input_filter( POE::Filter::XML->new(
+								      'NOTSTREAMING' => 1,
+								      'CALLBACK'     => sub {&_parsing_error( @_ )},
+								     ));
+	    my $interface = new POE::Component::Server::Yggdrasil::Interface( client => $client );
+	    $client->{protocol} = 'xml';
+	    $client->{interface} = $interface;
+	    $client->{Wheel}->put( '200, Switching to XML' );
+	} else {
+	    $client->{Wheel}->put( '400, Please authenticate before switching protocols' );
+	}
+    } elsif ($input =~ /username: (\w+)/) {
+	$client->{username} = $1;
+    } elsif ($input =~ /password: (\w+)/) {
+	$client->{password} = $1;
+    } else {
+	$client->{Wheel}->put( '400, Unknown command' );	
+    }
+
+    if (! $client->{authenticated} && $client->{username} && $client->{password}) {
+	my $y = new Yggdrasil;
+	my $s = $y->get_status();
+	$y->connect( 
+		    user      => $server->{engineuser},
+		    password  => $server->{enginepassword},
+		    host      => $server->{enginehost},
+		    port      => $server->{engineport},
+		    db        => $server->{enginedb},
+		    engine    => $server->{enginetype},
+		   );
+
+	if ($s->OK()) {
+	    my $iam = $y->login( user => $client->{username}, password => $client->{password});    
+	    if ($s->OK()) {
+		$client->{authenticated} = $iam;
+		$client->{password} = undef;
+		$client->{yggdrasil} = $y;
+		$client->{Wheel}->put( $s->status() . ", Welcome to yggdrasil '"  . $client->{username} . "'" );
+	    } else {
+		$client->{Wheel}->put( $s->status() . ', ' . $s->message() );	
+	    }
+	} else {
+	    $client->{Wheel}->put( $s->status() . ", " . $s->message() );
+	}
+    }
+    return undef;
 }
 
 sub _client_error {
