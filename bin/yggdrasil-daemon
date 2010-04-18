@@ -24,6 +24,20 @@ my $config = $c->get($label);
 die "No such label as $label\n" unless $config;
 die "Not a functional server label '$label'" unless $config->get('daemonhost');
 
+my @missing_fields;
+for my $field (qw|user password host port db type|) {
+    my $fqfield = "engine$field";
+    push @missing_fields, $fqfield unless $config->get( $fqfield );
+}
+
+if (@missing_fields) {
+    print "Required fields missing from config:\n";
+    for my $f (@missing_fields) {
+	print " * $f\n";
+    }
+    exit 1;
+}
+
 # $y->connect( 
 # 	    user      => $config->get( 'engineuser' ),
 # 	    password  => $config->get( 'enginepassword' ),
@@ -36,8 +50,15 @@ die "Not a functional server label '$label'" unless $config->get('daemonhost');
 my $self = POE::Component::Server::Yggdrasil->spawn(
 	    address => $config->get('daemonhost'),
 	    port    => $config->get('daemonport'),
+
+ 	    euser     => $config->get( 'engineuser' ),
+ 	    epassword => $config->get( 'enginepassword' ),
+ 	    ehost     => $config->get( 'enginehost' ),
+ 	    eport     => $config->get( 'engineport' ),
+ 	    edb       => $config->get( 'enginedb' ),
+ 	    eengine   => $config->get( 'enginetype' ),
 );
-print "Foo\n";
+
 POE::Kernel->run();
 
 __DATA__
