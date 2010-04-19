@@ -5,6 +5,7 @@ use strict;
 
 use XML::Simple;
 use POE::Component::Server::Yggdrasil::Interface::Commands;
+use POE::Component::Server::Yggdrasil::Interface::XML;
 
 sub new {
     my $class = shift;
@@ -14,6 +15,7 @@ sub new {
     $self->{client}   = $params{client};
     $self->{commands} = new POE::Component::Server::Yggdrasil::Interface::Commands(
 				      yggdrasil => $params{client}->{yggdrasil} );
+    $self->{xml} = new POE::Component::Server::Yggdrasil::Interface::XML;
     
     return bless $self, $class;
 }
@@ -44,56 +46,34 @@ sub _process_xml {
 
     use Data::Dumper;
     print Dumper( $ref );
-    
-    my $root = $ref->{yggdrasil};
-    if ($root) {
-	my $commandname = delete $root->{command};
-	unless ($self->{commands}->{$commandname}) {
-	    return $self->_return_xml( 400, "No command '$commandname'" );
+
+    my @retobjs;
+    for my $request (keys %$ref) {
+	my $root = $ref->{request};
+
+	my $command = delete $root->{exec};
+	unless ($self->{commands}->{$command}) {
+	    push @retobjs, $self->{xml}->xmlify_status( 406, "Unknown command '$command'" );
+	    next;
 	}
-
-	my $callback = $self->{commands}->{$commandname};
-
+	
+	my $callback = $self->{commands}->{$command};
+	
 	my @args;
 	push @args, delete $root->{id} if $root->{id};
 	@args = map { $_ => $root->{$_} } keys %$root unless @args;
-
+	
 	my $ret = $callback->( @args );	
-
 	my $status = $self->{client}->{yggdrasil}->get_status();
 	
 	if ($status->OK()) {
-	    my $stop = $ret->stop() || '';
-	    # We need a way to XMLify the object.
-	    return "<yggdrasil>
- <entity>
-  <name>" . $ret->name() . "</name>
-  <start>" . $ret->start() . "</start>
-  <stop>$stop</stop>
-  <instances>" . join(", ", $ret->instances()) . "</instances>
- </entity>
-</yggdrasil>\n";
+	    push @retobjs, $self->{xml}->xmlify( $status, $ret );
 	} else {
-	    return $self->_return_xml( $status->status(), $status->message() );
+	    push @retobjs, $self->{xml}->xmlify( $status );
 	}
-	
-
-
-	return "XMLFIY: $ret";
-    } else {
-	return $self->_return_xml( 406, 'Missing root element' );
     }
-}
-
-sub _return_xml {
-    my ($self, $retval, $retstr) = @_;
-    return "<yggdrasil>
- <status>
-  <code>$retval</code>
-  <message>$retstr</message>
- </status>
-</yggdrasil>
-";
+    
+    return "<yggdrasil>\n" . join( "\n", @retobjs ) . "</yggdrasil>\n";    
 }
 
 1;
