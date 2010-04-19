@@ -38,7 +38,6 @@ sub xmlify {
     } elsif (ref $data) {
 	# Unknown data reference, that's not good.
 	$statusref = $self->xmlify_status( 406, "Unknown data type ($data) passed to XML backend" );
-	$dataref   = {};
     } elsif ($data) {
 	$dataref = $self->_scalar_xml( $data );	
     }
