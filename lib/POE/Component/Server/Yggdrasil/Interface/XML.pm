@@ -37,7 +37,7 @@ sub xmlify {
 	$dataref = $self->_relation_xml( $data );	
     } elsif (ref $data) {
 	# Unknown data reference, that's not good.
-	$statusref = $self->xmlify_status( 406, "Unknown data type ($data) passed to XML backend" );
+	$statusref = $self->xmlify_status( $requestid, 406, "Unknown data type ($data) passed to XML backend" );
     } elsif ($data) {
 	$dataref = $self->_scalar_xml( $data );	
     }
@@ -119,7 +119,7 @@ sub xmlout {
     return XMLout( \%data, NoAttr => 1, KeyAttr => [], RootName => undef )    
 }
 
-sub generate_status {
+sub generate_status_reply {
     my ($self, $requestid, $retval, $retstr) = @_;
 
     my @rid = ();
