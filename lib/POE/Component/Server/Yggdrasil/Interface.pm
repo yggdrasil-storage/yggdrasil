@@ -48,12 +48,15 @@ sub _process_xml {
     print Dumper( $ref );
 
     my @retobjs;
+    my $status = $self->{client}->{yggdrasil}->get_status();
     for my $request (keys %$ref) {
 	my $root = $ref->{request};
 
-	my $command = delete $root->{exec};
+	my $command   = delete $root->{exec};
+	my $requestid = delete $root->{requestid};
 	unless ($self->{commands}->{$command}) {
-	    push @retobjs, $self->{xml}->xmlify_status( 406, "Unknown command '$command'" );
+	    $status->set( 406, "Unknown command '$command'" );
+	    push @retobjs, $self->{xml}->xmlify( $requestid, $status );
 	    next;
 	}
 	
@@ -64,12 +67,11 @@ sub _process_xml {
 	@args = map { $_ => $root->{$_} } keys %$root unless @args;
 	
 	my $ret = $callback->( @args );	
-	my $status = $self->{client}->{yggdrasil}->get_status();
 	
 	if ($status->OK()) {
-	    push @retobjs, $self->{xml}->xmlify( $status, $ret );
+	    push @retobjs, $self->{xml}->xmlify( $requestid, $status, $ret );
 	} else {
-	    push @retobjs, $self->{xml}->xmlify( $status );
+	    push @retobjs, $self->{xml}->xmlify( $requestid, $status );
 	}
     }
     

@@ -3,16 +3,18 @@ package POE::Component::Server::Yggdrasil::Interface::XML;
 use warnings;
 use strict;
 
+use XML::Simple;
+
 sub new {
     my $class = shift;
     return bless {}, $class;
 }
 
 sub xmlify {
-    my ($self, $status, $data) = @_;
+    my ($self, $requestid, $status, $data) = @_;
 
-    my $statusxml = $self->_status_xml( $status );
-    return $statusxml unless $data;
+    my $statusref = $self->_status_xml( $status );
+    return $self->xmlout( reply => { $statusref } ) unless $data;
 
     # We now have some valid data to return to the user, and we can
     # rightfully assume it's an Yggdrasil object or a simple scalar
@@ -25,23 +27,26 @@ sub xmlify {
     #  * Relations  (Yggdrasil::Relation)
     #  * <$scalar>  (Value, encode if needed and return)
     
-    my $dataxml;
+    my $dataref;
     if (ref $data eq 'Yggdrasil::Entity') {
-	$dataxml = $self->_entity_xml( $data );
+	$dataref = $self->_entity_xml( $data );
     } elsif (ref $data eq 'Yggdrasil::Entity::Instance') {
-	$dataxml = $self->_instance_xml( $data );	
+	$dataref = $self->_instance_xml( $data );	
     } elsif (ref $data eq 'Yggdrasil::Property') {
-	$dataxml = $self->_property_xml( $data );	
+	$dataref = $self->_property_xml( $data );	
     } elsif (ref $data eq 'Yggdrasil::Relation') {
-	$dataxml = $self->_relation_xml( $data );	
+	$dataref = $self->_relation_xml( $data );	
     } elsif (ref $data) {
 	# Unknown data reference, that's not good.
-	$dataxml = $self->xmlify_status( 406, "Unknown data type ($data) passed to XML backend" );
+	$statusref = $self->xmlify_status( 406, "Unknown data type ($data) passed to XML backend" );
+	$dataref   = {};
     } else {
-	$dataxml = $self->_scalar_xml( $data );	
+	$dataref = $self->_scalar_xml( $data );	
     }
-    
-    return " <reply>$statusxml\n$dataxml </reply>\n";
+        
+    my @rid = ();
+    @rid = ( requestid => $requestid ) if defined $requestid;
+    return $self->xmlout( reply => { @rid, %$statusref, %$dataref } );    
 }
 
 sub _entity_xml {
@@ -53,14 +58,15 @@ sub _entity_xml {
 
     $stopinfo  = $stopinfo->{stamp} || '';
     $startinfo = $startinfo->{stamp};
+
+    return { entity => {
+			name => $name,
+			start => $start,
+			stop => $stop,
+			starttime => $startinfo,
+			stoptime => $stopinfo
+		       }};
     
-    return "  <entity>
-   <name>$name</name>
-   <start>$start</start>
-   <stop>$stop</stop>
-   <starttime>$startinfo</starttime>
-   <stoptime>$stopinfo</stoptime>
-  </entity>\n";
 }
 
 
@@ -71,13 +77,14 @@ sub _status_xml {
 
 sub xmlify_status {
     my ($self, $retval, $retstr) = @_;
-    return "
-  <status>
-   <code>$retval</code>
-   <message>$retstr</message>
-  </status>
-";
+    return { status => { code => $retval, message => $retstr } };
+}
 
+sub xmlout {
+    my $self = shift;
+    my %data = @_;
+
+    return XMLout( \%data, NoAttr => 1, KeyAttr => [], RootName => undef )    
 }
 
 1;
