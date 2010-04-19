@@ -404,6 +404,7 @@ sub get_ticks {
 	push @ticks, 'id' => $t;
     }
     
+    # FIXME, return the 'stamp' field in an ISO date format.
     my $fetchref = $self->{storage}->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
 								where  => [ @ticks ],
 								bind   => 'or',
