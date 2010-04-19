@@ -167,7 +167,8 @@ sub _handle_line_input {
 								      'NOTSTREAMING' => 1,
 								      'CALLBACK'     => sub {&_parsing_error( @_ )},
 								     ));
-	    my $interface = new POE::Component::Server::Yggdrasil::Interface( client => $client );
+	    my $interface = new POE::Component::Server::Yggdrasil::Interface( client   => $client,
+									      protocol => 'xml' );
 	    $client->{protocol} = 'xml';
 	    $client->{interface} = $interface;
 	    $client->{Wheel}->put( '200, Switching to XML' );

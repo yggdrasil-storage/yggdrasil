@@ -13,9 +13,13 @@ sub new {
 
     my $self = {};
     $self->{client}   = $params{client};
+    $self->{protocol} = $params{protocol};
     $self->{commands} = new POE::Component::Server::Yggdrasil::Interface::Commands(
 				      yggdrasil => $params{client}->{yggdrasil} );
-    $self->{xml} = new POE::Component::Server::Yggdrasil::Interface::XML;
+
+    if ($params{protocol} eq 'xml') {
+	$self->{xml} = new POE::Component::Server::Yggdrasil::Interface::XML;	
+    }
     
     return bless $self, $class;
 }
@@ -55,27 +59,28 @@ sub _process_xml {
 	my $command   = delete $root->{exec};
 	my $requestid = delete $root->{requestid};
 	unless ($self->{commands}->{$command}) {
-	    $status->set( 406, "Unknown command '$command'" );
-	    push @retobjs, $self->{xml}->xmlify( $requestid, $status );
+	    push @retobjs, $self->create_status_reply( $requestid, 406, "Unknown command '$command'" );
 	    next;
 	}
 	
 	my $callback = $self->{commands}->{$command};
-	
-	my @args;
-	push @args, delete $root->{id} if $root->{id};
-	@args = map { $_ => $root->{$_} } keys %$root unless @args;
-	
-	my $ret = $callback->( @args );	
+	my @ret = $callback->( map { $_ => $root->{$_} } keys %$root );	
 	
 	if ($status->OK()) {
-	    push @retobjs, $self->{xml}->xmlify( $requestid, $status, $ret );
+	    push @retobjs, $self->{xml}->xmlify( $requestid, $status, @ret );
 	} else {
 	    push @retobjs, $self->{xml}->xmlify( $requestid, $status );
 	}
     }
     
     return "<yggdrasil>\n" . join( "\n", @retobjs ) . "</yggdrasil>\n";    
+}
+
+sub create_status_reply {
+    my ($self, $code, $message) = @_;
+    
+    my $protocol = $self->{$self->{protocol}};
+    return $protocol->generate_status_reply( $code, $message );    
 }
 
 1;
