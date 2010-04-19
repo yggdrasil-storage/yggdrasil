@@ -77,10 +77,10 @@ sub _process_xml {
 }
 
 sub create_status_reply {
-    my ($self, $code, $message) = @_;
+    my ($self, $requestid, $code, $message) = @_;
     
     my $protocol = $self->{$self->{protocol}};
-    return $protocol->generate_status_reply( $code, $message );    
+    return $protocol->generate_status_reply( $requestid, $code, $message );    
 }
 
 1;
