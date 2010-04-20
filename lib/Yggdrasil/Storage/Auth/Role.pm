@@ -15,6 +15,9 @@ sub _new {
     $self->{_id}      = $id;
     $self->{_storage} = $storage;
 
+    $self->{_start}   = shift;
+    $self->{_stop}    = shift;
+
     return $self;
 }
 
@@ -50,15 +53,17 @@ sub get {
     my $roleschema = $storage->get_structure( 'authrole' );
     my $rid = $storage->fetch(
 	$roleschema => {
-	    return => 'id',
+	    return => [ 'id', 'start', 'stop' ],
 	    where  => [ name => $role ]
 	} );
 
     return unless $rid;
-    my $id = $rid->[0]->{id};
+    my $id    = $rid->[0]->{id};
+    my $start = $rid->[0]->{start};
+    my $stop  = $rid->[0]->{stop};
     return unless $id;
 
-    return $class->_new( $storage, $id, $role )
+    return $class->_new( $storage, $id, $role, $start, $stop )
 }
 
 sub get_nobody {
@@ -82,6 +87,16 @@ sub get_all {
     return unless $roles;
 
     return map { $class->_new( $storage, $_->{id}, $_->{name} ) } @$roles;
+}
+
+sub start {
+    my $self = shift;
+    return $self->{_start};
+}
+
+sub stop {
+    my $self = shift;
+    return $self->{_stop};
 }
 
 sub description :method {
