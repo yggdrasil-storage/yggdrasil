@@ -27,11 +27,12 @@ sub new {
 sub process {
     my $self = shift;
     my %params = @_;
-    my $mode = $params{mode};
-    my $data = $params{data};
+    my $mode   = $params{mode};
+    my $data   = $params{data};
+    my $client = $params{client};
     
     if ($mode eq 'xml') {
-	return $self->_process_xml( $data );
+	return $self->_process_xml( $data, $client );
     } else {
 	# Unsupported mode, scary stuff, how do we know what to
 	# return?  We don't, so we return undef.  The caller will have
@@ -45,11 +46,9 @@ sub process {
 sub _process_xml {
     my $self = shift;
     my $xml  = shift;
+    my $client = shift;
 
     my $ref = XMLin( $xml );
-
-    use Data::Dumper;
-    print Dumper( $ref );
 
     my @retobjs;
     my $status = $self->{client}->{yggdrasil}->get_status();
@@ -62,6 +61,12 @@ sub _process_xml {
 	    push @retobjs, $self->create_status_reply( $requestid, 406, "Unknown command '$command'" );
 	    next;
 	}
+
+	# If we're asked who we are, return the clients whoami field
+	# as the only value.  One could argue that this should be
+	# caught earlier in the server code, but data structures might
+	# not map in a pretty fashion.
+	$root->{value} = $client->{whoami} if $command eq 'whoami';
 	
 	my $callback = $self->{commands}->{$command};
 	my @ret = $callback->( map { $_ => $root->{$_} } keys %$root );	

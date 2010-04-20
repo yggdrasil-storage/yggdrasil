@@ -30,6 +30,9 @@ sub new {
 		get_user_value  => sub { _get_set_uservalue( $y, @_ ) },
 		set_user_value  => sub { _get_set_uservalue( $y, @_ ) },
 		
+		info            => sub { _info( $y, @_ ) },
+		yggdrasil       => sub { _info( $y, @_ ) },
+		whoami          => sub { return $_[1] },
 		# ...
 	       };  
   
@@ -37,6 +40,11 @@ sub new {
     return bless $self, $class;
 }
 
+sub _info {
+    my $ygg = shift;
+    return $ygg->info();
+}
+  
 sub _define_entity {
     my $ygg = shift;
     my %params = @_;

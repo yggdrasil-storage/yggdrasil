@@ -202,6 +202,9 @@ sub _handle_line_input {
 		$client->{password} = undef;
 		$client->{yggdrasil} = $y;
 		$client->{Wheel}->put( $s->status() . ", Welcome to yggdrasil '"  . $client->{username} . "'" );
+
+		$client->{whoami} = "Connecting from " . $client->{peeraddr} . ":" . $client->{peerport} .
+		  " to " . $server->{address} . ':' . $server->{port} . " as " . $client->{username} ;
 	    } else {
 		$client->{Wheel}->put( $s->status() . ', ' . $s->message() );	
 	    }
