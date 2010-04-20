@@ -80,6 +80,7 @@ sub expire {
     $self->{_user_obj}->expire();
 }
 
+# FIXME? This does *NOT* allow undef values to be set.
 sub _setter_getter {
     my $self = shift;
     my $key  = shift;
@@ -92,6 +93,26 @@ sub _setter_getter {
     }
 
     return $uo->get_field( $key );
+}
+
+# Instance-like interface.
+sub property {
+    my ($self, $key, $value) = @_;
+    
+    my $status = $self->get_status();
+    my %accepted_properties = (
+			       password => 1,
+			       session  => 1,
+			       cert     => 1,
+			       fullname => 1,
+			      );
+
+    unless ($accepted_properties{$key}) {
+	$status->set( 404, "Users have no property '$key'" );
+	return;
+    }
+    
+    return $self->_setter_getter( $key, $value );    
 }
 
 sub password {

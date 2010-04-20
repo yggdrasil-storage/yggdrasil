@@ -89,6 +89,23 @@ sub _setter_getter {
     return $ro->get_field( $key );
 }
 
+# Instance-like interface.
+sub property {
+    my ($self, $key, $value) = @_;
+    
+    my $status = $self->get_status();
+    my %accepted_properties = (
+			       description => 1,
+			      );
+
+    unless ($accepted_properties{$key}) {
+	$status->set( 404, "Roles have no property '$key'" );
+	return;
+    }
+    
+    return $self->_setter_getter( $key, $value );    
+}
+
 sub members {
     my $self = shift;
 
