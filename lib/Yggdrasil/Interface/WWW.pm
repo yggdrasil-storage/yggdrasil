@@ -27,6 +27,10 @@ sub new {
 		style    => [ { src => 'yggdrasil.css', }, ],
     };
 
+    if ($ENV{HTTP_USER_AGENT} =~ /iphone/i) {
+	$self->{style} = [ { src => 'iPhone.css', }, ]
+    }
+    
     return bless $self, $class;
 }
 
