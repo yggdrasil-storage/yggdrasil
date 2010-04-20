@@ -125,6 +125,11 @@ sub start {
     return $self->{_start};
 }
 
+sub stop {
+    my $self = shift;
+    return $self->{_stop};
+}
+
 sub name :method {
     my $self = shift;
     return $self->{_name};
