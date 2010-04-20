@@ -14,6 +14,10 @@ documentation/overview/Overview.pdf
 documentation/overview/Overview.tex
 documentation/overview/title.tex
 documentation/TODO
+etc/server.crt
+etc/server.csr
+etc/server.key
+etc/server.key.org
 inc/Module/Install.pm
 inc/Module/Install/Base.pm
 inc/Module/Install/Can.pm
@@ -23,6 +27,10 @@ inc/Module/Install/Metadata.pm
 inc/Module/Install/Scripts.pm
 inc/Module/Install/Win32.pm
 inc/Module/Install/WriteAll.pm
+lib/POE/Component/Server/Yggdrasil.pm
+lib/POE/Component/Server/Yggdrasil/Interface.pm
+lib/POE/Component/Server/Yggdrasil/Interface/Commands.pm
+lib/POE/Component/Server/Yggdrasil/Interface/XML.pm
 lib/Yggdrasil.pm
 lib/Yggdrasil/Auth.pm
 lib/Yggdrasil/Common/CommandLine.pm
