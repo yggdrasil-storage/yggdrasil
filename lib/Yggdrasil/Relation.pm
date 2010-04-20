@@ -47,13 +47,15 @@ sub get {
     my %param = @_; 
     
     my $status = $param{yggdrasil}->get_status();
-    my $ref = $self->storage()->fetch( "MetaRelation" => { return => [qw/id lval rval/],
+    my $ref = $self->storage()->fetch( "MetaRelation" => { return => [qw/id lval rval start stop/],
 							   where  => [ 'label' => $param{label} ] },
 				     );
 
     if( $ref && defined $ref->[0]->{id} ) {
 	my $new = Yggdrasil::Relation->new( @_ );
 	$new->{_id} = $ref->[0]->{id};
+	$new->{_start} = $ref->[0]->{start};
+	$new->{_stop}  = $ref->[0]->{stop};
 	
 	$new->{lval} = Yggdrasil::Entity->get( yggdrasil => $self, id => $ref->[0]->{lval} );
 	$new->{rval} = Yggdrasil::Entity->get( yggdrasil => $self, id => $ref->[0]->{rval} );
