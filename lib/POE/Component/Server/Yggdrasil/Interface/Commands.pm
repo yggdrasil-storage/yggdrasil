@@ -16,10 +16,20 @@ sub new {
 		create_instance => sub { _create_instance( $y, @_ ) },
 	       
 		get_entity      => sub { _get_entity( $y, @_ ) },
+		get_relation    => sub { _get_relation( $y, @_ ) },
 		get_instance    => sub { _get_instance( $y, @_ ) },
+		get_user        => sub { _get_user( $y, @_ ) },
+		get_role        => sub { _get_role( $y, @_ ) },
 
 		get_value       => sub { _get_set_value( $y, @_ ) },
 		set_value       => sub { _get_set_value( $y, @_ ) },
+		
+		get_role_value  => sub { _get_set_rolevalue( $y, @_ ) },
+		set_role_value  => sub { _get_set_rolevalue( $y, @_ ) },
+
+		get_user_value  => sub { _get_set_uservalue( $y, @_ ) },
+		set_user_value  => sub { _get_set_uservalue( $y, @_ ) },
+		
 		# ...
 	       };  
   
@@ -38,10 +48,16 @@ sub _define_property {
     my $ygg = shift;
     my %params = @_;
     
-    my $entity = $ygg->define_entity( $params{entityid} );
+    my $entity = $ygg->get_entity( $params{entityid} );
     return unless $entity;
 
-    return $entity->define_property( $params{propertyid} );
+    my $defined = $entity->define_property( $params{propertyid}, type => $params{type}, null => $params{null} );
+    return unless defined $defined;
+
+    # There is some weird things happening when creating properties,
+    # not everything is properly objectified, so we have an extra call
+    # here to solve that.  The FIXME should go into Property->define().    
+    return $entity->get_property( $params{propertyid} );
 }
 
 sub _create_instance {
@@ -59,6 +75,29 @@ sub _get_entity {
     my %params = @_;
     
     return $ygg->get_entity( $params{entityid} );
+}
+
+# Please note that the label is still assumed to be globally unique,
+# so 'relationid' is indeed its label.
+sub _get_relation {
+    my $ygg = shift;
+    my %params = @_;
+    
+    return $ygg->get_relation( $params{relationid} );
+}
+
+sub _get_user {
+    my $ygg = shift;
+    my %params = @_;
+    
+    return $ygg->get_user( $params{userid} );
+}
+
+sub _get_role {
+    my $ygg = shift;
+    my %params = @_;
+    
+    return $ygg->get_role( $params{roleid} );
 }
 
 sub _get_instance {
@@ -81,12 +120,41 @@ sub _get_set_value {
     my $instance = $entity->fetch( $params{instanceid} );
     
     return undef unless $instance;
-    if (exists $params{propertyvalue}) {
-	return ($instance->property( $params{propertyid}, $params{propertyvalue} ), $instance);
+    if (exists $params{value}) {
+	return ($instance->property( $params{propertyid}, $params{value} ), $instance);
     } else {
 	return ($instance->property( $params{propertyid} ), $instance);
     }
     
 }
+
+sub _get_set_uservalue {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $user = $ygg->get_user( $params{userid} );
+    return undef unless $user;
+
+    if (exists $params{value}) {
+	return ($user->property( $params{propertyid}, $params{value} ), $user);
+    } else {
+	return ($user->property( $params{propertyid} ), $user);
+    }
+}
+
+sub _get_set_rolevalue {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $role = $ygg->get_role( $params{roleid} );
+    return undef unless $role;
+
+    if (exists $params{value}) {
+	return ($role->property( $params{propertyid}, $params{value} ), $role);
+    } else {
+	return ($role->property( $params{propertyid} ), $role);
+    }
+}
+
 
 1;
