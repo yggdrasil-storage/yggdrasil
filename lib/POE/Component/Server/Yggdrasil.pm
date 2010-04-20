@@ -165,7 +165,7 @@ sub _handle_line_input {
 	if ($client->{authenticated}) {
 	    $client->{Wheel}->set_input_filter( POE::Filter::XML->new(
 								      'NOTSTREAMING' => 1,
-								      'CALLBACK'     => sub {&_parsing_error( @_ )},
+								      'CALLBACK'     => sub { &_parsing_error( $client ) }
 								     ));
 	    my $interface = new POE::Component::Server::Yggdrasil::Interface( client   => $client,
 									      protocol => 'xml' );
@@ -220,11 +220,9 @@ sub _client_error {
     delete $self->{Clients}->{$wheel_id};
 }
 
-# This needs to be handled better, there is no recovery.  There are no args.  Hang up?
 sub _parsing_error {
-    my ($kernel, $object) = @_[KERNEL,OBJECT];
-    print "PARSING ERROR\n";
-    print join ", ", $object, $kernel; print "\n";
+    my $client = shift;
+    delete $client->{Wheel};
 }
 
 1;
