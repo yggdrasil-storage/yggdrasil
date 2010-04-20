@@ -14,7 +14,7 @@ sub define {
 
     my $entity   = $params{entity};
     my $property = $params{property};
-  
+    
     my $yggdrasil = $self->yggdrasil();
     my $storage   = $yggdrasil->{storage};
 
@@ -35,7 +35,7 @@ sub define {
 	    $status->set( 406, "Unable to create properties with names containing ':'." );
 	    return;
 	}
-	$entity = $entity->{name};
+	$entity = $entity->name();
     } elsif( $property =~ /:/ ) {
 	my @parts = split m/::/, $property;
 	my $last = pop @parts;
@@ -56,7 +56,8 @@ sub define {
     $self->{entity} = $entity;
 
     # --- Set the default data type.
-    $params{type} = uc $params{type} || 'TEXT';
+    $params{type} = uc $params{type} if $params{type};
+    $params{type} ||= 'TEXT';
     $params{null} = 1 if $params{null} || ! defined $params{null};
 
     unless ($storage->is_valid_type( $params{type} )) {
