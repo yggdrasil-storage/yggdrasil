@@ -32,9 +32,15 @@ sub _get {
     my $type = shift;
     my @keys = @_;
     my $req  = $self->{nextrequestid}->();
+    my $exec = 'get_' . $type;
 
+    if ($type eq 'whoami' || $type eq 'uptime') {
+	$exec = $type;
+	$type = 'value';
+    }
+    
     $self->execute( requestid => $req,
-		    exec      => 'get_' . $type,
+		    exec      => $exec,
 		    @keys,
 		  );
     return $self->_get_reply( $type, $req );
@@ -79,6 +85,15 @@ sub get_value {
     return $self->_get( 'value', entityid => $eid, propertyid => $pid, instanceid => $id );    
 }
 
+sub uptime {
+    my $self = shift;
+    return $self->_get( 'uptime' );
+}
+
+sub whoami {
+    my $self = shift;
+    return $self->_get( 'whoami' );
+}
 
 sub execute {
     my $self   = shift;
@@ -147,11 +162,10 @@ sub _pair {
     my $data = shift;
     my $type = shift;
     my %pair;
-
     $pair{$type} = 1;
 
-    if ($type eq 'value') {
-	$pair{$type} = $data->{_text};
+    if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
+	$pair{'value'} = $data->{_text};
     } else {
 	for my $k (keys %$data) {
 	    next if $k =~ /^_/;

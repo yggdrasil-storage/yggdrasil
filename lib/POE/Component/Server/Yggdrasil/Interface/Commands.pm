@@ -34,6 +34,7 @@ sub new {
 		info            => sub { _info( $y, @_ ) },
 		yggdrasil       => sub { _info( $y, @_ ) },
 		whoami          => sub { return $_[1] },
+		uptime          => sub { return $_[1] },
 		# ...
 	       };  
   

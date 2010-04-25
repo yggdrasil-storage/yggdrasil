@@ -39,6 +39,7 @@ sub spawn {
     $self->{alias}     = defined $params{alias} || 'Yggdrasil Daemon v.X';
     $self->{port}      = $params{port} || 59999;
     $self->{address}   = $params{address} || 'localhost';
+    $self->{startup}   = time;
     
     $self->{engineuser}     = $params{euser};
     $self->{enginepassword} = $params{epassword};
@@ -115,6 +116,7 @@ sub _accept_new_client {
     );
 
     my $wheel_id = $wheel->ID();
+    $self->{Clients}->{ $wheel_id }->{clientstart} = time;
     $self->{Clients}->{ $wheel_id }->{Wheel} = $wheel;
     $self->{Clients}->{ $wheel_id }->{peeraddr} = $peeraddr;
     $self->{Clients}->{ $wheel_id }->{peerport} = $peerport;
@@ -205,6 +207,7 @@ sub _handle_line_input {
 
 		$client->{whoami} = "Connecting from " . $client->{peeraddr} . ":" . $client->{peerport} .
 		  " to " . $server->{address} . ':' . $server->{port} . " as " . $client->{username} ;
+		$client->{serverstart} = $server->{startup};
 	    } else {
 		$client->{Wheel}->put( $s->status() . ', ' . $s->message() );	
 	    }

@@ -52,6 +52,13 @@ $ygg->{client}->{protocol}->get_property( 'Host', 'ip' );
 print "Host -> nommo -> ip\n";
 $ygg->{client}->{protocol}->get_value( 'Host', 'ip', 'nommo' );
 
+print "uptime\n";
+$ygg->{client}->{protocol}->uptime();
+
+print "whoami\n";
+$ygg->{client}->{protocol}->whoami();
+
+
 sub print_status {
     print $status->status(), " : ", $status->message(), "\n";
 }
