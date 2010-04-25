@@ -31,6 +31,8 @@ lib/POE/Component/Server/Yggdrasil.pm
 lib/POE/Component/Server/Yggdrasil/Interface.pm
 lib/POE/Component/Server/Yggdrasil/Interface/Commands.pm
 lib/POE/Component/Server/Yggdrasil/Interface/XML.pm
+lib/XML/StreamReader.pm
+lib/XML/StreamReader/Handler.pm
 lib/Yggdrasil.pm
 lib/Yggdrasil/Auth.pm
 lib/Yggdrasil/Common/CommandLine.pm
@@ -105,5 +107,6 @@ t/pod.t
 t/Yggdrasil/Test/Common.pm
 www/ajax/foo.cgi
 www/index.cgi
+www/iPhone.css
 www/yggdrasil.css
 www/yggdrasil.js
