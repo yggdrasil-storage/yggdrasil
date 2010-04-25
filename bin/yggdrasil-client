@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+BEGIN { our $VERSION = 0.05 }
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Yggdrasil;
+
+use Yggdrasil::Common::Config;
+use Yggdrasil::Common::CommandLine ("foo=s", "bar:s");
+
+my $ygg     = Yggdrasil->new();
+my $cmdline = Yggdrasil::Common::CommandLine->new();
+my $c       = Yggdrasil::Common::Config->new();
+my $status  = $ygg->get_status();
+
+my $label  = $cmdline->get('label') || 'default';
+my $config = $c->get($label);
+die "No such label as $label\n" unless $config;
+
+my $uname = $cmdline->get( 'username' ) || $config->get( 'authuser' ) || (getpwuid($>))[0];
+my $upass = $cmdline->get( 'password' ) || $config->get( 'authpass' );
+
+$ygg->connect(
+	      daemonhost => $config->get( 'daemonhost' ),
+	      daemonport => $config->get( 'daemonport' ),
+	     );
+
+&print_status();
+
+$ygg->login(
+	    username => $uname,
+	    password => $upass,
+	    protocol => 'XML',
+	   );
+
+&print_status();
+
+$ygg->{client}->{protocol}->get_entity( 'UNIVERSAL' );
+
+
+sub print_status {
+    print $status->status(), " : ", $status->message(), "\n";
+}
+ 

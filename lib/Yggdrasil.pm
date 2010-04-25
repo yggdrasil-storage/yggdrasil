@@ -25,6 +25,8 @@ use Yggdrasil::Role;
 use Yggdrasil::Status;
 use Yggdrasil::Debug;
 
+use Yggdrasil::Interface::Client;
+
 our $VERSION = '0.10';
 
 # $SIG{__DIE__} = sub {
@@ -101,9 +103,17 @@ sub bootstrap {
 
 sub connect {
     my $self = shift;
+    my %params = @_;
 
-    $self->{storage} =
-      Yggdrasil::Storage->new(@_, status => $self->{status} );
+    # Check to see if we're connecting to a remote Yggdrasil server.
+    # If so, avoid calling Storage in any way.
+    if ($params{daemonport}) {
+	$self->{client} = new Yggdrasil::Interface::Client( yggdrasil => $self );
+	$self->{client}->connect( @_ );
+    } else {
+	$self->{storage} =
+	  Yggdrasil::Storage->new(@_, status => $self->{status} );
+    }
 
     return unless $self->get_status()->OK();
 
@@ -121,15 +131,21 @@ sub login {
 	return;
     }
 
-    # we're nobody until authenticated
-    $self->{user} = $self->get_user( $self->{storage}->user() );
+    if ($self->{client}) {
+	# FIXME, create user objects properly.
+	$self->{client}->login( %params );	
+    } else {
+	# we're nobody until authenticated
+	$self->{user} = $self->get_user( $self->{storage}->user() );
+	
+	my $auth = $self->{storage}->authenticate( %params );
+	$self->{user} = $self->get_user( $auth );
+	
+	return $self->user() if $status->OK();
+	
+	$status->set( 403, 'Login to Yggdrasil denied.' );
+    }
 
-    my $auth = $self->{storage}->authenticate( %params );
-    $self->{user} = $self->get_user( $auth );
-
-    return $self->user() if $status->OK();
-
-    $status->set( 403, 'Login to Yggdrasil denied.' );
     return;
 }
 
