@@ -17,6 +17,7 @@ sub new {
 	       
 		get_entity      => sub { _get_entity( $y, @_ ) },
 		get_relation    => sub { _get_relation( $y, @_ ) },
+		get_property    => sub { _get_property( $y, @_ ) },
 		get_instance    => sub { _get_instance( $y, @_ ) },
 		get_user        => sub { _get_user( $y, @_ ) },
 		get_role        => sub { _get_role( $y, @_ ) },
@@ -84,6 +85,15 @@ sub _get_entity {
     
     return $ygg->get_entity( $params{entityid} );
 }
+
+sub _get_property {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $entity = $ygg->get_entity( $params{entityid} );
+    return $entity->get_property( $params{propertyid} );
+}
+
 
 # Please note that the label is still assumed to be globally unique,
 # so 'relationid' is indeed its label.
