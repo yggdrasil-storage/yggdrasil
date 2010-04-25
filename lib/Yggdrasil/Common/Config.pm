@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use File::Spec;
+use Fcntl qw|:mode|;
 
 # Read and parse yggdrasil configuration files.
 # 1. Read global configuration files
@@ -71,8 +72,17 @@ sub _parse_all_configuration {
 
     # --- Parse each configuration file
     foreach my $file ( @files ) {
-	my $config = $self->_parse( File::Spec->catfile($path, $file) );
+	my $fqp = File::Spec->catfile($path, $file);
+	my $mode = (stat( $fqp ))[2];
 
+	my $config = $self->_parse( $fqp );
+	if ($config->get( 'authpass' ) || $config->get( 'enginepass' )) {
+	    warn "Warning, label '$file' is group readable and contains a password.\n"
+	      if ($mode & S_IRGRP) >> 3;
+	    die "Fatal, label '$file' is publicly readable while containing a password.\n"
+	      if ($mode & S_IROTH);
+	}	
+	
 	# --- file == label
 	$self->{$file} = $config;
     }
