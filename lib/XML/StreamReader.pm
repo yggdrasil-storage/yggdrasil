@@ -26,6 +26,7 @@ sub _init {
     my %params = @_;
 
     $self->{stream}  = $params{stream};
+    die "No stream specificed, aborting initialization" unless $self->{stream};
     $self->{select}  = IO::Select->new( $self->{stream} );
 
     $self->{handler} = XML::StreamReader::Handler->new();
