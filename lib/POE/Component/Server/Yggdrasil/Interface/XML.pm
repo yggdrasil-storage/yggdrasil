@@ -63,7 +63,7 @@ sub _entity_xml {
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $entity );
 
     return { entity => {
-			name => $name,
+			id => $name,
 			start => $start,
 			stop => $stop,
 			starttime => $starttime,
