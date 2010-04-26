@@ -77,7 +77,7 @@ sub enable_protocol {
 	}
 	$self->{protocol} = $protocol_class->new( yggdrasil => $self->yggdrasil(),
 						  stream    => $self->{connection} );
-	print $connection "protocol: xml\n";
+	print $connection "protocol: $protocol_name\n";
 	$self->_parse_client_line_reply( $connection );
 	return $self->{protocol} if $status->OK();
     } else {
