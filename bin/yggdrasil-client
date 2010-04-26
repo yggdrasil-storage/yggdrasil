@@ -40,6 +40,12 @@ $ygg->login(
 
 &status();
 
+print "Available protocols:\n";
+for my $p ($ygg->{client}->protocols()) {
+    print " - $p\n";
+}
+print "\n";
+
 print "Host\n";
 $ygg->{client}->{protocol}->get_entity( 'Host' );
 
@@ -49,8 +55,14 @@ $ygg->{client}->{protocol}->get_instance( 'Host', 'nommo' );
 print "Host:ip\n";
 $ygg->{client}->{protocol}->get_property( 'Host', 'ip' );
 
+print "Host:uname\n";
+$ygg->{client}->{protocol}->define_property( 'Host', 'uname' );
+
 print "Host -> nommo -> ip\n";
 $ygg->{client}->{protocol}->get_value( 'Host', 'ip', 'nommo' );
+
+print "Host -> nommo -> ip -> 129.240.222.1\n";
+$ygg->{client}->{protocol}->set_value( 'Host', 'ip', 'nommo', '129.240.222.1' );
 
 print "uptime\n";
 $ygg->{client}->{protocol}->uptime();
