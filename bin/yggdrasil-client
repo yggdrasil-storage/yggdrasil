@@ -23,14 +23,14 @@ my $config = $c->get($label);
 die "No such label as $label\n" unless $config;
 
 my $uname = $cmdline->get( 'username' ) || $config->get( 'authuser' ) || (getpwuid($>))[0];
-my $upass = $cmdline->get( 'password' ) || $config->get( 'authpass' );
+my $upass = $cmdline->get( 'password' ) || $config->get( 'authpass' ) || $cmdline->read_password();
 
 $ygg->connect(
 	      daemonhost => $config->get( 'daemonhost' ),
 	      daemonport => $config->get( 'daemonport' ),
 	     );
 
-&print_status();
+&status();
 
 $ygg->login(
 	    username => $uname,
@@ -38,7 +38,7 @@ $ygg->login(
 	    protocol => 'XML',
 	   );
 
-&print_status();
+&status();
 
 print "Host\n";
 $ygg->{client}->{protocol}->get_entity( 'Host' );
@@ -59,7 +59,8 @@ print "whoami\n";
 $ygg->{client}->{protocol}->whoami();
 
 
-sub print_status {
+sub status {
     print $status->status(), " : ", $status->message(), "\n";
+    exit unless $status->OK();
 }
  
