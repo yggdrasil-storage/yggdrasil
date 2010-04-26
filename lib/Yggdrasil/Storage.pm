@@ -919,7 +919,7 @@ sub cache {
 	$cachename = '_hasauthschema';
     } elsif ($map eq 'authschemaname') {
 	$cachename = '_authschemaname';
-    } elsif ($map =~ /^authbindings/) {
+    } elsif ($map eq 'authbindings') {
 	$cachename = $map;
     } else {
 	Yggdrasil::fatal( "Unknown cache type '$map' requested for populating" );
