@@ -19,6 +19,8 @@ use POE::Component::SSLify qw( Server_SSLify SSLify_Options );
 
 use POE::Component::Server::Yggdrasil::Interface;
 
+our $VERSION = '0.03';
+
 sub spawn {
     my $package = shift;
     confess "Uneven parameter list" if @_ % 2;
@@ -49,9 +51,11 @@ sub spawn {
     $self->{engineport}     = $params{eport};
     $self->{enginedb}       = $params{edb};
     $self->{enginetype}     = $params{eengine};
+
+    $self->{supported_protocol}->{xml} = POE::Filter::XML->new( 'NOTSTREAMING' => 1 );
     
     POE::Session->create(
-	 object_states => [
+			 object_states => [
 			   $self => { 
 				    _start   => '_server_start',
 				    _stop    => '_server_stop',
@@ -68,6 +72,15 @@ sub spawn {
 			  ],
 			);
     return $self;
+}
+
+sub preamble {
+    my ($server, $client) = @_;
+    my $protos = join ', ', sort keys %{$server->{supported_protocol}};
+    return "Server version: $VERSION
+Yggdrasil version: $Yggdrasil::VERSION
+Available protocols: $protos
+OK";
 }
 
 sub _server_start {
@@ -117,6 +130,7 @@ sub _accept_new_client {
            ErrorEvent => '_client_error',
     );
 
+    $wheel->put( $self->preamble() );
     my $wheel_id = $wheel->ID();
     $self->{Clients}->{ $wheel_id }->{yggcache} = $self->{yggcache};
     $self->{Clients}->{ $wheel_id }->{clientstart} = time;
@@ -143,40 +157,38 @@ sub _client_input {
 	return;
     }
 
-    if ($client->{protocol} eq 'xml') {
-#	print "Command from " . $client->{peerport} . " ($wheel_id) was \n";
-#	print $input->toString();
-#	print "\n";
-
-	my $return = $client->{interface}->process(
-						   mode   => 'xml',
-						   data   => $input->toString(),
-						   client => $client,
-						  );
-#	print "Query returns:\n$return\n";
-	$client->{Wheel}->put( $return );
-    }
-    
-#    my $node = POE::Filter::XML::Node->new('yggdrasil');
-#    $node->appendTextChild('return', '200');
-
-#    $self->{Clients}->{$wheel_id}->{Wheel}->put( $node->toString() );
+    my $return = $client->{interface}->process(
+					       mode   => $client->{protocol},
+					       data   => $input->toString(),
+					       client => $client,
+					      );
+    $client->{Wheel}->put( $return );
 }
 
 sub _handle_line_input {
     my ($server, $client, $input) = @_;
     
-    if ($input =~ /^protocol: xml$/i) {
+    if ($input =~ /^protocol: (\w+)$/i) {
+	my $protocol_format = lc $1;
 	if ($client->{authenticated}) {
-	    $client->{Wheel}->set_input_filter( POE::Filter::XML->new(
-								      'NOTSTREAMING' => 1,
-								      'CALLBACK'     => sub { &_parsing_error( $client ) }
-								     ));
+	    if ($server->{supported_protocol}->{$protocol_format}) {
+		$client->{Wheel}->set_input_filter( $server->{supported_protocol}->{$protocol_format} );
+
+		# Do protocol specific setup here.
+		if ($protocol_format eq 'xml') {
+		    $server->{supported_protocol}->{$protocol_format}->callback( sub { &_parsing_error( $client ) } );
+		}
+
+	    } else {		
+		$client->{Wheel}->put( "406, Unsupported protocol '$protocol_format' requested" );
+		return;
+	    }
+
 	    my $interface = new POE::Component::Server::Yggdrasil::Interface( client   => $client,
-									      protocol => 'xml' );
-	    $client->{protocol} = 'xml';
+									      protocol => $protocol_format );
+	    $client->{protocol} = $protocol_format;
 	    $client->{interface} = $interface;
-	    $client->{Wheel}->put( '200, Switching to XML' );
+	    $client->{Wheel}->put( '200, Switching to ' . $protocol_format );
 	} else {
 	    $client->{Wheel}->put( '400, Please authenticate before switching protocols' );
 	}
