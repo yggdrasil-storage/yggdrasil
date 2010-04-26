@@ -18,8 +18,9 @@ my $cmdline = Yggdrasil::Common::CommandLine->new();
 my $c       = Yggdrasil::Common::Config->new();
 my $status  = $ygg->get_status();
 
-my $label  = $cmdline->get('label') || 'default';
-my $config = $c->get($label);
+my $label   = $cmdline->get('label') || 'default';
+my $verbose = $cmdline->get('verbose') || 0;
+my $config  = $c->get($label);
 die "No such label as $label\n" unless $config;
 
 my $uname = $cmdline->get( 'username' ) || $config->get( 'authuser' ) || (getpwuid($>))[0];
@@ -30,7 +31,17 @@ $ygg->connect(
 	      daemonport => $config->get( 'daemonport' ),
 	     );
 
+for my $line (@{$ygg->{client}->{server_data}}) {
+    print " - $line\n";
+}
+
 &status();
+
+print "Available client protocols:\n";
+for my $p ($ygg->{client}->protocols()) {
+    print " - $p\n";
+}
+print "\n";
 
 $ygg->login(
 	    username => $uname,
@@ -39,12 +50,6 @@ $ygg->login(
 	   );
 
 &status();
-
-print "Available protocols:\n";
-for my $p ($ygg->{client}->protocols()) {
-    print " - $p\n";
-}
-print "\n";
 
 print "Host\n";
 $ygg->{client}->{protocol}->get_entity( 'Host' );

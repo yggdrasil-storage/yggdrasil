@@ -28,12 +28,19 @@ sub connect {
     my $status = $self->get_status();
 
     if ($client) {
-	$self->{connection} = $client;
+	my $server_reply = '';
+	while (1) {
+	    $server_reply = <$client>;
+	    last if $server_reply =~ /^OK/;
+	    chomp $server_reply;
+	    push @{$self->{server_data}}, $server_reply;
+	}
+	$self->{connection}  = $client;
 	$status->set( 200, "Successfully connected to $params{daemonhost}:$params{daemonport}" );
     } else {
 	$status->set( 400, "Unable to connect to $params{daemonhost}:$params{daemonport} (" . 
 		      IO::Socket::SSL::errstr() . ")" );
-    }
+    }    
     return $client;
 }
 
