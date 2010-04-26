@@ -61,10 +61,14 @@ sub init {
     my $self = shift;
     
     $self->_initialize_config();
-    $self->_initialize_filter();
-    $self->_initialize_mapper();
-    $self->_initialize_temporal();
-    $self->_initialize_hasauthschema();
+
+    unless ($self->{_storage}->cache_is_populated()) {
+	$self->_initialize_filter();
+	$self->_initialize_mapper();
+	$self->_initialize_temporal();
+	$self->_initialize_hasauthschema();
+    }
+
 }
 
 sub get {

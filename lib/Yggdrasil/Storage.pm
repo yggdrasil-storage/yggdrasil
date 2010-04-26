@@ -75,6 +75,16 @@ sub new {
 	$storage->{mapper} = $data{mapper};
 	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
 
+	if ($data{cache}) {
+	    if (ref $data{cache} eq 'HASH') {
+		$storage->{cache} = $data{cache};
+	    } else {
+		Yggdrasil::fatal( "The cache parameter needs to be a hash reference, not a " . ref $data{cache} );
+	    }
+	} else {
+	    $storage->{cache} = {};
+	}
+	
 	# Structure the internals of Storage. Reads the Storage_* structures.
 	$storage->{structure} = new Yggdrasil::Storage::Structure( storage => $storage );
 	$storage->{structure}->init();
@@ -906,8 +916,18 @@ sub cache {
 	Yggdrasil::fatal( "Unknown cache type '$map' requested for populating" );
     }
 
-    $self->{$cachename}->{$from} = $to if $to;
-    return $self->{$cachename}->{$from};
+    $self->{cache}->{$cachename}->{$from} = $to if $to;
+    return $self->{cache}->{$cachename}->{$from};
+}
+
+sub cache_is_populated {
+    my $self = shift;
+
+    if (keys %{$self->{cache}->{_hasauthschema}}) {
+	return 1;
+    } else {
+	return;
+    }
 }
 
 # Map string like "Instances:Auth" to "Storage_auth_Instances" f.ex.

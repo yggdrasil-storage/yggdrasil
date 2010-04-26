@@ -35,11 +35,13 @@ sub spawn {
     } else {
 	$self->{ssl} = 1;
     }
-     
+
+    my %yggcache;
     $self->{alias}     = defined $params{alias} || 'Yggdrasil Daemon v.X';
     $self->{port}      = $params{port} || 59999;
     $self->{address}   = $params{address} || 'localhost';
     $self->{startup}   = time;
+    $self->{yggcache}  = \%yggcache;
     
     $self->{engineuser}     = $params{euser};
     $self->{enginepassword} = $params{epassword};
@@ -116,6 +118,7 @@ sub _accept_new_client {
     );
 
     my $wheel_id = $wheel->ID();
+    $self->{Clients}->{ $wheel_id }->{yggcache} = $self->{yggcache};
     $self->{Clients}->{ $wheel_id }->{clientstart} = time;
     $self->{Clients}->{ $wheel_id }->{Wheel} = $wheel;
     $self->{Clients}->{ $wheel_id }->{peeraddr} = $peeraddr;
@@ -141,16 +144,16 @@ sub _client_input {
     }
 
     if ($client->{protocol} eq 'xml') {
-	print "Command from " . $client->{peerport} . " ($wheel_id) was \n";
-	print $input->toString();
-	print "\n";
+#	print "Command from " . $client->{peerport} . " ($wheel_id) was \n";
+#	print $input->toString();
+#	print "\n";
 
 	my $return = $client->{interface}->process(
 						   mode   => 'xml',
 						   data   => $input->toString(),
 						   client => $client,
 						  );
-	print "Query returns:\n$return\n";
+#	print "Query returns:\n$return\n";
 	$client->{Wheel}->put( $return );
     }
     
@@ -195,6 +198,7 @@ sub _handle_line_input {
 		    port      => $server->{engineport},
 		    db        => $server->{enginedb},
 		    engine    => $server->{enginetype},
+		    cache     => $server->{yggcache},
 		   );
 
 	if ($s->OK()) {
