@@ -3,14 +3,12 @@ package Yggdrasil::Common::CommandLine;
 use strict;
 use warnings;
 
-use UNIVERSAL qw/VERSION/;
 use Getopt::Long;
 
 use Yggdrasil::Common::Config;
 
 our $VERSION = 0.01;
 our $SELF = bless {}, __PACKAGE__;
-
 
 sub new {
     return $SELF;
@@ -74,7 +72,7 @@ sub INIT {
     my $caller = $self->{_caller};
     my %args   = %{ $self->{_import} };
 
-    my $version = $caller->VERSION;
+    my $version = $caller->UNIVERSAL::VERSION;
     unless( $version ) {
 	die 'You must declare $VERSION in your program' . "\n";
     }
