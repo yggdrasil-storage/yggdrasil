@@ -577,15 +577,20 @@ sub _add_auth {
 	my $schemabindings = $schemadefs->[$i+1];
 
 	# 1. Find auth-bindings for this schema
-	my $ret = $self->_fetch( $self->get_structure( 'authschema' ) =>
-				 {
-				  return => 'bindings',
-				  where  => [ usertable => $schema, type => $authtype ]
-				 } );
-	next unless $ret;
-
-	my $frozen_bindings = $ret->[0]->{bindings};
-	my $typebindings = Storable::thaw( $frozen_bindings );
+	my $cachename = $schema . ':' . $authtype;
+	my $typebindings = $self->cache( 'authbindings', $cachename );
+	unless ($typebindings) {
+	    my $ret = $self->_fetch( $self->get_structure( 'authschema' ) =>
+				     {
+				      return => 'bindings',
+				      where  => [ usertable => $schema, type => $authtype ]
+				     } );
+	    next unless $ret;
+	    
+	    my $frozen_bindings = $ret->[0]->{bindings};
+	    $typebindings = Storable::thaw( $frozen_bindings );
+	    $self->cache( 'authbindings', $cachename, $typebindings );
+	}
 	next unless $typebindings;
 
 	# 2. Assign uniq alias for each auth-table.  FIXME for rand.
@@ -912,6 +917,10 @@ sub cache {
 	$cachename = '_filtercache';
     } elsif ($map eq 'hasauthschema') {
 	$cachename = '_hasauthschema';
+    } elsif ($map eq 'authschemaname') {
+	$cachename = '_authschemaname';
+    } elsif ($map =~ /^authbindings/) {
+	$cachename = $map;
     } else {
 	Yggdrasil::fatal( "Unknown cache type '$map' requested for populating" );
     }
@@ -934,7 +943,9 @@ sub cache_is_populated {
 sub _get_auth_schema_name {
     my $self = shift;
     my $schema = shift;
-
+    return $self->cache( 'authschemaname', $schema ) if 
+      $self->cache( 'authschemaname', $schema );
+    
     my @parts = split( ":", $schema );
     pop @parts; # remove the ":Auth" part
     my $usertable = join(":", @parts);
@@ -944,8 +955,11 @@ sub _get_auth_schema_name {
 			      return => 'authtable',
 			      where  => [ usertable => $usertable ],
 			     } );
-    
-    return $ret->[0]->{authtable};
+
+    my $at = $ret->[0]->{authtable};
+    print "$at\n";
+    $self->cache( 'authschemaname', $schema, $at );
+    return ;
 }
 
 
