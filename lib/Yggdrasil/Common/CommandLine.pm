@@ -97,14 +97,18 @@ sub INIT {
     } elsif (defined $self->{username} && ! defined $self->{password} && -t) {
 	# We have a user, but no password, and we have a TTY.  Let's
 	# ask for a password shall we?
-	my $password;
-	print "Password: ";
-	system("stty -echo");
-	chop($password = <>);
-	print "\n";
-	system("stty echo");
-	$self->{password} = $password;	
+	$self->{password} = $self->read_password();
     }
+}
+
+sub read_password {    
+    my $password;
+    print "Password: ";
+    system("stty -echo");
+    chop($password = <>);
+    print "\n";
+    system("stty echo");
+    return $password;
 }
 
 sub _client_help {
