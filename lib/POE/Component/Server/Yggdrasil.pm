@@ -8,7 +8,6 @@ use IO::Socket::INET; # For constants
 
 use FindBin qw($Bin);
 
-use lib qw|/hom/terjekv/lib/perl/lib/perl5/site_perl/|;
 use lib qw|$Bin/../lib|;
 
 use Yggdrasil;
@@ -101,7 +100,8 @@ sub _server_start {
 }
 
 sub _server_stop {
-    confess 'Server died';
+    my ($kernel, $self) = @_[KERNEL,OBJECT];
+    print "Server exited\n";
 }
 
 sub _server_close {
@@ -141,6 +141,7 @@ sub _accept_new_client {
 
 sub _accept_failed {
     my ($kernel, $self) = @_[KERNEL,OBJECT];
+    warn "Unable to accept, socket busy?\n";
     $kernel->yield( 'shutdown' );
 }
 
