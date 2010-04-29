@@ -83,6 +83,9 @@ print "whoami\n";
 $ygg->{client}->{protocol}->whoami();
 &status();
 
+print "info\n";
+$ygg->{client}->{protocol}->yggdrasil();
+&status();
 
 sub status {
     print $status->status(), " : ", $status->message(), "\n";
