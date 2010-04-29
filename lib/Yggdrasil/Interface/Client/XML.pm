@@ -60,7 +60,7 @@ sub _exec {
     my $req  = $self->{nextrequestid}->();
     my $exec = $command_type . '_' . $type;
 
-    if ($type eq 'whoami' || $type eq 'uptime') {
+    if ($type eq 'whoami' || $type eq 'uptime' || $type eq 'info') {
 	$exec = $type;
 	$type = 'value';
     }
@@ -199,6 +199,16 @@ sub uptime {
 sub whoami {
     my $self = shift;
     return $self->_get( 'whoami' );
+}
+
+sub info {
+    my $self = shift;
+    return $self->_get( 'info' );
+}
+
+sub yggdrasil {
+    my $self = shift;
+    return $self->_get( 'info' );
 }
 
 # Reply handling.  This is done by calling _get_reply(), which will
