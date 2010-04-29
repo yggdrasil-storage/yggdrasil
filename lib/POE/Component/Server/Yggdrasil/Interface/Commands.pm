@@ -31,10 +31,10 @@ sub new {
 		get_user_value  => sub { _get_set_uservalue( $y, @_ ) },
 		set_user_value  => sub { _get_set_uservalue( $y, @_ ) },
 		
-		info            => sub { _info( $y, @_ ) },
-		yggdrasil       => sub { _info( $y, @_ ) },
-		whoami          => sub { return $_[1] },
-		uptime          => sub { return $_[1] },
+		info            => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
+		yggdrasil       => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
+		whoami          => sub { $y->get_status()->set( 200 ); return $_[1] },
+		uptime          => sub { $y->get_status()->set( 200 ); return $_[1] },
 		# ...
 	       };  
   
@@ -92,6 +92,7 @@ sub _get_property {
     my %params = @_;
 
     my $entity = $ygg->get_entity( $params{entityid} );
+    return unless defined $entity;
     return $entity->get_property( $params{propertyid} );
 }
 
