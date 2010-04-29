@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Auth::Role;
+package Storage::Auth::Role;
 
 use strict;
 use warnings;
@@ -157,7 +157,7 @@ sub members :method {
     
     my @users;
     foreach my $e ( @$ret ) {
-	my $user = Yggdrasil::Storage::Auth::User->_new( 
+	my $user = Storage::Auth::User->_new( 
 	    $self->{_storage}, $e->{id}, $e->{name} );
 
 	push( @users, $user );

@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Mapper::SHA1;
+package Storage::Mapper::SHA1;
 
 use strict;
 use warnings;

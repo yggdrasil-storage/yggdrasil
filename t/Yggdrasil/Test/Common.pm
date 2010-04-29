@@ -6,18 +6,19 @@ use warnings;
 use Test::More;
 
 use Yggdrasil;
-use Yggdrasil::Status;
+use Storage::Status;
 
 use Digest::SHA qw|sha256_hex|;
 
 our $Y = 'Yggdrasil';
-our $Y_S = 'Yggdrasil::Status';
 our $Y_E = 'Yggdrasil::Entity';
 our $Y_P = 'Yggdrasil::Property';
 our $Y_U = 'Yggdrasil::User';
 our $Y_Ro = 'Yggdrasil::Role';
 our $Y_Re = 'Yggdrasil::Relation';
 our $Y_E_I = 'Yggdrasil::Entity::Instance';
+
+our $Y_S = 'Storage::Status';
 
 sub import {
     my $class = shift;

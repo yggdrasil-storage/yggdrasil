@@ -9,7 +9,6 @@ use lib qq($Bin/../lib);
 
 use Preamble qw|getopts status status_die|;
 use Yggdrasil;
-use Yggdrasil::Status;
 
 my $opts = getopts();
 $opts->{bootstrap} = 1;

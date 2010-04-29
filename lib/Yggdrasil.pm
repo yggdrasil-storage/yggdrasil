@@ -11,23 +11,24 @@ use Time::Local;
 use Log::Log4perl qw(get_logger :levels :nowarn);
 use Carp;
 
+use Storage;
+use Storage::Status;
+
 use Yggdrasil::MetaEntity;
 use Yggdrasil::MetaProperty;
 use Yggdrasil::MetaRelation;
 
-use Yggdrasil::Storage;
 use Yggdrasil::Entity;
 use Yggdrasil::Relation;
 use Yggdrasil::Property;
 use Yggdrasil::User;
 use Yggdrasil::Role;
 
-use Yggdrasil::Status;
 use Yggdrasil::Debug;
 
 use Yggdrasil::Interface::Client;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 # $SIG{__DIE__} = sub {
 #     $Carp::CarpLevel = 1;
@@ -52,7 +53,7 @@ sub new {
     my %params = @_;
 
     if ( ref $self eq __PACKAGE__ ) {
-	$self->{status} = new Yggdrasil::Status();
+	$self->{status} = new Storage::Status();
 	$self->_setup_logger( $params{logconfig} );
 	#$self->{auth}   = new Yggdrasil::Auth( yggdrasil => $self );
 	Yggdrasil::Debug->new( $params{debug} );
@@ -112,7 +113,7 @@ sub connect {
 	$self->{client}->connect( @_ );
     } else {
 	$self->{storage} =
-	  Yggdrasil::Storage->new(@_, status => $self->{status} );
+	  Storage->new(@_, status => $self->{status} );
     }
 
     return unless $self->get_status()->OK();
@@ -611,7 +612,7 @@ which namespace your entities should reside. The engine parameter
 tells Yggdrasil which storage engine to use.
 
 Depending on what engine you want to use, the arguments differ. See
-L<Yggdrasil::Storage> for more information.
+L<Storage> for more information.
 
     Yggdrasil::new( namespace => 'MyNamespace',
                     engine    => 'mysql', 

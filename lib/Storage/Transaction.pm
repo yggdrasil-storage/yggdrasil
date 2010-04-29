@@ -1,4 +1,4 @@
-package Yggdrasil::Transaction;
+package Storage::Transaction;
 
 use strict;
 use warnings;

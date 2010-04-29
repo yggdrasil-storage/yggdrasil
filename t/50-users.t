@@ -11,7 +11,7 @@ use Digest::SHA qw|sha256_hex|;
 
 my $Y   = 'Yggdrasil';
 my $Y_U = 'Yggdrasil::User';
-my $auth = Yggdrasil::Storage::Auth->new();
+my $auth = Storage::Auth->new();
 
 my $tester = Yggdrasil::Test::Common->new();
 

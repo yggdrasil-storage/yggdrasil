@@ -9,8 +9,8 @@ use warnings;
 
 use base qw(Yggdrasil::Object);
 
-use Yggdrasil::Storage::Auth;
-use Yggdrasil::Storage::Auth::User;
+use Storage::Auth;
+use Storage::Auth::User;
 
 sub define {
     my $class = shift;
@@ -18,9 +18,9 @@ sub define {
     my %params = @_;
 
     # --- Generate a password if one was not passed in
-    my $auth = new Yggdrasil::Storage::Auth;
+    my $auth = new Storage::Auth;
     my $pass = defined $params{password} ? $params{password} : $auth->generate_password();
-    my $storage_user = Yggdrasil::Storage::Auth::User->define( $self->{yggdrasil}->{storage},
+    my $storage_user = Storage::Auth::User->define( $self->{yggdrasil}->{storage},
 							       $params{user},
 							       $pass,
 							     );
@@ -35,12 +35,12 @@ sub get {
     my %params = @_;
     
     my $storage_user;
-    if (ref $params{user} eq 'Yggdrasil::Storage::Auth::User') {
+    if (ref $params{user} eq 'Storage::Auth::User') {
 	$storage_user = $params{user};
     } elsif (ref $params{user}) {
 	Yggdrasil::fatal( "Unexpected reference given to Yggdrasil::User->get()" );
     } else {
-	$storage_user = Yggdrasil::Storage::Auth::User->get( $self->{yggdrasil}->{storage}, $params{user} );	
+	$storage_user = Storage::Auth::User->get( $self->{yggdrasil}->{storage}, $params{user} );	
     }
     
     $self->{_user_obj} = $storage_user;
@@ -58,7 +58,7 @@ sub get_all {
     my %params = @_;
 
     my @users;
-    for my $user_obj ( Yggdrasil::Storage::Auth::User->get_all( $self->{yggdrasil}->{storage}) ) {
+    for my $user_obj ( Storage::Auth::User->get_all( $self->{yggdrasil}->{storage}) ) {
 	push( @users, $class->get( yggdrasil => $self, user => $user_obj ) );
     }
     

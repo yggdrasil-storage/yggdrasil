@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Mapper::MD5;
+package Storage::Mapper::MD5;
 
 use strict;
 use warnings;

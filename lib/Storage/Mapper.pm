@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Mapper;
+package Storage::Mapper;
 
 use warnings;
 use strict;

@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Type;
+package Storage::Type;
 
 use strict;
 use warnings;

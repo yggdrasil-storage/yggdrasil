@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Auth;
+package Storage::Auth;
 
 use strict;
 use warnings;

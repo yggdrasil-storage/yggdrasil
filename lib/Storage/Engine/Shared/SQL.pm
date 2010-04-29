@@ -1,17 +1,17 @@
-package Yggdrasil::Storage::Engine::Shared::SQL;
+package Storage::Engine::Shared::SQL;
 
 use strict;
 use warnings;
 
-use base 'Yggdrasil::Storage';
+use base 'Storage';
 
-use Yggdrasil::Debug qw|debug_if debug_level|;
+# use Yggdrasil::Debug qw|debug_if debug_level|;
 
 # Define a structure, it is assumed that the Storage layer has called
 # _structure_exists() with the name of the structure to check its
 # existance before _define is called.  If _define is called, the
 # structure is expected to be non-existant.  For a definition of the
-# call, see Yggdrasil::Storage::define().  At this point any table mappings are already done
+# call, see Storage::define().  At this point any table mappings are already done
 sub _define {
     my $self   = shift;
     my $schema = shift;
@@ -66,7 +66,7 @@ sub _define {
     $sql .= $self->_engine_post_create_details();
     $sql .= ";\n";
     
-    $self->{logger}->debug( $sql );
+#    $self->{logger}->debug( $sql );
     $self->_sql( $sql );
 
     for my $field (@indexes) {
@@ -163,8 +163,8 @@ sub _sql {
 
     # Log + debugging.
     my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);    
-    $self->{logger}->debug( "$sql -> Args: [$args_str]" );
-    debug_if( 5, "SQL: $sql -> Args: [$args_str]" );
+#    $self->{logger}->debug( "$sql -> Args: [$args_str]" );
+#    debug_if( 5, "SQL: $sql -> Args: [$args_str]" );
 
     # Transaction information.
     my $sqlinline = $sql;
@@ -284,7 +284,7 @@ sub _fetch {
 #	print STDERR "$sql with [" . join(", ", map { defined()?$_:"NULL" } @params) . "]\n";
 #    }  
     
-    $self->{logger}->debug( $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]" );
+#    $self->{logger}->debug( $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]" );
     return $self->_sql( $sql, @params ); 
 }
 

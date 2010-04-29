@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Type::Filter::SHA;
+package Storage::Type::Filter::SHA;
 
 use strict;
 use warnings;

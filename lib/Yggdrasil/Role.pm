@@ -9,14 +9,14 @@ use warnings;
 
 use base qw(Yggdrasil::Object);
 
-use Yggdrasil::Storage::Auth::Role;
+use Storage::Auth::Role;
 
 sub define {
     my $class = shift;
     my $self  = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $ro = Yggdrasil::Storage::Auth::Role->define( $self->{yggdrasil}->{storage},
+    my $ro = Storage::Auth::Role->define( $self->{yggdrasil}->{storage},
 						     $params{role},
 						   );
 
@@ -34,7 +34,7 @@ sub get {
     if (ref $params{role}) {
 	$ro = $params{role};
     } else {
-	$ro = Yggdrasil::Storage::Auth::Role->get( $self->{yggdrasil}->{storage}, $params{role} );	
+	$ro = Storage::Auth::Role->get( $self->{yggdrasil}->{storage}, $params{role} );	
     }
     
     $self->{_role_obj} = $ro;
@@ -53,7 +53,7 @@ sub get_all {
     my %params = @_;
 
     my @roles;
-    for my $role_obj ( Yggdrasil::Storage::Auth::Role->get_all( $self->{yggdrasil}->{storage}) ) {
+    for my $role_obj ( Storage::Auth::Role->get_all( $self->{yggdrasil}->{storage}) ) {
 	push( @roles, $class->get( yggdrasil => $self, role => $role_obj ) );
     }
     

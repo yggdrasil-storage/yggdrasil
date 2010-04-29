@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Type::Filter::MD5;
+package Storage::Type::Filter::MD5;
 
 use strict;
 use warnings;

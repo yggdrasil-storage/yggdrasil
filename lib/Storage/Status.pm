@@ -1,4 +1,4 @@
-package Yggdrasil::Status;
+package Storage::Status;
 
 use strict;
 use warnings;

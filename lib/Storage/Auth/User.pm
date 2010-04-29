@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Auth::User;
+package Storage::Auth::User;
 
 use strict;
 use warnings;
@@ -39,7 +39,7 @@ sub define {
 			       });
     
     # specifically grant rights to nobody role
-    my $nobody_role = Yggdrasil::Storage::Auth::Role->get_nobody( $storage );
+    my $nobody_role = Storage::Auth::Role->get_nobody( $storage );
     $nobody_role->grant( $storage->get_structure( 'authuser' ), 
 			 'r', id => $uid );
     $nobody_role->grant( $storage->get_structure( 'authuser:password' ),
@@ -238,7 +238,7 @@ sub member_of :method {
 
     my @roles;
     foreach my $e ( @$ret ) {
-	my $role = Yggdrasil::Storage::Auth::Role->_new(
+	my $role = Storage::Auth::Role->_new(
 	    $self->{_storage}, $e->{id}, $e->{name} );
 
 	push( @roles, $role );

@@ -1,9 +1,9 @@
-package Yggdrasil::Storage::Engine::SQLite;
+package Storage::Engine::SQLite;
 
 use strict;
 use warnings;
 
-use base 'Yggdrasil::Storage::Engine::Shared::SQL';
+use base 'Storage::Engine::Shared::SQL';
 
 use DBI;
 

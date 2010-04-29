@@ -1,22 +1,24 @@
-package Yggdrasil::Storage;
+package Storage;
 
 use strict;
 use warnings;
 
 use Storable qw();
 
-use Yggdrasil::Transaction;
-use Yggdrasil::Storage::Mapper;
-use Yggdrasil::Storage::Type;
-use Yggdrasil::Storage::Structure;
+use Storage::Mapper;
+use Storage::Type;
+use Storage::Structure;
+use Storage::Transaction;
 
-use Yggdrasil::Storage::Auth;
-use Yggdrasil::Storage::Auth::User;
-use Yggdrasil::Storage::Auth::Role;
+use Storage::Auth;
+use Storage::Auth::User;
+use Storage::Auth::Role;
 
 use Digest::MD5 qw(md5_hex);
 
-our $TRANSACTION = Yggdrasil::Transaction->create_singleton();
+our $VERSION = '0.01';
+
+our $TRANSACTION = Storage::Transaction->create_singleton();
 
 sub new {
     my $class = shift;
@@ -64,7 +66,7 @@ sub new {
 	}
 
 	$storage->{transaction} = $TRANSACTION;
-	$storage->{type} = new Yggdrasil::Storage::Type();
+	$storage->{type} = new Storage::Type();
 	
 	unless (defined $storage) {
 	    $status->set( 500 );
@@ -86,7 +88,7 @@ sub new {
 	}
 	
 	# Structure the internals of Storage. Reads the Storage_* structures.
-	$storage->{structure} = new Yggdrasil::Storage::Structure( storage => $storage );
+	$storage->{structure} = new Storage::Structure( storage => $storage );
 	$storage->{structure}->init();
 	
 	return $storage;
@@ -97,7 +99,7 @@ sub _set_default_user {
     my $self = shift;
     my $user = shift;
 
-    my $u = Yggdrasil::Storage::Auth::User->get_nobody( $self );
+    my $u = Storage::Auth::User->get_nobody( $self );
     $self->{user} = $u;
 }
 
@@ -105,7 +107,7 @@ sub _set_bootstrap_user {
     my $self = shift;
     my $user = shift;
 
-    my $u = Yggdrasil::Storage::Auth::User->get_bootstrap( $self );
+    my $u = Storage::Auth::User->get_bootstrap( $self );
     $self->{user} = $u;
 }
 
@@ -132,7 +134,7 @@ sub bootstrap {
     # Create default users and roles
     my %roles;
     for my $role ( qw/admin user/ ) {
-	my $r = Yggdrasil::Storage::Auth::Role->define( $self, $role );
+	my $r = Storage::Auth::Role->define( $self, $role );
 	$roles{$role} = $r;
     }
 
@@ -143,9 +145,9 @@ sub bootstrap {
 
     # create bootstrap and nobody, the order is relevant as bootstrap
     # is required to be ID1 and nobody is ID2.    
-    my $nobody_role    = Yggdrasil::Storage::Auth::Role->define( $self, "nobody" );
-    my $bootstrap_user = Yggdrasil::Storage::Auth::User->define( $self, "bootstrap", undef );
-    my $nobody_user    = Yggdrasil::Storage::Auth::User->define( $self, "nobody", undef );
+    my $nobody_role    = Storage::Auth::Role->define( $self, "nobody" );
+    my $bootstrap_user = Storage::Auth::User->define( $self, "bootstrap", undef );
+    my $nobody_user    = Storage::Auth::User->define( $self, "nobody", undef );
 
     $nobody_role->description( 'System role' );
     $bootstrap_user->fullname( 'Bootstrapper extraordinare' );
@@ -165,10 +167,10 @@ sub bootstrap {
 
     for my $user ( keys %users ) {
 	my $pwd = $users{$user};
-	my $auth = new Yggdrasil::Storage::Auth;
+	my $auth = new Storage::Auth;
 	$pwd ||= $auth->generate_password();
 
-	my $u = Yggdrasil::Storage::Auth::User->define( $self, $user, $pwd );
+	my $u = Storage::Auth::User->define( $self, $user, $pwd );
 
 	for my $rolename ( keys %roles ) {
 	    my $role = $roles{$rolename};
@@ -759,7 +761,7 @@ sub authenticate {
 
     if (defined $user && defined $pass) {
 	# First, we got both a username and a password.
-	$user_obj = Yggdrasil::Storage::Auth::User->get( $self, $user );
+	$user_obj = Storage::Auth::User->get( $self, $user );
 
 	if( $user_obj ) {
 	    my $filterset = $self->cache( 'filter', $self->get_structure( 'authuser:password' ) );
@@ -777,13 +779,13 @@ sub authenticate {
 	$session = undef;
     } elsif ($session) {
 	# Or, we got a session id - see if we find a user with this session id	
-	$user_obj = Yggdrasil::Storage::Auth::User->get_by_session( $self, $session );
+	$user_obj = Storage::Auth::User->get_by_session( $self, $session );
     } elsif (-t && ! defined $user && ! defined $pass) {
 	# Lastly, let see if we're connected to a tty without getting a
 	# username / password, at which point we're already authenticated
 	# and we don't want to touch the session.  $> is effective UID.
 	my $uname = (getpwuid($>))[0];
-	$user_obj = Yggdrasil::Storage::Auth::User->get( $self, $uname );
+	$user_obj = Storage::Auth::User->get( $self, $uname );
 	$session = "invalid";
     }
 
@@ -1115,7 +1117,7 @@ sub set_mapper {
     my $self = shift;
     my $mappername = shift;
 
-    $self->{mapper} = Yggdrasil::Storage::Mapper->new( mapper => $mappername, status => $self->get_status() );
+    $self->{mapper} = Storage::Mapper->new( mapper => $mappername, status => $self->get_status() );
     return $self->{mapper};
 }
 

@@ -1,4 +1,4 @@
-package Yggdrasil::Storage::Structure;
+package Storage::Structure;
 
 use strict;
 use warnings;
@@ -534,7 +534,7 @@ sub _bootstrap_schema_auth {
 
 # Initialize the STORAGE config, this structure is required to be
 # accessible with the specific configuration for this
-# Yggdrasil::Storage instance and its workings.  TODO, fix mapper setup.
+# Storage instance and its workings.  TODO, fix mapper setup.
 sub _initialize_config {
     my $self = shift;
 
