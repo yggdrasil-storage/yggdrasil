@@ -578,7 +578,7 @@ sub _add_auth {
 
 	# 1. Find auth-bindings for this schema
 	my $cachename = $schema . ':' . $authtype;
-	my $typebindings = $self->cache( 'authbindings', $cachename );
+	my $typebindings; # = $self->cache( 'authbindings', $cachename );
 	unless ($typebindings) {
 	    my $ret = $self->_fetch( $self->get_structure( 'authschema' ) =>
 				     {
@@ -589,7 +589,7 @@ sub _add_auth {
 	    
 	    my $frozen_bindings = $ret->[0]->{bindings};
 	    $typebindings = Storable::thaw( $frozen_bindings );
-	    $self->cache( 'authbindings', $cachename, $typebindings );
+#	    $self->cache( 'authbindings', $cachename, $typebindings );
 	}
 	next unless $typebindings;
 
@@ -957,9 +957,8 @@ sub _get_auth_schema_name {
 			     } );
 
     my $at = $ret->[0]->{authtable};
-    print "$at\n";
     $self->cache( 'authschemaname', $schema, $at );
-    return ;
+    return $at;
 }
 
 
