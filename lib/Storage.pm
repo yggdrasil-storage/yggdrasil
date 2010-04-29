@@ -6,6 +6,7 @@ use warnings;
 use Storable qw();
 
 use Storage::Mapper;
+use Storage::Status;
 use Storage::Type;
 use Storage::Structure;
 use Storage::Transaction;
@@ -25,7 +26,7 @@ sub new {
     my $self  = {};
     my %data = @_;
     
-    my $status = $self->{status} = $data{status};
+    my $status = $self->{status} = $data{status} || new Storage::Status();
 
     unless ($data{engine}) {
 	$status->set( 404, "No engine specified?" );
