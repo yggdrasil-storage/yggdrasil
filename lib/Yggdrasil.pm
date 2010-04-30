@@ -55,7 +55,6 @@ sub new {
     if ( ref $self eq __PACKAGE__ ) {
 	$self->{status} = new Storage::Status();
 	$self->_setup_logger( $params{logconfig} );
-	#$self->{auth}   = new Yggdrasil::Auth( yggdrasil => $self );
 	Yggdrasil::Debug->new( $params{debug} );
 	$self->{strict} = $params{strict} || 1;
 	$self->{status}->set( 200 );
