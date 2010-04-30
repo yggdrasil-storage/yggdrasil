@@ -281,7 +281,7 @@ sub _bootstrap_user_auth {
 		roleid => { type => 'INTEGER', null => 0 },
 	    },
 	    hints => {
-		roleid => { foreign => $roleschema },
+		roleid => { foreign => $roleschema, index => 1 },
 	    },
 	    authschema => 1,
 	    auth => {
@@ -322,6 +322,7 @@ sub _bootstrap_user_auth {
 					  id   => { type => 'SERIAL', null => 0 },
 					  name => { type => 'TEXT', null => 0 },
 					 },
+			       hints    => { id => { index => 1 } },
 			       authschema => 1,
 			       auth => {
 					create =>
@@ -364,6 +365,7 @@ sub _bootstrap_user_auth {
 					  name     => { type => 'TEXT', null => 0 },
 					 },
 			       authschema => 1,
+			       hints    => { id => { index => 1 } },
 			       auth => {
 					create =>
 					[
@@ -405,8 +407,8 @@ sub _bootstrap_user_auth {
 					  roleid => { type => 'INTEGER', null => 0 },
 					 },
 			       hints    => {
-					    userid => { foreign => $userschema },
-					    roleid => { foreign => $roleschema },
+					    userid => { foreign => $userschema, index => 1 },
+					    roleid => { foreign => $roleschema, index => 1 },
 					   },
 			       authschema => 0,
 			       auth     => {
@@ -471,7 +473,7 @@ sub _bootstrap_fields {
 							    @filterfiller,
 							   },
 						 },
-				       hints  => { id => { foreign => $self->get( 'authuser' ) } },
+				       hints  => { id => { foreign => $self->get( 'authuser' ), index => 1 } },
 # 				      auth => {
 # 					       create =>
 # 					       [
@@ -629,7 +631,10 @@ sub _define_auth {
 				   nomap => $nomap,
 				   hints => {
 					     id     => { foreign => $schema },
-					     roleid => { foreign => $self->get( 'authrole' ) },
+					     roleid => { foreign => $self->get( 'authrole' ), index => 1 },
+					     w      => { index => 1 },
+					     r      => { index => 1 },
+					     'm'    => { index => 1 },
 					    } );
     }
 
