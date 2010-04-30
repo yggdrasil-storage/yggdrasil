@@ -21,7 +21,7 @@ sub xmlify {
     # types are:
     #
     #  * Entities   (Yggdrasil::Entity)
-    #  * Instances  (Yggdrasil::Entity::Instance)
+    #  * Instances  (Yggdrasil::Instance)
     #  * Properties (Yggdrasil::Property)
     #  * Relations  (Yggdrasil::Relation)
     #  * Users      (Yggdrasil::User)
@@ -31,7 +31,7 @@ sub xmlify {
     my $dataref;
     if (ref $data eq 'Yggdrasil::Entity') {
 	$dataref = $self->_entity_xml( $data );
-    } elsif (ref $data eq 'Yggdrasil::Entity::Instance') {
+    } elsif (ref $data eq 'Yggdrasil::Instance') {
 	$dataref = $self->_instance_xml( $data );	
     } elsif (ref $data eq 'Yggdrasil::Property') {
 	$dataref = $self->_property_xml( $data );	

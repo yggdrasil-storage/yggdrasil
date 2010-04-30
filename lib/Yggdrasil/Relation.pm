@@ -109,12 +109,12 @@ sub participants {
 	my $rval = $storage->fetch( Instances => { where => [ id => $r ],
 						  return => 'visual_id' } );
 	
-	my $li = Yggdrasil::Entity::Instance->new( yggdrasil => $self );
+	my $li = Yggdrasil::Instance->new( yggdrasil => $self );
 	$li->{visual_id} = $lval->[0]->{visual_id};
 	$li->{_id}       = $l;
 	$li->{entity}    = $le;
 
-	my $ri = Yggdrasil::Entity::Instance->new( yggdrasil => $self );
+	my $ri = Yggdrasil::Instance->new( yggdrasil => $self );
 	$ri->{visual_id} = $rval->[0]->{visual_id};
 	$ri->{_id}       = $r;
 	$ri->{entity}    = $re;
@@ -149,12 +149,12 @@ sub link :method {
 
   my $status = $self->get_status();
 
-  unless ($lval && ref $lval && ref $lval eq 'Yggdrasil::Entity::Instance') {
+  unless ($lval && ref $lval && ref $lval eq 'Yggdrasil::Instance') {
       $status->set( 406, "The first paramter to link has to be an instance object." );
       return undef;      
   }
 
-  unless ($rval && ref $rval && ref $rval eq 'Yggdrasil::Entity::Instance') {
+  unless ($rval && ref $rval && ref $rval eq 'Yggdrasil::Instance') {
       $status->set( 406, "The second paramter to link has to be an instance object." );
       return undef;      
   }

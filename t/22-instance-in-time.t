@@ -8,7 +8,7 @@ use Test::More;
 use lib qw(./t);
 use Yggdrasil::Test::Common '69';
 
-my $Y_E_I = "Yggdrasil::Entity::Instance";
+my $Y_E_I = "Yggdrasil::Instance";
 
 my $tester = Yggdrasil::Test::Common->new();
 

@@ -16,7 +16,7 @@ our $Y_P = 'Yggdrasil::Property';
 our $Y_U = 'Yggdrasil::User';
 our $Y_Ro = 'Yggdrasil::Role';
 our $Y_Re = 'Yggdrasil::Relation';
-our $Y_E_I = 'Yggdrasil::Entity::Instance';
+our $Y_E_I = 'Yggdrasil::Instance';
 
 our $Y_S = 'Storage::Status';
 

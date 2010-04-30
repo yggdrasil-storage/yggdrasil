@@ -1,4 +1,4 @@
-package Yggdrasil::Entity::Instance;
+package Yggdrasil::Instance;
 
 use base 'Yggdrasil::Object';
 

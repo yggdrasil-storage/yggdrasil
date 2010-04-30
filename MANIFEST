@@ -57,7 +57,7 @@ lib/Yggdrasil/Common/CommandLine.pm
 lib/Yggdrasil/Common/Config.pm
 lib/Yggdrasil/Debug.pm
 lib/Yggdrasil/Entity.pm
-lib/Yggdrasil/Entity/Instance.pm
+lib/Yggdrasil/Instance.pm
 lib/Yggdrasil/Interface.pm
 lib/Yggdrasil/Interface/Client.pm
 lib/Yggdrasil/Interface/Client/XML.pm
@@ -70,9 +70,6 @@ lib/Yggdrasil/MetaEntity.pm
 lib/Yggdrasil/MetaProperty.pm
 lib/Yggdrasil/MetaRelation.pm
 lib/Yggdrasil/Object.pm
-lib/Yggdrasil/Plugin.pm
-lib/Yggdrasil/Plugin/Property/Prioritize.pm
-lib/Yggdrasil/Plugin/Shared.pm
 lib/Yggdrasil/Property.pm
 lib/Yggdrasil/Relation.pm
 lib/Yggdrasil/Role.pm

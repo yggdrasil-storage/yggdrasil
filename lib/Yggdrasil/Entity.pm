@@ -5,7 +5,7 @@ use warnings;
 
 use base qw(Yggdrasil::Object);
 
-use Yggdrasil::Entity::Instance;
+use Yggdrasil::Instance;
 use Yggdrasil::MetaEntity;
 use Yggdrasil::Property;
 
@@ -135,9 +135,9 @@ sub create {
     my $self = shift;
     my $name = shift;
 
-    return Yggdrasil::Entity::Instance->create( yggdrasil => $self,
-						entity    => $self,
-						id        => $name );
+    return Yggdrasil::Instance->create( yggdrasil => $self,
+					entity    => $self,
+					id        => $name );
 }
 
 # fetch instance
@@ -159,10 +159,10 @@ sub fetch {
 	}
     }
 
-    return Yggdrasil::Entity::Instance->fetch( yggdrasil => $self,
-					       entity    => $self,
-					       id        => $name, 
-					       time      => [@time] );
+    return Yggdrasil::Instance->fetch( yggdrasil => $self,
+				       entity    => $self,
+				       id        => $name, 
+				       time      => [@time] );
 }
 
 # delete instance
@@ -170,9 +170,9 @@ sub delete :method {
     my $self = shift;
     my $name = shift;
 
-    return Yggdrasil::Entity::Instance->delete( yggdrasil => $self,
-						entity    => $self,
-						id        => $name );
+    return Yggdrasil::Instance->delete( yggdrasil => $self,
+					entity    => $self,
+					id        => $name );
 }
 
 # all instances
@@ -187,7 +187,7 @@ sub instances {
     # FIXME, find a way to create instance objects in a nice way
     my @i;
     for my $i ( @$instances ) {
-	my $o = Yggdrasil::Entity::Instance->new( yggdrasil => $self );
+	my $o = Yggdrasil::Instance->new( yggdrasil => $self );
 	$o->{visual_id} = $i->{visual_id};
 	$o->{_id}       = $i->{id};
 	$o->{entity}    = $self;
@@ -205,7 +205,7 @@ sub search {
     
     my @hits;
     for my $hit (@$nodes) {
-	my $obj = bless {}, 'Yggdrasil::Entity::Instance';
+	my $obj = bless {}, 'Yggdrasil::Instance';
 	$obj->{entity}    = $self;
 	$obj->{yggdrasil} = $self->{yggdrasil};
 	for my $key (keys %$hit) {
