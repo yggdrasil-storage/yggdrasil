@@ -17,7 +17,7 @@ sub new {
 
     $self->{stream}    = $params{stream};
     $self->{parser}    = XML::StreamReader->new( stream => $params{stream} );
-    $self->{yggdrasil} = $params{yggdrasil};
+    $self->{status}    = $params{status};
     $self->{objectify} = Yggdrasil::Interface::Objectify->new();
 
     my $i = 1;
@@ -39,14 +39,9 @@ sub parser {
     return $self->{parser};
 }
 
-sub yggdrsail {
-    my $self = shift;
-    return $self->{yggdrasil};    
-}
-
 sub get_status {
     my $self = shift;
-    return $self->{yggdrasil}->get_status();
+    return $self->{status};
 }
 
 # Command interface.  The two parameters are the type (entity /

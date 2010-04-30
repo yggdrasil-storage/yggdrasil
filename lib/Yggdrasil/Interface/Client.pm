@@ -11,7 +11,7 @@ sub new {
     
     my $self = bless {}, $class;
 
-    $self->{yggdrasil} = $params{yggdrasil};
+    $self->{status} = $params{status};
     $self->_populate_protocols();    
     
     return $self;
@@ -82,8 +82,8 @@ sub enable_protocol {
 	    $status->set( 500, "Unable to load '$protocol_name': $@" );
 	    return;
 	}
-	$self->{protocol} = $protocol_class->new( yggdrasil => $self->yggdrasil(),
-						  stream    => $self->{connection} );
+	$self->{protocol} = $protocol_class->new( status => $self->get_status(),
+						  stream => $self->{connection} );
 	print $connection "protocol: $protocol_name\n";
 	$self->_parse_client_line_reply( $connection );
 	return $self->{protocol} if $status->OK();
@@ -132,14 +132,9 @@ sub _parse_client_line_reply {
 }
 
 
-sub yggdrasil {
-    my $self = shift;
-    return $self->{yggdrasil};
-}
-
 sub get_status {
     my $self = shift;
-    return $self->{yggdrasil}->get_status();
+    return $self->{status};
 }
 
 1;

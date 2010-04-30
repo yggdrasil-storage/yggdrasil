@@ -108,7 +108,7 @@ sub connect {
     # Check to see if we're connecting to a remote Yggdrasil server.
     # If so, avoid calling Storage in any way.
     if ($params{daemonport}) {
-	$self->{client} = new Yggdrasil::Interface::Client( yggdrasil => $self );
+	$self->{client} = new Yggdrasil::Interface::Client( status => $self->{status} );
 	$self->{client}->connect( @_ );
     } else {
 	$self->{storage} =
