@@ -7,6 +7,8 @@ use XML::Simple;
 use POE::Component::Server::Yggdrasil::Interface::Commands;
 use POE::Component::Server::Yggdrasil::Interface::XML;
 
+use Yggdrasil::Utilities qw(time_diff);
+
 sub new {
     my $class = shift;
     my %params = @_;
@@ -69,14 +71,14 @@ sub _process_xml {
 	if ($command eq 'whoami') {
 	    $root->{value} = $client->{whoami};	    
 	} elsif ($command eq 'uptime') {
-	    $root->{value} = 'Client uptime: ' . $self->time_diff( $client->{clientstart} ) .
+	    $root->{value} = 'Client uptime: ' . time_diff( $client->{clientstart} ) .
 	      ' (' . $client->{clientstart} . ')' . 
-		' / Server uptime: ' . $self->time_diff( $client->{serverstart} ) .
+		' / Server uptime: ' . time_diff( $client->{serverstart} ) .
 		  ' (' . $client->{serverstart} . ')';
 	}
 	
 	my $callback = $self->{commands}->{$command};
-	my @ret = $callback->( map { $_ => $root->{$_} } keys %$root );	
+	my @ret = $callback->( map { $_ => $root->{$_} } keys %$root );
 	
 	if ($status->OK()) {
 	    push @retobjs, $self->{xml}->xmlify( $requestid, $status, @ret );
@@ -93,54 +95,6 @@ sub create_status_reply {
     
     my $protocol = $self->{$self->{protocol}};
     return $protocol->generate_status_reply( $requestid, $code, $message );    
-}
-
-
-sub time_diff {
-    my $self = shift;
-    my $stamp = shift;
-    my $delta = time - $stamp;
-    my @values;
-    
-    my $weeks = int($delta / 604800);
-    if ($weeks > 0) {
-        push @values, plural_p($weeks, "week");
-        $delta -= $weeks * 604800;
-    }
-    my $days = int($delta / 86400);
-    if ($days > 0) {
-        push @values, plural_p($days, "day");
-        $delta -= $days * 86400;
-    }
-    my $hours = int($delta / 3600);
-    if ($hours > 0) {
-        push @values, plural_p($hours, "hour");
-        $delta -= $hours * 3600;
-    }
-    my $minutes = int($delta / 60);
-    if ($minutes > 0) {
-        push @values, plural_p($minutes, "minute");
-        $delta -= $minutes * 60;
-    }
-
-    if ($delta) {
-	push @values, plural_p($delta, "second");
-    } elsif (! @values) {
-	push @values, "0 seconds";
-    }
-
-    return join ", ", @values;
-}
-
-sub plural_p {
-    my $value = shift;
-    my $string = shift;
-    
-    if ($value > 1 || ! $value) {
-        return "$value ${string}s";
-    } else {
-        return "$value $string";        
-    }
 }
 
 1;
