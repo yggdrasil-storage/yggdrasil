@@ -785,9 +785,9 @@ sub authenticate {
 	# Lastly, let see if we're connected to a tty without getting a
 	# username / password, at which point we're already authenticated
 	# and we don't want to touch the session.  $> is effective UID.
-	#my $uname = (getpwuid($>))[0];
-	#$user_obj = Storage::Auth::User->get( $self, $uname );
-	#$session = "invalid";
+	my $uname = (getpwuid($>))[0];
+	$user_obj = Storage::Auth::User->get( $self, $uname );
+	$session = "invalid";
     }
 
     if( $user_obj ) {
