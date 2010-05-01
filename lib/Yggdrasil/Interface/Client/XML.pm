@@ -185,6 +185,18 @@ sub set_value {
 			instanceid => $id,  value => $value );
 }
 
+# User interface
+sub get_user {
+    my ($self, $uid) = @_;
+    return $self->_get( 'user', userid => $uid );
+}
+
+# Role interface
+sub get_role {
+    my ($self, $rid) = @_;
+    return $self->_get( 'role', roleid => $rid );
+}
+
 # Introspective calls, handle with care.
 sub uptime {
     my $self = shift;
