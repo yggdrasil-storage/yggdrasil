@@ -63,8 +63,12 @@ sub login {
 
 sub protocols {
     my $self = shift;
-
     return sort keys %{$self->{protocols}};
+}
+
+sub server_data {
+    my $self = shift;
+    return @{$self->{server_data}};
 }
 
 sub enable_protocol {

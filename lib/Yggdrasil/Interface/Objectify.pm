@@ -24,6 +24,10 @@ sub parse {
 	$self->_create_relation( $data );
     } elsif ($data->{entity}) {
 	$self->_create_entity( $data );
+    } elsif ($data->{user}) {
+	$self->_create_user( $data );
+    } elsif ($data->{role}) {
+	$self->_create_role( $data );
     } else {
 	# Unknown stuff.
 	return undef;
@@ -34,54 +38,48 @@ sub _create_entity {
     my $self = shift;
     my $data = shift;
     delete $data->{entity};
-    
-    print "Entity:\n";
-    for my $k (keys %$data) {
-	printf "%20s - %s\n", $k, $data->{$k};
-    }
+    return $data;
 }
 
 sub _create_property {
     my $self = shift;
     my $data = shift;
     delete $data->{property};
-
-    print "Property:\n";
-    for my $k (keys %$data) {
-	printf "%20s - %s\n", $k, $data->{$k};
-    }
+    return $data;
 }
 
 sub _create_relation {
     my $self = shift;
     my $data = shift;
     delete $data->{relation};
-
-    print "Relation:\n";
-    for my $k (keys %$data) {
-	printf "%20s - %s\n", $k, $data->{$k};
-    }
+    return $data;
 }
 
 sub _create_instance {
     my $self = shift;
     my $data = shift;
     delete $data->{instance};
-
-    print "Instance:\n";
-    for my $k (keys %$data) {
-	printf "%20s - %s\n", $k, $data->{$k};
-    }
+    return $data;
 }
 
 sub _create_value {
     my $self = shift;
     my $data = shift;
+    return $data->{value};
+}
 
-    print "Value:\n";
-    for my $k (keys %$data) {
-	printf "%20s - %s\n", $k, $data->{$k};
-    }
+sub _create_user {
+    my $self = shift;
+    my $data = shift;
+    delete $data->{user};
+    return $data;
+}
+
+sub _create_role {
+    my $self = shift;
+    my $data = shift;
+    delete $data->{role};
+    return $data;
 }
 
 1;

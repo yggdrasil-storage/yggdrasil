@@ -45,16 +45,16 @@ $y->connect(
 	    port      => $port,
 	    db        => $db,
 	    engine    => $engine,
+	    
+	    daemonhost => $config->get( 'daemonhost' ),
+	    daemonport => $config->get( 'daemonport' ),
 	   );
 
 die $status->message() unless $status->OK();
 
-my $iam;
-if ($cmdline->get( 'username' )) {
-    $iam = $y->login( user => $cmdline->get( 'username' ), password => $cmdline->get( 'password' ));    
-} else {
-    $iam = $y->login();
-}
+my $uname = $cmdline->get( 'username' ) || $config->get( 'authuser' ) || (getpwuid($>))[0];
+my $upass = $cmdline->get( 'password' ) || $config->get( 'authpass' ) || $cmdline->read_password();
+my $iam = $y->login( username => $uname, password => $upass );    
 
 die $status->message() unless $status->OK();
 
@@ -287,10 +287,13 @@ my %cmd;
 	current => \&tick_current,
     },
 
-    whoami   => \&whoami,
-    storage  => \&storage_info,
-    quit     => sub { exit },
-    exit     => sub { exit },
+    whoami     => \&whoami,
+    uptime     => \&uptime,
+    protocols  => \&protocols,
+    serverdata => \&server_data,
+    storage    => \&storage_info,
+    quit       => sub { exit },
+    exit       => sub { exit },
 );
 
 
@@ -398,7 +401,21 @@ sub help {
 }
 
 sub whoami {    
-    print $y->user()->username(), "\n";
+    print $y->whoami(), "\n";
+}
+
+sub uptime {    
+    print $y->uptime(), "\n";
+}
+
+sub server_data {    
+    for my $data ($y->server_data()) {
+	print "$data\n";
+    }
+}
+
+sub protocols {    
+    print join( ',', $y->protocols() ), "\n";
 }
 
 sub storage_info {

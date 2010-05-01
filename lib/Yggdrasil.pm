@@ -121,7 +121,7 @@ sub login {
 
     my $status = $self->get_status();
     if ($status->OK()) {
-	$self->{user} = $self->get_user( $user );
+	$self->{user} = $user;
 	return $self->user();
     } 
     
@@ -136,8 +136,27 @@ sub user {
 
 sub info {
     my $self = shift;
-
     return $self->{mode}->info();
+}
+
+sub protocols {
+    my $self = shift;
+    return $self->{mode}->protocols();
+}
+
+sub whoami {
+    my $self = shift;
+    return $self->{mode}->whoami();
+}
+
+sub uptime {
+    my $self = shift;
+    return $self->{mode}->uptime();
+}
+
+sub server_data {
+    my $self = shift;
+    return $self->{mode}->server_data();    
 }
 
 ###############################################################################
@@ -185,10 +204,11 @@ sub define_relation {
 }
 
 sub define_property {
-    my $self = shift;
-    my $prop = shift;
+    my $self   = shift;
+    my $entity = shift;
+    my $prop   = shift;
     
-    return Yggdrasil::Property->define( yggdrasil => $self, property => $prop, @_ );
+    return Yggdrasil::Property->define( yggdrasil => $self, entity => $entity, property => $prop, @_ );
 }
 
 ###############################################################################
@@ -219,12 +239,12 @@ sub get_instance {
     my $entity = shift;
     my $instance = shift;
 
-    return Yggdrasil::Instance->get(
-				    yggdrasil => $self,
-				    entity    => $entity,
-				    instance  => $instance,
-				    @_
-				   );
+    return Yggdrasil::Instance->fetch(
+				      yggdrasil => $self,
+				      entity    => $entity,
+				      instance  => $instance,
+				      @_
+				     );
 }
 
 sub get_relation {
@@ -235,10 +255,11 @@ sub get_relation {
 }
 
 sub get_property {
-    my $self = shift;
-    my $prop = shift;
+    my $self   = shift;
+    my $entity = shift;
+    my $prop   = shift;
     
-    return Yggdrasil::Property->get( yggdrasil => $self, property => $prop, @_ );
+    return Yggdrasil::Property->get( yggdrasil => $self, entity => $entity, property => $prop, @_ );
 }
 
 sub get_property_types {

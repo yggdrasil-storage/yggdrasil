@@ -7,6 +7,8 @@ use Storage;
 
 use base qw/Yggdrasil/;
 
+use Yggdrasil::Utilities qw(time_diff);
+
 sub new {
     my $class = shift;
     my %params = @_;
@@ -58,15 +60,37 @@ sub login {
     my $self = shift;
 
     my $storage_user_object = $self->{storage}->authenticate( @_ );
-    return $storage_user_object->name();
+    $self->{user} = $storage_user_object->name();
+    return $self->{user};
 }
 
 sub info {
     my $self = shift;
-
     return $self->{storage}->info();
 }
 
+sub protocols {
+    my $self = shift;
+    return;
+}
+
+sub whoami {
+    my $self = shift;    
+    return $self->user();
+}
+
+sub server_data {
+    my $self = shift;
+    return $self->{storage}->info();
+}
+
+# FIXME, generalize out the call to the uptime string.  See also
+# POE::Component::Server::Yggdrasil::Interface.pm
+sub uptime {
+    my $self = shift;    
+    my $runtime = time_diff( $^T );
+    return "Client uptime: $runtime ($^T) / Server uptime: $runtime ($^T)";
+}
 
 sub property_types {
     my $self = shift;

@@ -29,21 +29,23 @@ sub xmlify {
     #  * <$scalar>  (Value, encode if needed and return)
     
     my $dataref;
-    if (ref $data eq 'Yggdrasil::Entity') {
-	$dataref = $self->_entity_xml( $data );
-    } elsif (ref $data eq 'Yggdrasil::Instance') {
-	$dataref = $self->_instance_xml( $data );	
-    } elsif (ref $data eq 'Yggdrasil::Property') {
-	$dataref = $self->_property_xml( $data );	
-    } elsif (ref $data eq 'Yggdrasil::Relation') {
-	$dataref = $self->_relation_xml( $data );	
-    } elsif (ref $data eq 'Yggdrasil::User') {
-	$dataref = $self->_user_or_role_xml( $data );	
-    } elsif (ref $data eq 'Yggdrasil::Role') {
-	$dataref = $self->_user_or_role_xml( $data );	
-    } elsif (ref $data) {
-	# Unknown data reference, that's not good.
-	$statusref = $self->xmlify_status( $requestid, 406, "Unknown data type ($data) passed to XML backend" );
+    if (ref $data) {
+	if ($data->isa( 'Yggdrasil::Entity' )) {
+	    $dataref = $self->_entity_xml( $data );
+	} elsif ($data->isa( 'Yggdrasil::Instance' )) {
+	    $dataref = $self->_instance_xml( $data );	
+	} elsif ($data->isa( 'Yggdrasil::Property' )) {
+	    $dataref = $self->_property_xml( $data );
+	} elsif ($data->isa( 'Yggdrasil::Relation' )) {
+	    $dataref = $self->_relation_xml( $data );	
+	} elsif ($data->isa( 'Yggdrasil::User' )) {
+	    $dataref = $self->_user_or_role_xml( $data );	
+	} elsif ($data->isa( 'Yggdrasil::Role' )) {
+	    $dataref = $self->_user_or_role_xml( $data );
+	} else {
+	    # Unknown data reference, that's not good.
+	    $statusref = $self->generate_status_reply( $requestid, 406, "Unknown data type ($data) passed to XML backend" );
+	}
     } elsif ($data) {
 	$dataref = $self->_scalar_xml( $data );	
     }
@@ -172,7 +174,6 @@ sub xmlout {
 
 sub generate_status_reply {
     my ($self, $requestid, $retval, $retstr) = @_;
-
     my @rid = ();
     @rid = ( requestid => $requestid ) if defined $requestid;
     return $self->xmlout( reply => { @rid, %{$self->xmlify_status( $retval, $retstr )} } );

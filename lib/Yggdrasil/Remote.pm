@@ -5,6 +5,8 @@ use warnings;
 
 use base qw/Yggdrasil/;
 
+use Yggdrasil::Interface::Client;
+
 sub new {
     my $class = shift;
     my %params = @_;
@@ -26,24 +28,43 @@ sub bootstrap {
 sub connect {
     my $self = shift;
 
-    $self->{client} = new Yggdrasil::Interface::Client( status => $self->{status} );
-    $self->{client}->connect( @_ );
+    $self->{storage} = Yggdrasil::Interface::Client->new( status => $self->{status} );
+    $self->{storage}->connect( @_ );
 }
 
 sub login {
     my $self = shift;
 
-    return $self->{client}->login( @_ );
+    return $self->{storage}->login( @_, protocol => 'XML' );
+}
+
+sub protocols {
+    my $self = shift;
+    return $self->{storage}->protocols();
 }
 
 sub info {
     my $self = shift;
+    return $self->{storage}->{protocol}->info();
+}
 
-    return $self->{client}->info();
+sub whoami {
+    my $self = shift;
+    return $self->{storage}->{protocol}->whoami();
+}
+
+sub uptime {
+    my $self = shift;
+    return $self->{storage}->{protocol}->uptime();
+}
+
+sub server_data {
+    my $self = shift;
+    return $self->{storage}->server_data();    
 }
 
 sub property_types {
-
+    
 }
 
 sub get_ticks_by_time {
@@ -51,12 +72,15 @@ sub get_ticks_by_time {
 }
 
 sub get_ticks {
+
 }
 
 sub transaction_stack_get {
+
 }
 
 sub transaction_stack_clear {
+    
 }
 
 1;
