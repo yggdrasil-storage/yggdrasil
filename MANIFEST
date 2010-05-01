@@ -64,6 +64,13 @@ lib/Yggdrasil/Interface/Client/XML.pm
 lib/Yggdrasil/Interface/Objectify.pm
 lib/Yggdrasil/Interface/WWW.pm
 lib/Yggdrasil/Interface/WWW/Container.pm
+lib/Yggdrasil/Local.pm
+lib/Yggdrasil/Local/Entity.pm
+lib/Yggdrasil/Local/Instance.pm
+lib/Yggdrasil/Local/Property.pm
+lib/Yggdrasil/Local/Relation.pm
+lib/Yggdrasil/Local/Role.pm
+lib/Yggdrasil/Local/User.pm
 lib/Yggdrasil/Meta.pm
 lib/Yggdrasil/MetaAuth.pm
 lib/Yggdrasil/MetaEntity.pm
@@ -72,6 +79,13 @@ lib/Yggdrasil/MetaRelation.pm
 lib/Yggdrasil/Object.pm
 lib/Yggdrasil/Property.pm
 lib/Yggdrasil/Relation.pm
+lib/Yggdrasil/Remote.pm
+lib/Yggdrasil/Remote/Entity.pm
+lib/Yggdrasil/Remote/Instance.pm
+lib/Yggdrasil/Remote/Property.pm
+lib/Yggdrasil/Remote/Relation.pm
+lib/Yggdrasil/Remote/Role.pm
+lib/Yggdrasil/Remote/User.pm
 lib/Yggdrasil/Role.pm
 lib/Yggdrasil/User.pm
 lib/Yggdrasil/Utilities.pm

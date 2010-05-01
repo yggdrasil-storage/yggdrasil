@@ -11,7 +11,6 @@ use Time::Local;
 use Log::Log4perl qw(get_logger :levels :nowarn);
 use Carp;
 
-use Storage;
 use Storage::Status;
 
 use Yggdrasil::MetaEntity;
@@ -24,9 +23,10 @@ use Yggdrasil::Property;
 use Yggdrasil::User;
 use Yggdrasil::Role;
 
-use Yggdrasil::Debug;
+use Yggdrasil::Local;
+use Yggdrasil::Remote;
 
-use Yggdrasil::Interface::Client;
+use Yggdrasil::Debug;
 
 our $VERSION = '0.11';
 
@@ -60,13 +60,21 @@ sub new {
 	$self->{status}->set( 200 );
     } else {
 	Yggdrasil::fatal( "in new() in Yggdrasil! should not be here!" );
-#	Yggdrasil::fatal( "Did not get an yggdrasil reference passed upon creation of '$class'") unless $params{yggdrasil};
-#	$self->{name}      = $params{name};
-#	$self->{yggdrasil} = $params{yggdrasil};
-#	$self->{logger} = get_logger( __PACKAGE__ );
     }
     
     return $self;
+}
+
+sub is_remote {
+    my $self = shift;
+    
+    return unless $self->{mode};
+    $self->{mode}->is_remote();
+}
+
+sub is_local {
+    my $self = shift;
+    return ! $self->is_remote();
 }
 
 sub get_status {
@@ -74,78 +82,50 @@ sub get_status {
     return $self->{status};
 }
 
-
 sub bootstrap {
     my $self = shift;
-    my %userlist = @_;
-    
-    my $status = $self->get_status();
-    if ($self->{storage}->yggdrasil_is_empty()) {
-	my %usermap = $self->{storage}->bootstrap( %userlist );
-	Yggdrasil::MetaEntity->define( yggdrasil => $self );
-	Yggdrasil::MetaRelation->define( yggdrasil => $self );
-	Yggdrasil::MetaProperty->define( yggdrasil => $self );
 
-	# MetaEntity was created without 'create' auth rules in order
-	# for UNIVERSAL to be created. We then proceed to add 'create'
-	# auth rules for MetaEntity now that we have a root entity
-	my $universal = $self->define_entity( 'UNIVERSAL' );
-	Yggdrasil::MetaEntity->define_create_auth( yggdrasil => $self );
-
-	$self->get_user( 'bootstrap' )->expire();
-	$status->set( 200, 'Bootstrap successful.');
-	return \%usermap;
-    } else {
-	$status->set( 406, "Unable to bootstrap, data exists." );
-	return;
-    }
+    return $self->{mode}->bootstrap( @_ );
 }
 
 sub connect {
     my $self = shift;
     my %params = @_;
-
-    # Check to see if we're connecting to a remote Yggdrasil server.
-    # If so, avoid calling Storage in any way.
+    
+    # Setting mode for the first time, so we need to use this explicit
+    # test for daemonport to establish context.
     if ($params{daemonport}) {
-	$self->{client} = new Yggdrasil::Interface::Client( status => $self->{status} );
-	$self->{client}->connect( @_ );
+	$self->{mode} = Yggdrasil::Remote->new( status => $self->get_status() );
     } else {
-	$self->{storage} =
-	  Storage->new(@_, status => $self->{status} );
+	$self->{mode} = Yggdrasil::Local->new( status => $self->get_status() );
     }
 
-    return unless $self->get_status()->OK();
 
+    $self->{mode}->connect( @_ );
+    $self->{storage} = $self->{mode}->{storage};
+
+    return unless $self->get_status()->OK();
     return 1;
 }
 
 sub login {
     my $self = shift;
-    my %params = @_;
-
-    my $status = $self->get_status();
 
     if( $self->user() ) {
+	my $status = $self->get_status();
 	$status->set( 406, 'Already logged in' );
 	return;
     }
+    
+    my $user = $self->{mode}->login( @_ );
 
-    if ($self->{client}) {
-	# FIXME, create user objects properly.
-	$self->{client}->login( %params );	
-    } else {
-	# we're nobody until authenticated
-	$self->{user} = $self->get_user( $self->{storage}->user() );
-	
-	my $auth = $self->{storage}->authenticate( %params );
-	$self->{user} = $self->get_user( $auth );
-	
-	return $self->user() if $status->OK();
-	
-	$status->set( 403, 'Login to Yggdrasil denied.' );
-    }
-
+    my $status = $self->get_status();
+    if ($status->OK()) {
+	$self->{user} = $self->get_user( $user );
+	return $self->user();
+    } 
+    
+    $status->set( 403, 'Login to Yggdrasil denied.' );
     return;
 }
 
@@ -156,9 +136,8 @@ sub user {
 
 sub info {
     my $self = shift;
-    my $storage = $self->{storage};
 
-    return $storage->info();
+    return $self->{mode}->info();
 }
 
 ###############################################################################
@@ -182,6 +161,19 @@ sub define_entity {
     my $entity = shift;
 
     return Yggdrasil::Entity->define( yggdrasil => $self, entity => $entity, @_ );
+}
+
+sub define_instance {
+    my $self   = shift;
+    my $entity = shift;
+    my $instance = shift;
+
+    return Yggdrasil::Instance->define(
+				       yggdrasil => $self,
+				       entity    => $entity,
+				       instance  => $instance,
+				       @_
+				      );
 }
 
 sub define_relation {
@@ -222,6 +214,19 @@ sub get_entity {
     return Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity, @_ );
 }
 
+sub get_instance {
+    my $self   = shift;
+    my $entity = shift;
+    my $instance = shift;
+
+    return Yggdrasil::Instance->get(
+				    yggdrasil => $self,
+				    entity    => $entity,
+				    instance  => $instance,
+				    @_
+				   );
+}
+
 sub get_relation {
     my $self = shift;
     my $label = shift;
@@ -242,40 +247,53 @@ sub get_property_types {
 }
 
 ###############################################################################
-# Undefines
-sub undefine_user {
+# Expire / undefine.
+sub expire_user {
     my $self = shift;
     my $user = shift;
 
-    return Yggdrasil::User->undefine( yggdrasil => $self, user => $user, @_ );
+    return Yggdrasil::User->expire( yggdrasil => $self, user => $user, @_ );
 }
 
-sub undefine_role {
+sub expire_role {
     my $self = shift;
     my $role = shift;
 
-    return Yggdrasil::Role->undefine( yggdrasil => $self, role => $role, @_ );
+    return Yggdrasil::Role->expire( yggdrasil => $self, role => $role, @_ );
 }
 
-sub undefine_entity {
+sub expire_entity {
     my $self   = shift;
     my $entity = shift;
 
-    return Yggdrasil::Entity->undefine( yggdrasil => $self, entity => $entity, @_ );
+    return Yggdrasil::Entity->expire( yggdrasil => $self, entity => $entity, @_ );
 }
 
-sub undefine_relation {
+sub expire_instance {
+    my $self     = shift;
+    my $entity   = shift;
+    my $instance = shift;
+
+    return Yggdrasil::Instance->expire(
+					 yggdrasil => $self,
+					 entity    => $entity,
+					 instance  => $instance,
+					 @_
+					);
+}
+
+sub expire_relation {
     my $self  = shift;
     my $label = shift;
 
-    return Yggdrasil::Relation->undefine( yggdrasil => $self, label => $label, @_ );
+    return Yggdrasil::Relation->expire( yggdrasil => $self, label => $label, @_ );
 }
 
-sub undefine_property {
+sub expire_property {
     my $self = shift;
     my $prop = shift;
 
-    return Yggdrasil::Property->undefine( yggdrasil => $self, property => $prop,  @_ );
+    return Yggdrasil::Property->expire( yggdrasil => $self, property => $prop,  @_ );
 }
 
 
@@ -285,22 +303,15 @@ sub undefine_property {
 # entities, returns all the entities known to Yggdrasil.
 sub entities {
     my $self = shift;
-
-    my @roles = $self->user()->member_of();
-    my @roleids = map { $_->{_role_obj}->{_id} } @roles;
-
-    my $aref = $self->{storage}->fetch( MetaEntity => { return => 'entity' });
-
-    return map { Yggdrasil::Entity::objectify( name      => $_->{entity}, 
-					       yggdrasil => $self ) } @$aref;
+    
+    return Yggdrasil::Entity->get_all( yggdrasil => $self, @_ );
 }
 
 # relations, returns all the relations known to Yggdrasil.
 sub relations {
     my $self = shift;
-    my $aref = $self->{storage}->fetch( 'MetaRelation', { return => [ 'rval', 'lval', 'label' ] });
 
-    return map { $_->{label} } @$aref;
+    return Yggdrasil::Relation->get_all( yggdrasil => $self, @_ );
 }
 
 
@@ -308,7 +319,7 @@ sub relations {
 sub users {
     my $self = shift;
     
-    return Yggdrasil::User->get_all( yggdrasil => $self );
+    return Yggdrasil::User->get_all( yggdrasil => $self, @_ );
 }
 
 
@@ -317,25 +328,6 @@ sub roles {
     my $self = shift;
     
     return Yggdrasil::Role->get_all( yggdrasil => $self, @_ );
-}
-
-# Generic exist method for non-instanced calls across Yggdrasil to see
-# if a given instance of a given entity exists.  It is called as
-# "$HOSTOBJ->exists( 'nommo' )", or "$ROOMOBJ->exists( 'B810' ) etc.
-sub exists {
-    my $self = shift;
-    my $visual_id = shift;
-    my @time = @_;
-
-    my $entity = $self->_extract_entity(ref $self);
-
-    my $fetchref = $self->{storage}->fetch( 'Instances', { return => 'id',
-							  where  => [ visual_id => $visual_id,
-								      entity    => $entity ] },
-					    { start => $time[0], stop => $time[1] } );
-    
-    return undef unless $fetchref->[0];
-    return $fetchref->[0]->{id};
 }
 
 # usernames / rolenames, returns all the usernames / rolenames known
@@ -354,7 +346,7 @@ sub rolenames {
 sub property_types {
     my $self = shift;
 
-    return $self->{storage}->get_defined_types();
+    return $self->{mode}->property_types(@_);
 }
 
 # How to enter time formats... Best suggestions so far are:
@@ -377,11 +369,7 @@ sub get_ticks_by_time {
 
     return unless defined $from;
 
-    # We need to feed the backend something it can use, and they like
-    # working with all sorts of weird stuff, but we'll delegate that
-    # to the storage layer.
-    
-    return $self->{storage}->get_ticks_from_time( $from, $to );
+    $self->{mode}->get_ticks_by_time( $from, $to );
 }
 
 # We're only doing resolution down to a second, so we can use epoch
@@ -414,78 +402,21 @@ sub _get_epoch_from_input {
 # Get information about the ticks in question.
 sub get_ticks {
     my $self  = shift;
-    my @ticks;
-    
-    for my $t (@_) {
-	push @ticks, 'id' => $t;
-    }
-    
-    # FIXME, return the 'stamp' field in an ISO date format.
-    my $fetchref = $self->{storage}->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
-								where  => [ @ticks ],
-								bind   => 'or',
-							      } );
-    
-    if (! $fetchref->[0]->{stamp}) {
-	$self->{status}->set( 400, 'Tick not found' );
-	return undef;
-    }
 
-    my $events = $self->_get_instance_event_at_ticks( @_ );
-
-    for my $t (@$fetchref) {
-	$t->{events} = $events->{ $t->{id} };
-    }
-    return @$fetchref;
-}
-
-# Get all the instances that were created or expired on the given
-# ticks.  Beware, asking for temporal stuff with times set will
-# clobber start and stop between the tables, use 'as' or proceed with
-# caution.  Oh, and we're using q<> constructs to insert the value
-# literally, since a lot of db systems don't evaluate functions if
-# they're added via ?.
-sub _get_instance_event_at_ticks {
-    my $self  = shift;
-    my @ticks = @_;
-    my %tick;
-
-    my @where;
-    for my $t (@_) {
-	push @where, 'start' => $t, 'stop' => $t;
-    }
-    
-    my $fetchref = $self->{storage}->fetch( 'Instances', { return => [ 'visual_id', 'start', 'stop' ],
-							  where  => [ @where ],
-							  bind   => 'or',
-							  as     => 1,
-							},
-					    'MetaEntity', { return => [ 'entity' ],
-							    where  => [ 'id' => \qq{Instances.entity} ],
-							    as     => 1,
-							  },
-					    { start => 0, stop => undef },
-					  );
-    for my $h (@$fetchref) {
-	my $etext = 'Created';
-	my $id = $h->{Instances_start} || $h->{Instances_stop};
-	$etext = 'Expired' if $h->{Instances_stop};
-	push @{$tick{$id}}, { start => $h->{Instances_start}, stop => $h->{Instances_stop},
-			      string => "$etext the instance '" . $h->{visual_id} . "' in '" . $h->{entity} . "'",
-			    };
-    }
-    return \%tick;
+    return $self->{mode}->get_ticks( @_ );
 }
 
 # Transaction interface.
 sub transaction_stack_get {
     my $self = shift;
-    return $self->{storage}->{transaction}->get_stack();
+
+    return $self->{mode}->transaction_stack_get( @_ );
 }
 
 sub transaction_stack_clear {
     my $self = shift;
-    return $self->{storage}->{transaction}->clear_stack();
+
+    return $self->{mode}->transaction_stack_clear( @_ );
 }
   
 ###############################################################################
