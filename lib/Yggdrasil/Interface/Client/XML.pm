@@ -3,8 +3,6 @@ package Yggdrasil::Interface::Client::XML;
 use warnings;
 use strict;
 
-use Yggdrasil::Interface::Objectify;
-
 use IO::Socket::SSL;
 use XML::StreamReader;
 use XML::Simple;
@@ -18,7 +16,6 @@ sub new {
     $self->{stream}    = $params{stream};
     $self->{parser}    = XML::StreamReader->new( stream => $params{stream} );
     $self->{status}    = $params{status};
-    $self->{objectify} = Yggdrasil::Interface::Objectify->new();
 
     my $i = 1;
     $self->{nextrequestid} = sub { return $i++ };
@@ -221,9 +218,8 @@ sub yggdrasil {
 # Reply handling.  This is done by calling _get_reply(), which will
 # gather up one (complete) XML document, break it apart abit for
 # status checkups (_get_reply_status) and process the data part of the
-# reply via _pair() before feeding the results to the objectifier
-# which returns the results.  Ideally, this should return a proper
-# Yggdrasil object.
+# reply via _pair() before returning the object to the Yggdrasil
+# calling class, that'll make this into a proper object.
 sub _get_reply {
     my $self = shift;
     my $reply_node = shift;
@@ -237,7 +233,7 @@ sub _get_reply {
 
     if ($s->OK()) {
 	my $req  = $reply->{yggdrasil}->{reply}->{requestid};
-	return $self->{objectify}->parse( $self->_pair( $data, $reply_node ));
+	return $self->_pair( $data, $reply_node );
     } else {
 	print $s->status(), ", ", $s->message();
 	return undef;
@@ -267,8 +263,7 @@ sub _pair {
     my $data = shift;
     my $type = shift;
     my %pair;
-    $pair{$type} = 1;
-
+    
     if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
 	$pair{'value'} = $data->{_text};
     } else {
