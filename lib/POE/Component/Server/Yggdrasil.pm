@@ -215,7 +215,7 @@ sub _handle_line_input {
 		   );
 
 	if ($s->OK()) {
-	    my $iam = $y->login( user => $client->{username}, password => $client->{password});    
+	    my $iam = $y->login( username => $client->{username}, password => $client->{password});    
 	    if ($s->OK()) {
 		$client->{authenticated} = $iam;
 		$client->{password} = undef;
