@@ -5,7 +5,7 @@ use warnings;
 
 use base qw/Yggdrasil/;
 
-use Yggdrasil::Interface::Client;
+use Yggdrasil::Remote::Client;
 
 sub new {
     my $class = shift;
@@ -28,7 +28,7 @@ sub bootstrap {
 sub connect {
     my $self = shift;
 
-    $self->{storage} = Yggdrasil::Interface::Client->new( status => $self->{status} );
+    $self->{storage} = Yggdrasil::Remote::Client->new( status => $self->{status} );
     $self->{storage}->connect( @_ );
 }
 

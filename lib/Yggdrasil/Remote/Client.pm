@@ -1,4 +1,4 @@
-package Yggdrasil::Interface::Client;
+package Yggdrasil::Remote::Client;
 
 use warnings;
 use strict;

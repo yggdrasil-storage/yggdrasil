@@ -1,4 +1,4 @@
-package Yggdrasil::Interface::Client::XML;
+package Yggdrasil::Remote::Client::XML;
 
 use warnings;
 use strict;
