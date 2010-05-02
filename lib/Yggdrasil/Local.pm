@@ -60,7 +60,7 @@ sub login {
     my $self = shift;
 
     my $storage_user_object = $self->{storage}->authenticate( @_ );
-    $self->{user} = $storage_user_object->name();
+    $self->{user} = $storage_user_object->name() if $storage_user_object;
     return $self->{user};
 }
 
