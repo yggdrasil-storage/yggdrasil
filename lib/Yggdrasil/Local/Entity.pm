@@ -196,7 +196,7 @@ sub instances {
     
     my $instances = $self->storage()->fetch( 
 	'MetaEntity' => { where  => [ entity => $self->name() ] },
-	'Instances'   => { return => [ 'visual_id', 'id' ],
+	'Instances'   => { return => [ 'visual_id', 'id', 'start', 'stop' ],
 			  where  => [ entity => \qq{MetaEntity.id} ] } );
     
     # FIXME, find a way to create instance objects in a nice way
@@ -204,6 +204,8 @@ sub instances {
     for my $i ( @$instances ) {
 	my $o = Yggdrasil::Local::Instance->new( yggdrasil => $self );
 	$o->{visual_id} = $i->{visual_id};
+	$o->{_start}    = $i->{start};
+	$o->{_stop}     = $i->{stop};
 	$o->{_id}       = $i->{id};
 	$o->{entity}    = $self;
 	push(@i,$o);
