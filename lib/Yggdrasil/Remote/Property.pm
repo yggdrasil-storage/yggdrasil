@@ -12,6 +12,7 @@ sub get {
 
     my $dataref = $self->storage()->{protocol}->get_property( $params{entity}, $params{property} );
     return unless $dataref;
+    $dataref->{yggdrasil} = $self->yggdrasil();
     return bless $dataref, __PACKAGE__;
 }
 
@@ -22,7 +23,17 @@ sub define {
 
     my $dataref = $self->storage()->{protocol}->define_property( $params{entity}, $params{property} );
     return unless $dataref;
+    $dataref->{yggdrasil} = $self->yggdrasil();
     return bless $dataref, __PACKAGE__;
+}
+
+sub entity {
+    my $self = shift;
+
+    my $dataref = $self->storage()->{protocol}->get_entity( $self->{entity} );
+    return unless $dataref;
+    $dataref->{yggdrasil} = $self->yggdrasil();
+    return bless $dataref, 'Yggdrasil::Remote::Entity';
 }
 
 1;
