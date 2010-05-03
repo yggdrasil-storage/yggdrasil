@@ -16,9 +16,9 @@ sub xmlify {
     my $statusref = $self->_status_xml( $status );
 
     # We probabaly have some valid data to return to the user, and we
-    # can rightfully assume it's an Yggdrasil object or a simple
-    # scalar containing a value (property lookup most likely).  Valid
-    # types are:
+    # can rightfully assume it's an Yggdrasil object, a simple scalar
+    # containing a value (property lookup most likely) or a list of
+    # values (list of usernames etc).  Valid types are:
     #
     #  * Entities   (Yggdrasil::Entity)
     #  * Instances  (Yggdrasil::Instance)
@@ -27,35 +27,52 @@ sub xmlify {
     #  * Users      (Yggdrasil::User)
     #  * Roles      (Yggdrasil::Role)
     #  * <$scalar>  (Value, encode if needed and return)
+    #  * arrayref   (Values)
     
-    my $dataref;
-    if (ref $data) {
-	if ($data->isa( 'Yggdrasil::Entity' )) {
-	    $dataref = $self->_entity_xml( $data );
-	} elsif ($data->isa( 'Yggdrasil::Instance' )) {
-	    $dataref = $self->_instance_xml( $data );	
-	} elsif ($data->isa( 'Yggdrasil::Property' )) {
-	    $dataref = $self->_property_xml( $data );
-	} elsif ($data->isa( 'Yggdrasil::Relation' )) {
-	    $dataref = $self->_relation_xml( $data );	
-	} elsif ($data->isa( 'Yggdrasil::User' )) {
-	    $dataref = $self->_user_or_role_xml( $data );	
-	} elsif ($data->isa( 'Yggdrasil::Role' )) {
-	    $dataref = $self->_user_or_role_xml( $data );
-	} else {
-	    # Unknown data reference, that's not good.
-	    $statusref = $self->generate_status_reply( $requestid, 406, "Unknown data type ($data) passed to XML backend" );
-	}
-    } elsif ($data) {
-	$dataref = $self->_scalar_xml( $data );	
+    my %data;
+    $data = [ $data ] unless ref $data eq 'ARRAY';
+
+    for my $entry (@$data) {
+	my ($key, $val) = $self->_create_xml_chunk( $entry );
+	return $self->generate_status_reply( $requestid, 406, "Unknown data type ($data) passed to XML backend" )
+	  unless $val;
+	push @{$data{$key}}, $val;
     }
-        
+    
     my @rid = ();
     @rid = ( requestid => $requestid ) if defined $requestid;
-    my @data = ();
-    @data = %$dataref if ref $dataref eq 'HASH';
+
+    use Data::Dumper;
+    print Dumper( \%data );
     
-    return $self->xmlout( reply => { @rid, %$statusref, @data } );
+    return $self->xmlout( reply => { @rid, %$statusref, %data } );
+}
+
+sub _create_xml_chunk {
+    my $self = shift;
+    my $data = shift;
+    
+    if (ref $data) {
+	if ($data->isa( 'Yggdrasil::Entity' )) {
+	    return $self->_entity_xml( $data );
+	} elsif ($data->isa( 'Yggdrasil::Instance' )) {
+	    return $self->_instance_xml( $data );	
+	} elsif ($data->isa( 'Yggdrasil::Property' )) {
+	    return $self->_property_xml( $data );
+	} elsif ($data->isa( 'Yggdrasil::Relation' )) {
+	    return $self->_relation_xml( $data );	
+	} elsif ($data->isa( 'Yggdrasil::User' )) {
+	    return $self->_user_or_role_xml( $data );	
+	} elsif ($data->isa( 'Yggdrasil::Role' )) {
+	    return $self->_user_or_role_xml( $data );
+	} else {
+	    # Unknown data reference, that's not good.
+	    return undef;
+	}
+    } elsif ($data) {
+	return $self->_scalar_xml( $data );	
+    }
+    return undef;
 }
 
 sub _entity_xml {
@@ -63,14 +80,14 @@ sub _entity_xml {
 
     my $name = $entity->name();
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $entity );
-
-    return { entity => {
-			id => $name,
-			start => $start,
-			stop => $stop,
-			starttime => $starttime,
-			stoptime => $stoptime,
-		       }};
+    
+    return entity => {
+		      id => $name,
+		      start => $start,
+		      stop => $stop,
+		      starttime => $starttime,
+		      stoptime => $stoptime,
+		     };
     
 }
 
@@ -80,14 +97,14 @@ sub _property_xml {
     my $name = $property->name();
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $property );
 
-    return { property => {
-			  id => $name,
-			  entity => $property->entity()->name(),
-			  start => $start,
-			  stop => $stop,
-			  starttime => $starttime,
-			  stoptime => $stoptime,
-			 }};
+    return property => {
+			id => $name,
+			entity => $property->entity()->name(),
+			start => $start,
+			stop => $stop,
+			starttime => $starttime,
+			stoptime => $stoptime,
+		       };
     
 }
 
@@ -97,14 +114,14 @@ sub _instance_xml {
     my $name = $instance->id();
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $instance );
 
-    return { instance => {
-			  id => $name,
-			  entity => $instance->entity()->name(),
-			  start => $start,
-			  stop => $stop,
-			  starttime => $starttime,
-			  stoptime => $stoptime,
-			 }};
+    return instance => {
+			id => $name,
+			entity => $instance->entity()->name(),
+			start => $start,
+			stop => $stop,
+			starttime => $starttime,
+			stoptime => $stoptime,
+		       };
     
 }
 
@@ -115,16 +132,16 @@ sub _relation_xml {
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $relation );
     my ($lval, $rval) = $relation->entities();
     
-    return { instance => {
-			  id => $name,
-			  label => $name,
-			  lval => $lval->name(),
-			  rval => $rval->name(),
-			  start => $start,
-			  stop => $stop,
-			  starttime => $starttime,
-			  stoptime => $stoptime,
-			 }};
+    return relation => {
+			id => $name,
+			label => $name,
+			lval => $lval->name(),
+			rval => $rval->name(),
+			start => $start,
+			stop => $stop,
+			starttime => $starttime,
+			stoptime => $stoptime,
+		       };
     
 }
 
@@ -136,7 +153,7 @@ sub _scalar_xml {
     # property and then do the right thing[tm] with the value.  We
     # might wish to base64 a few types, but for now, just pass it
     # through as is.
-    return { value => $value };
+    return value => $value;
     
 }
 
@@ -144,15 +161,16 @@ sub _user_or_role_xml {
     my ($self, $obj) = @_;
 
     my $name = $obj->id();
+    my $class = $obj->isa( 'Yggdrasil::User' )?'user':'role';
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $obj );
-
-    return { user => {
+    
+    return $class => {
 		      id => $name,
 		      start => $start,
 		      stop => $stop,
 		      starttime => $starttime,
 		      stoptime => $stoptime,
-		     }};
+		     };
 }
 
 sub _status_xml {
@@ -162,14 +180,13 @@ sub _status_xml {
 
 sub xmlify_status {
     my ($self, $retval, $retstr) = @_;
-    return { status => { code => $retval, message => $retstr } };
+    return { status => { code => $retval, message => $retstr }};
 }
 
 sub xmlout {
     my $self = shift;
-    my %data = @_;
-
-    return XMLout( \%data, NoAttr => 1, KeyAttr => [], RootName => undef )    
+    
+    return XMLout( { @_ }, NoAttr => 1, KeyAttr => [], RootName => undef );
 }
 
 sub generate_status_reply {
@@ -187,11 +204,13 @@ sub _get_times {
     my ($start, $stop) = ($object->start(), $object->stop());
     my ($startinfo) = $object->yggdrasil()->get_ticks( $start );
     my ($stopinfo) = $object->yggdrasil()->get_ticks( $stop ) if $stop;
-    
+
     my $starttime  = $startinfo->{stamp};
     my $stoptime   = $stopinfo->{stamp} || '';
     
-    return ($object->start(), $object->stop(), $starttime, $stoptime);
+#    print "$start $stop $starttime $stoptime\n";
+    
+    return ($start, $stop, $starttime, $stoptime);
 }
 
 1;

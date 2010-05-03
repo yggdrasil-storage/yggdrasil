@@ -10,31 +10,34 @@ sub new {
     my $y = $params{yggdrasil};
 
     my $self = {	
-		define_entity   => sub { _define_entity( $y, @_ ) },
-		define_property => sub { _define_property( $y, @_ ) },
+		define_entity    => sub { _define_entity( $y, @_ ) },
+		define_property  => sub { _define_property( $y, @_ ) },
 
-		create_instance => sub { _create_instance( $y, @_ ) },
+		create_instance  => sub { _create_instance( $y, @_ ) },
 	       
-		get_entity      => sub { _get_entity( $y, @_ ) },
-		get_relation    => sub { _get_relation( $y, @_ ) },
-		get_property    => sub { _get_property( $y, @_ ) },
-		get_instance    => sub { _get_instance( $y, @_ ) },
-		get_user        => sub { _get_user( $y, @_ ) },
-		get_role        => sub { _get_role( $y, @_ ) },
+		get_entity       => sub { _get_entity( $y, @_ ) },
+		get_relation     => sub { _get_relation( $y, @_ ) },
+		get_property     => sub { _get_property( $y, @_ ) },
+		get_instance     => sub { _get_instance( $y, @_ ) },
+		get_user         => sub { _get_user( $y, @_ ) },
+		get_role         => sub { _get_role( $y, @_ ) },
 
-		get_value       => sub { _get_set_value( $y, @_ ) },
-		set_value       => sub { _get_set_value( $y, @_ ) },
+		get_all_users    => sub { _get_all_users( $y, @_ ) },
+		get_all_entities => sub { _get_all_entities( $y, @_ ) },
 		
-		get_role_value  => sub { _get_set_rolevalue( $y, @_ ) },
-		set_role_value  => sub { _get_set_rolevalue( $y, @_ ) },
+		get_value        => sub { _get_set_value( $y, @_ ) },
+		set_value        => sub { _get_set_value( $y, @_ ) },
+		
+		get_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
+		set_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
 
-		get_user_value  => sub { _get_set_uservalue( $y, @_ ) },
-		set_user_value  => sub { _get_set_uservalue( $y, @_ ) },
+		get_user_value   => sub { _get_set_uservalue( $y, @_ ) },
+		set_user_value   => sub { _get_set_uservalue( $y, @_ ) },
 		
-		info            => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
-		yggdrasil       => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
-		whoami          => sub { $y->get_status()->set( 200 ); return $_[1] },
-		uptime          => sub { $y->get_status()->set( 200 ); return $_[1] },
+		info             => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
+		yggdrasil        => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
+		whoami           => sub { $y->get_status()->set( 200 ); return $_[1] },
+		uptime           => sub { $y->get_status()->set( 200 ); return $_[1] },
 		# ...
 	       };  
   
@@ -96,6 +99,18 @@ sub _get_property {
     return $entity->get_property( $params{propertyid} );
 }
 
+# Get all objects of a given type.
+sub _get_all_users {
+    my $ygg = shift;    
+    my @data = $ygg->users();
+    return \@data;
+}
+
+sub _get_all_entities {
+    my $ygg = shift;    
+    my @data = $ygg->entities();
+    return \@data;
+}
 
 # Please note that the label is still assumed to be globally unique,
 # so 'relationid' is indeed its label.
