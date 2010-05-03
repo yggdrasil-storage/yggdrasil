@@ -163,7 +163,6 @@ sub _client_input {
 					       data   => $input->toString(),
 					       client => $client,
 					      );
-    print "$return\n";
     $client->{Wheel}->put( $return );
 }
 

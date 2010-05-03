@@ -41,10 +41,6 @@ sub xmlify {
     
     my @rid = ();
     @rid = ( requestid => $requestid ) if defined $requestid;
-
-    use Data::Dumper;
-    print Dumper( \%data );
-    
     return $self->xmlout( reply => { @rid, %$statusref, %data } );
 }
 
@@ -207,8 +203,6 @@ sub _get_times {
 
     my $starttime  = $startinfo->{stamp};
     my $stoptime   = $stopinfo->{stamp} || '';
-    
-#    print "$start $stop $starttime $stoptime\n";
     
     return ($start, $stop, $starttime, $stoptime);
 }

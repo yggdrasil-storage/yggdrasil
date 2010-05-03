@@ -246,16 +246,12 @@ sub _get_reply {
 	$reply_node = 'user';
     }
 
-    use Data::Dumper;
-    print Dumper( $reply );
-    
     my $data = $reply->{yggdrasil}->{reply}->{$reply_node};
 
     if ($s->OK()) {
 	my $req  = $reply->{yggdrasil}->{reply}->{requestid};
 	return $self->_pair( $data, $reply_node );
     } else {
-	print $s->status(), ", ", $s->message();
 	return undef;
     }
     
