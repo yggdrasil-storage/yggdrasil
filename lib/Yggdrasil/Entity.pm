@@ -44,6 +44,30 @@ sub get_all {
     }
 }
 
+sub get_all_instances {
+    my $class = shift;
+    my %params = @_;
+
+    my $yggdrasil = $params{yggdrasil};
+    if( $yggdrasil->is_remote() ) {
+	return Yggdrasil::Remote::Entity->get_all_instances( @_ );
+    } else {
+	return Yggdrasil::Local::Entity->get_all_instances( @_ );
+    }
+}
+
+sub get_all_properties {
+    my $class = shift;
+    my %params = @_;
+
+    my $yggdrasil = $params{yggdrasil};
+    if( $yggdrasil->is_remote() ) {
+	return Yggdrasil::Remote::Entity->get_all_properties( @_ );
+    } else {
+	return Yggdrasil::Local::Entity->get_all_properties( @_ );
+    }
+}
+
 sub name {
     my $self = shift;
 
