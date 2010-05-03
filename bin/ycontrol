@@ -546,6 +546,7 @@ sub entity_info {
 	printf "  %-13s - %-10s - %-7s\n", 'Name', 'Type', 'Null?', 'Source';
 	for my $prop (@props) {
 	    my $prop_orig_entity = $prop->entity();
+	    next unless $prop_orig_entity;
 	    my $source = $prop_orig_entity->name();
 	    my $type = $prop->type();
 	    printf "  %-13s - %-10s - %-7s%s\n",  $prop->name(), lc $prop->type(),
@@ -972,9 +973,9 @@ sub transaction_log {
 # Helper stuff.
 sub display_tick {
     my $tickid = shift;
-    my @tick = $y->get_ticks( $tickid );
-    printf "%-15s - %s (%d)\n", 'Created', $tick[0]->{stamp}, $tickid;
-    printf "%-15s - %s\n", 'Committer', $tick[0]->{committer};
+    my $tick = $y->get_tick( $tickid );
+    printf "%-15s - %s (%d)\n", 'Created', $tick->{stamp}, $tickid;
+    printf "%-15s - %s\n", 'Committer', $tick->{committer};
 }
 
 # Yggdrasil expand interface.
