@@ -38,6 +38,8 @@ sub new {
 
 		get_user_value   => sub { _get_set_uservalue( $y, @_ ) },
 		set_user_value   => sub { _get_set_uservalue( $y, @_ ) },
+
+		get_roles_of     => sub { _get_roles_of( $y, @_ ) },
 		
 		info             => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
 		yggdrasil        => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
@@ -195,9 +197,9 @@ sub _get_set_uservalue {
     return undef unless $user;
 
     if (exists $params{value}) {
-	return ($user->property( $params{propertyid}, $params{value} ), $user);
+	return $user->property( $params{propertyid}, $params{value} );
     } else {
-	return ($user->property( $params{propertyid} ), $user);
+	return $user->property( $params{propertyid} );
     }
 }
 
@@ -213,6 +215,18 @@ sub _get_set_rolevalue {
     } else {
 	return ($role->property( $params{propertyid} ), $role);
     }
+}
+
+sub _get_roles_of {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $user = $ygg->get_user( $params{userid} );
+    return unless $user;
+    
+    my @roles = $user->member_of();
+    return \@roles;
+    
 }
 
 sub _get_ticks {
