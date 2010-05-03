@@ -12,6 +12,7 @@ sub get {
 
     my $dataref = $self->storage()->{protocol}->get_user( $params{user} );
     return unless $dataref;
+    $dataref->{yggdrasil} = $self->yggdrasil();
     return bless $dataref, __PACKAGE__;
 }
 
@@ -24,34 +25,20 @@ sub get_all {
 #    return @users;
 }
 
-sub start {
-    my $self = shift;
-    return $self->{_user_obj}->start();
-}
-
-sub stop {
-    my $self = shift;
-    return $self->{_user_obj}->stop();
-}
-
 sub expire {
     my $self = shift;
-    $self->{_user_obj}->expire();
 }
 
-# FIXME? This does *NOT* allow undef values to be set.
 sub _setter_getter {
     my $self = shift;
     my $key  = shift;
-    my $val  = shift;
 
-    my $uo = $self->{_user_obj};
-    if( defined $val ) {
-	$uo->set_field( $key => $val );
-	return $val;
-    }
+#    if( @_ ) {
+#	$self->storage()->{protocol}->set_user_value( $self->id(), $key, $_[0] );
+#	return $_[0];
+#    }
 
-    return $uo->get_field( $key );
+    return $self->storage()->{protocol}->get_user_value( $self->id(), $key );
 }
 
 # Instance-like interface.
@@ -109,17 +96,14 @@ sub username {
 
 sub id {
     my $self = shift;
-    return $self->{_user_obj}->name();
+    return $self->{name};
 }
 
 sub member_of {
     my $self = shift;
-    my @r = $self->{_user_obj}->member_of();
-
-    return map { Yggdrasil::Local::Role->get( yggdrasil => $self, role => $_ ) } @r;
+    my @r = $self->storage()->{protocol}->get_roles_of( $self->id() );
+    @r = map { $_->{yggdrasil} = $self->yggdrasil(); bless $_, 'Yggdrasil::Remote::Role' } @r;
+    return @r;
 }
-
-1;
-
 
 1;
