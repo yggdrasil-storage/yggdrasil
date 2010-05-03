@@ -28,13 +28,15 @@ sub xmlify {
     #  * Roles      (Yggdrasil::Role)
     #  * <$scalar>  (Value, encode if needed and return)
     #  * arrayref   (Values)
-    
+
     my %data;
     $data = [ $data ] unless ref $data eq 'ARRAY';
 
     for my $entry (@$data) {
+	return $self->generate_status_reply( $requestid, 500, "No data passed to the XML backend" )
+	  unless $entry;
 	my ($key, $val) = $self->_create_xml_chunk( $entry );
-	return $self->generate_status_reply( $requestid, 406, "Unknown data type ($data) passed to XML backend" )
+	return $self->generate_status_reply( $requestid, 406, "Unknown data type ($entry) passed to XML backend" )
 	  unless $val;
 	push @{$data{$key}}, $val;
     }
@@ -49,7 +51,9 @@ sub _create_xml_chunk {
     my $data = shift;
     
     if (ref $data) {
-	if ($data->isa( 'Yggdrasil::Entity' )) {
+	if (ref $data eq 'HASH') {
+	    return $self->_hash_xml( $data );	    
+	} elsif ($data->isa( 'Yggdrasil::Entity' )) {
 	    return $self->_entity_xml( $data );
 	} elsif ($data->isa( 'Yggdrasil::Instance' )) {
 	    return $self->_instance_xml( $data );	
@@ -144,13 +148,20 @@ sub _relation_xml {
 
 sub _scalar_xml {
     my ($self, $value, $object) = @_;
-    
+
     # We could use the object, an instance, to check the type of the
     # property and then do the right thing[tm] with the value.  We
     # might wish to base64 a few types, but for now, just pass it
     # through as is.
     return value => $value;
     
+}
+
+# Generic hash returns, useful for ticks and other data that isn't an
+# object but has keys.
+sub _hash_xml {
+    my ($self, $hashref) = @_;
+    return ( hash => { map { $_ => $hashref->{$_ } } keys %$hashref } );
 }
 
 sub _user_or_role_xml {

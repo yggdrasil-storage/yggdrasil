@@ -22,11 +22,16 @@ sub new {
 		get_user         => sub { _get_user( $y, @_ ) },
 		get_role         => sub { _get_role( $y, @_ ) },
 
-		get_all_users    => sub { _get_all_users( $y, @_ ) },
-		get_all_entities => sub { _get_all_entities( $y, @_ ) },
+		get_all_users      => sub { _get_all_users( $y, @_ ) },
+		get_all_roles      => sub { _get_all_roles( $y, @_ ) },
+		get_all_entities   => sub { _get_all_entities( $y, @_ ) },
+		get_all_properties => sub { _get_all_properties( $y, @_ ) },
+		get_all_relations  => sub { _get_all_relations( $y, @_ ) },
 		
 		get_value        => sub { _get_set_value( $y, @_ ) },
 		set_value        => sub { _get_set_value( $y, @_ ) },
+
+		get_ticks        => sub { _get_ticks( $y, @_ ) },
 		
 		get_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
 		set_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
@@ -102,13 +107,32 @@ sub _get_property {
 # Get all objects of a given type.
 sub _get_all_users {
     my $ygg = shift;    
-    my @data = $ygg->users();
+    my @data = $ygg->users( @_ );
+    return \@data;
+}
+
+sub _get_all_roles {
+    my $ygg = shift;    
+    my @data = $ygg->roles( @_ );
     return \@data;
 }
 
 sub _get_all_entities {
     my $ygg = shift;    
-    my @data = $ygg->entities();
+    my @data = $ygg->entities( @_ );
+    return \@data;
+}
+
+sub _get_all_properties {
+    my $ygg = shift;
+    my $ent = shift;
+    my @data = $ygg->properties( @_ );
+    return \@data;
+}
+
+sub _get_all_relations {
+    my $ygg = shift;    
+    my @data = $ygg->entities( @_ );
     return \@data;
 }
 
@@ -191,5 +215,11 @@ sub _get_set_rolevalue {
     }
 }
 
+sub _get_ticks {
+    my $ygg = shift;
+    $ygg->get_status()->set( 200 );
+    my @ticks = $ygg->get_ticks( grep { /^\d+$/ } @_ );
+    return \@ticks;
+}
 
 1;
