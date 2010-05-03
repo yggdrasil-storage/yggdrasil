@@ -64,16 +64,24 @@ sub server_data {
 }
 
 sub property_types {
-    
+    my $self = shift;
+    return $self->{storage}->{protocol}->property_types();   
 }
 
 sub get_ticks_by_time {
-
+    
 }
 
 sub get_ticks {
-
+    my $self = shift;
+    return $self->{storage}->{protocol}->get_ticks( @_ );
 }
+
+sub get_tick {
+    my $self = shift;
+    return $self->{storage}->{protocol}->get_ticks( shift );
+}
+
 
 sub transaction_stack_get {
 

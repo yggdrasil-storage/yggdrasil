@@ -33,8 +33,25 @@ sub get_all {
     my $dataref = $self->storage()->{protocol}->get_all_entities();
     return unless $dataref;
     $dataref->{yggdrasil} = $self->yggdrasil();
-    return bless $dataref, __PACKAGE__;
+    return bless $dataref, __PACKAGE__;    
+}
+
+sub instances {
+    my $self = shift;
     
+    my $dataref = $self->storage()->{protocol}->get_all_instances( $self->name() );
+    return unless $dataref;
+    $dataref->{yggdrasil} = $self->yggdrasil();
+    return bless $dataref, 'Yggdrasil::Remote::Instance';
+}
+
+sub properties {
+    my $self = shift;
+    
+    my $dataref = $self->storage()->{protocol}->get_all_properties( $self->name() );
+    return unless $dataref;
+    $dataref->{yggdrasil} = $self->yggdrasil();
+    return bless $dataref, 'Yggdrasil::Remote::Property';
 }
 
 1;

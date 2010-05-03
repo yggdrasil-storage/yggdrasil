@@ -205,6 +205,40 @@ sub get_all_users {
     return $self->_get( 'all_users' );
 }
 
+sub get_all_relations {
+    my $self = shift;
+    return $self->_get( 'all_relations' );
+}
+
+sub get_all_roles {
+    my $self = shift;
+    return $self->_get( 'all_roles' );
+}
+
+sub get_all_instances {
+    my $self   = shift;
+    my $entity = shift;
+    return $self->_get( 'all_instances', entityid => $entity );
+}
+
+sub get_all_properties {
+    my $self   = shift;
+    my $entity = shift;
+    return $self->_get( 'all_properties', entityid => $entity );
+}
+
+# Metaish stuff
+# FIXME: Need to be able to send requests for multiple ticks.
+sub get_ticks {
+    my $self = shift;
+    return $self->_get( 'ticks', tickid => $_[0] );
+}
+
+sub property_types {
+    my $self = shift;
+    return $self->_get( 'property_types' );
+}
+
 # Introspective calls, handle with care.
 sub uptime {
     my $self = shift;
@@ -236,7 +270,6 @@ sub _get_reply {
     my $reply_node = shift;
     
     my $reply = $self->parser()->read_document();
-
     my $s = $self->_get_reply_status( $reply );
     return unless $s->OK();
 
@@ -244,6 +277,8 @@ sub _get_reply {
 	$reply_node = 'entity';
     } elsif ($reply_node eq 'all_users') {
 	$reply_node = 'user';
+    } elsif ($reply_node eq 'ticks') {
+	$reply_node = 'hash';
     }
 
     my $data = $reply->{yggdrasil}->{reply}->{$reply_node};
@@ -285,7 +320,14 @@ sub _pair {
     } else {
 	for my $k (keys %$data) {
 	    next if $k =~ /^_/;
-	    $pair{'name'} = $data->{$k}->{_text} || '' if $k eq 'id';
+
+	    if ($k eq 'id') {
+		$pair{'name'} = $data->{$k}->{_text};
+	    } elsif ($k eq 'start' || $k eq 'stop') {
+		$pair{"_$k"} = $data->{$k}->{_text};
+		next;
+	    }
+	    
 	    $pair{$k} = $data->{$k}->{_text} || '';
 	}
     }
