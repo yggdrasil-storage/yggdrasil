@@ -188,6 +188,16 @@ sub get_user {
     return $self->_get( 'user', userid => $uid );
 }
 
+sub get_user_value {
+    my ($self, $uid, $key) = @_;
+    return $self->_get( 'user_value', userid => $uid, propertyid => $key );
+}
+
+sub get_roles_of {
+    my ($self, $uid) = @_;
+    return $self->_get( 'roles_of', userid => $uid );
+}
+
 # Role interface
 sub get_role {
     my ($self, $rid) = @_;
@@ -277,8 +287,12 @@ sub _get_reply {
 	$reply_node = 'entity';
     } elsif ($reply_node eq 'all_users') {
 	$reply_node = 'user';
+    } elsif ($reply_node eq 'roles_of') {
+	$reply_node = 'role';
     } elsif ($reply_node eq 'ticks') {
 	$reply_node = 'hash';
+    } elsif ($reply_node eq 'user_value') {
+	$reply_node = 'value';
     }
 
     my $data = $reply->{yggdrasil}->{reply}->{$reply_node};
@@ -316,7 +330,7 @@ sub _pair {
     my %pair;
     
     if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
-	$pair{'value'} = $data->{_text};
+	return $data->{_text};
     } else {
 	for my $k (keys %$data) {
 	    next if $k =~ /^_/;
