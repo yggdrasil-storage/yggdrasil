@@ -78,10 +78,10 @@ sub _process_xml {
 	}
 	
 	my $callback = $self->{commands}->{$command};
-	my @ret = $callback->( map { $_ => $root->{$_} } keys %$root );
+	my $ret = $callback->( map { $_ => $root->{$_} } keys %$root );
 	
 	if ($status->OK()) {
-	    push @retobjs, $self->{xml}->xmlify( $requestid, $status, @ret );
+	    push @retobjs, $self->{xml}->xmlify( $requestid, $status, $ret );
 	} else {
 	    push @retobjs, $self->{xml}->xmlify( $requestid, $status );
 	}
