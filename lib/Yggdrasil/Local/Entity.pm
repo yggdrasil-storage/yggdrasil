@@ -118,10 +118,15 @@ sub get_all {
     my $class  = shift;
     my $self   = $class->SUPER::new( @_ );
 
-    my $aref = $self->storage()->fetch( MetaEntity => { return => 'entity' });
+    my $aref = $self->storage()->fetch( MetaEntity => { return => [ 'id', 'entity', 'parent', 'start', 'stop' ] });
 
-    return map { objectify( name      => $_->{entity}, 
-			    yggdrasil => $self ) } @$aref;
+    return map { objectify( name      => $aref->[0]->{entity},
+			    parent    => $aref->[0]->{parent},
+			    id        => $aref->[0]->{id},
+			    start     => $aref->[0]->{start},
+			    stop      => $aref->[0]->{stop},
+			    yggdrasil => $self->{yggdrasil},
+			  ) } @$aref;
 }
 
 sub objectify {
@@ -224,12 +229,6 @@ sub search {
 	push @hits, $obj;
     }
     return @hits;
-}
-
-sub name {
-    my $self = shift;
-
-    return $self->{name};
 }
 
 sub parent {

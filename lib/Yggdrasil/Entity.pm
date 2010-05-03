@@ -44,4 +44,10 @@ sub get_all {
     }
 }
 
+sub name {
+    my $self = shift;
+
+    return $self->{name};
+}
+
 1;
