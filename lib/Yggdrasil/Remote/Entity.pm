@@ -25,4 +25,16 @@ sub fetch {
 					       instance  => $instance );
 }
 
+sub get_all {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %params = @_;
+
+    my $dataref = $self->storage()->{protocol}->get_all_entities();
+    return unless $dataref;
+    $dataref->{yggdrasil} = $self->yggdrasil();
+    return bless $dataref, __PACKAGE__;
+    
+}
+
 1;

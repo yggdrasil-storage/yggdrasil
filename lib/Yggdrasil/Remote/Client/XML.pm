@@ -194,6 +194,17 @@ sub get_role {
     return $self->_get( 'role', roleid => $rid );
 }
 
+# Slurps.
+sub get_all_entities {
+    my $self = shift;
+    return $self->_get( 'all_entities' );
+}
+
+sub get_all_users {
+    my $self = shift;
+    return $self->_get( 'all_users' );
+}
+
 # Introspective calls, handle with care.
 sub uptime {
     my $self = shift;
@@ -223,11 +234,20 @@ sub yggdrasil {
 sub _get_reply {
     my $self = shift;
     my $reply_node = shift;
-
+    
     my $reply = $self->parser()->read_document();
 
     my $s = $self->_get_reply_status( $reply );
     return unless $s->OK();
+
+    if ($reply_node eq 'all_entities') {
+	$reply_node = 'entity';
+    } elsif ($reply_node eq 'all_users') {
+	$reply_node = 'user';
+    }
+
+    use Data::Dumper;
+    print Dumper( $reply );
     
     my $data = $reply->{yggdrasil}->{reply}->{$reply_node};
 
@@ -269,6 +289,7 @@ sub _pair {
     } else {
 	for my $k (keys %$data) {
 	    next if $k =~ /^_/;
+	    $pair{'name'} = $data->{$k}->{_text} || '' if $k eq 'id';
 	    $pair{$k} = $data->{$k}->{_text} || '';
 	}
     }
