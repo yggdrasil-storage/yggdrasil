@@ -328,6 +328,26 @@ sub entities {
     return Yggdrasil::Entity->get_all( yggdrasil => $self, @_ );
 }
 
+# instances, returns all the instances of a specific entitity.
+sub instances {
+    my $self   = shift;
+    my $entity = shift;
+    
+    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity, @_ );
+    return undef unless $e;    
+    return $e->instances();
+}
+
+# properties, returns all the properties of a specific entitity.
+sub properties {
+    my $self   = shift;
+    my $entity = shift;
+    
+    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity, @_ );
+    return undef unless $e;
+    return $e->properties();
+}
+
 # relations, returns all the relations known to Yggdrasil.
 sub relations {
     my $self = shift;
@@ -426,6 +446,13 @@ sub get_ticks {
 
     return $self->{mode}->get_ticks( @_ );
 }
+
+sub get_tick {
+    my $self  = shift;
+
+    return ($self->{mode}->get_ticks( shift ))[0];
+}
+
 
 # Transaction interface.
 sub transaction_stack_get {
