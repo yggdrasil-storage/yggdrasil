@@ -193,8 +193,7 @@ sub get {
     if (ref $params{entity}) {
 	$entityobj = $params{entity}; 
     } else {
-	$entityobj = Yggdrasil::Local::Entity::objectify( name      => $params{entity},
-							  yggdrasil => $self );
+	$entityobj = $self->yggdrasil()->get_entity( $params{entity} );
     }
 
     # property_exists does not require the entity to actually exist
@@ -220,12 +219,12 @@ sub undefine {
 }
 
 sub null {
-    my ($self) = (shift, shift);
+    my $self = shift;
     return $self->_get_meta( 'null', @_ );
 }
 
 sub type {
-    my ($self, $property) = (shift, shift);
+    my $self = shift;
     return $self->_get_meta( 'type', @_ );
 }
 
