@@ -136,6 +136,14 @@ sub expire_property {
     return $self->_expire( 'property', entityid => $eid, propertyid => $pid );    
 }
 
+sub get_property_meta {
+    my ($self, $eid, $pid, $meta) = @_;
+    return $self->_get(
+		       'property_meta',    entityid => $eid,
+		       propertyid => $pid, meta     => $meta,
+		      );
+}
+
 # Relation interface
 sub get_relation {
     my ($self, $id) = @_;
@@ -287,6 +295,14 @@ sub _get_reply {
 	$reply_node = 'entity';
     } elsif ($reply_node eq 'all_users') {
 	$reply_node = 'user';
+    } elsif ($reply_node eq 'all_instances') {
+	$reply_node = 'instance';
+    } elsif ($reply_node eq 'all_properties') {
+	$reply_node = 'property';
+    } elsif ($reply_node eq 'property_meta') {
+	$reply_node = 'value';
+    } elsif ($reply_node eq '') {
+	$reply_node = 'property';
     } elsif ($reply_node eq 'roles_of') {
 	$reply_node = 'role';
     } elsif ($reply_node eq 'ticks') {
@@ -295,15 +311,14 @@ sub _get_reply {
 	$reply_node = 'value';
     }
 
-    my $data = $reply->get( 'reply', $reply_node );
-
+    my @data = $reply->get( 'reply', $reply_node );
+    
     if ($s->OK()) {
 	my $req  = $reply->get( q/reply requestid/ );
-	return $self->_pair( $data, $reply_node );
+	return $self->_pair( $reply_node, @data );
     } else {
 	return undef;
     }
-    
 }
 
 sub _get_reply_status {
@@ -312,7 +327,7 @@ sub _get_reply_status {
 
     my $stat = $data->get( qw/reply status/ );
     my $code = $stat->get( 'code' )->text();
-    
+
     my $s = $self->get_status();
     $s->set( $code, $stat->get( 'message' )->text() );
     return $s;
@@ -325,29 +340,35 @@ sub _get_reply_status {
 # _text-key under a hash element in question).
 sub _pair {
     my $self = shift;
-    my $data = shift;
     my $type = shift;
-    my %pair;
+    return unless @_;
+    my @sets;
     
-    return unless $data;
-
-    if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
-	return $data->text();
-    } else {
-	for my $k ( $data->children() ) {
-	    my $tag = $k->tag();
-	    if ($tag eq 'id') {
-		$pair{'name'} = $k->text();
-	    } elsif ($tag eq 'start' || $tag eq 'stop') {
-		$pair{"_$tag"} = $k->text();
-		next;
+    for my $data (@_) {
+	my %pair;
+	if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
+	    return $data->text();
+	} else {
+	    for my $k ( $data->children() ) {
+		my $tag = $k->tag();
+		if ($tag eq 'id') {
+		    $pair{'name'} = $k->text();
+		} elsif ($tag eq 'start' || $tag eq 'stop') {
+		    $pair{"_$tag"} = $k->text();
+		    next;
+		}
+		
+		$pair{$tag} = $k->text() || '';
 	    }
-	    
-	    $pair{$tag} = $k->text() || '';
 	}
+	push @sets, \%pair;
     }
-    
-    return \%pair;
+
+    if (wantarray) {
+	return @sets;
+    } else {
+	return $sets[0];
+    }
 }
 
 1;
