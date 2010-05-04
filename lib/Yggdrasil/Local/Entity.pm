@@ -120,11 +120,11 @@ sub get_all {
 
     my $aref = $self->storage()->fetch( MetaEntity => { return => [ 'id', 'entity', 'parent', 'start', 'stop' ] });
 
-    return map { objectify( name      => $aref->[0]->{entity},
-			    parent    => $aref->[0]->{parent},
-			    id        => $aref->[0]->{id},
-			    start     => $aref->[0]->{start},
-			    stop      => $aref->[0]->{stop},
+    return map { objectify( name      => $_->{entity},
+			    parent    => $_->{parent},
+			    id        => $_->{id},
+			    start     => $_->{start},
+			    stop      => $_->{stop},
 			    yggdrasil => $self->{yggdrasil},
 			  ) } @$aref;
 }
@@ -133,11 +133,11 @@ sub objectify {
     my %params = @_;
     
     my $obj = new Yggdrasil::Local::Entity( name => $params{name}, yggdrasil => $params{yggdrasil} );
-    $obj->{name}   = $params{name};
-    $obj->{_id}    = $params{id};
-    $obj->{_start} = $params{start};
-    $obj->{_stop}  = $params{stop};
-    $obj->{parent}   = $params{parent};
+    $obj->{name}    = $params{name};
+    $obj->{_id}     = $params{id};
+    $obj->{_start}  = $params{start};
+    $obj->{_stop}   = $params{stop};
+    $obj->{parent}  = $params{parent};
     return $obj;
 }
 
