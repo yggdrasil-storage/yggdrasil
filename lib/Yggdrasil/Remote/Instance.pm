@@ -27,4 +27,14 @@ sub property {
     }
 }
 
+sub name {
+    my $self = shift;
+    return $self->{name};
+}
+
+sub id {
+    my $self = shift;
+    return $self->name();
+}
+
 1;
