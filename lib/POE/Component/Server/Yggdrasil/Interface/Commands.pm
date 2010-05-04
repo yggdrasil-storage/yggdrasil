@@ -25,8 +25,11 @@ sub new {
 		get_all_users      => sub { _get_all_users( $y, @_ ) },
 		get_all_roles      => sub { _get_all_roles( $y, @_ ) },
 		get_all_entities   => sub { _get_all_entities( $y, @_ ) },
+		get_all_instances  => sub { _get_all_instances( $y, @_ ) },
 		get_all_properties => sub { _get_all_properties( $y, @_ ) },
 		get_all_relations  => sub { _get_all_relations( $y, @_ ) },
+
+		get_property_meta  => sub { _get_property_meta( $y, @_ ) },
 		
 		get_value        => sub { _get_set_value( $y, @_ ) },
 		set_value        => sub { _get_set_value( $y, @_ ) },
@@ -120,8 +123,18 @@ sub _get_all_roles {
 }
 
 sub _get_all_entities {
+    my $ygg = shift;
+    my @data = $ygg->entities();
+    return \@data;
+}
+
+sub _get_all_instances {
     my $ygg = shift;    
-    my @data = $ygg->entities( @_ );
+    my %params = @_;
+    my @data = $ygg->instances( $params{entityid} );
+    for my $i (@data) {
+	$i->{id} = $i->{visual_id};
+    }
     return \@data;
 }
 
@@ -234,6 +247,23 @@ sub _get_ticks {
     $ygg->get_status()->set( 200 );
     my @ticks = $ygg->get_ticks( grep { /^\d+$/ } @_ );
     return \@ticks;
+}
+
+sub _get_property_meta {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $p = $ygg->get_property( $params{entityid}, $params{propertyid} );
+    return unless $p;
+    
+    if ($params{meta} eq 'null') {
+	return $p->null();	
+    } elsif ($params{meta} eq 'type') {
+	return $p->type();
+    } else {
+	$ygg->get_status()->set( 406, "Unknown meta request ($params{meta})" );
+	return undef;
+    }
 }
 
 1;
