@@ -74,4 +74,9 @@ sub name {
     return $self->{name};
 }
 
+sub id {
+    my $self = shift;
+    return $self->name();
+}
+
 1;
