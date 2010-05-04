@@ -295,10 +295,10 @@ sub _get_reply {
 	$reply_node = 'value';
     }
 
-    my $data = $reply->{yggdrasil}->{reply}->{$reply_node};
+    my $data = $reply->get( 'reply', $reply_node );
 
     if ($s->OK()) {
-	my $req  = $reply->{yggdrasil}->{reply}->{requestid};
+	my $req  = $reply->get( q/reply requestid/ );
 	return $self->_pair( $data, $reply_node );
     } else {
 	return undef;
@@ -310,11 +310,11 @@ sub _get_reply_status {
     my $self = shift;
     my $data = shift;
 
-    my $stat = $data->{yggdrasil}->{reply}->{status};
-    my $code = $stat->{code}->{_text};
+    my $stat = $data->get( qw/reply status/ );
+    my $code = $stat->get( 'code' )->text();
     
     my $s = $self->get_status();
-    $s->set( $code, $stat->{message}->{_text} );
+    $s->set( $code, $stat->get( 'message' )->text() );
     return $s;
 }
 
@@ -329,20 +329,21 @@ sub _pair {
     my $type = shift;
     my %pair;
     
-    if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
-	return $data->{_text};
-    } else {
-	for my $k (keys %$data) {
-	    next if $k =~ /^_/;
+    return unless $data;
 
-	    if ($k eq 'id') {
-		$pair{'name'} = $data->{$k}->{_text};
-	    } elsif ($k eq 'start' || $k eq 'stop') {
-		$pair{"_$k"} = $data->{$k}->{_text};
+    if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
+	return $data->text();
+    } else {
+	for my $k ( $data->children() ) {
+	    my $tag = $k->tag();
+	    if ($tag eq 'id') {
+		$pair{'name'} = $k->text();
+	    } elsif ($tag eq 'start' || $tag eq 'stop') {
+		$pair{"_$tag"} = $k->text();
 		next;
 	    }
 	    
-	    $pair{$k} = $data->{$k}->{_text} || '';
+	    $pair{$tag} = $k->text() || '';
 	}
     }
     
