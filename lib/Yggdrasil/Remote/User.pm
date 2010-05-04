@@ -9,20 +9,24 @@ sub get {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
     my %params = @_;
-
-    my $dataref = $self->storage()->{protocol}->get_user( $params{user} );
-    return unless $dataref;
-    $dataref->{yggdrasil} = $self->yggdrasil();
-    return bless $dataref, __PACKAGE__;
+    
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					__PACKAGE__,
+					$self->storage()->{protocol}->get_user( $params{user} ),
+				       );
 }
 
 sub get_all {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
     my %params = @_;
-    
-    my $dataref = $self->storage()->{protocol}->get_all_users();
-#    return @users;
+
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					__PACKAGE__,
+					$self->storage()->{protocol}->get_all_users(),
+				       );
 }
 
 sub expire {
@@ -90,7 +94,7 @@ sub cert {
 }
  
 sub username {
-    my $self = shift;
+    my $self = shift;    
     return $self->id();
 }
 

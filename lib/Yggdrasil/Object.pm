@@ -55,4 +55,15 @@ sub stop {
     return $self->{_stop};
 }
 
+sub objectify {
+    my ($ygg, $package, @refs) = @_;
+    my @set = map { $_->{yggdrasil} = $ygg; bless $_, $package; } @refs;
+
+    if (wantarray) {
+	return @set;
+    } else {
+	return $set[0];
+    }    
+}
+
 1;

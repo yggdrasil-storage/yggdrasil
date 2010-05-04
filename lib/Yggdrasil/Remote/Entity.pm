@@ -11,9 +11,7 @@ sub get {
     my %params = @_;
 
     my $dataref = $self->storage()->{protocol}->get_entity( $params{entity} );
-    return unless $dataref;
-    $dataref->{yggdrasil} = $self->yggdrasil();
-    return bless $dataref, __PACKAGE__;
+    return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );    
 }
 
 sub fetch {
@@ -30,28 +28,31 @@ sub get_all {
     my $self = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $dataref = $self->storage()->{protocol}->get_all_entities();
-    return unless $dataref;
-    $dataref->{yggdrasil} = $self->yggdrasil();
-    return bless $dataref, __PACKAGE__;    
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					__PACKAGE__,
+					$self->storage()->{protocol}->get_all_entities(),
+				       );
 }
 
 sub instances {
     my $self = shift;
-    
-    my $dataref = $self->storage()->{protocol}->get_all_instances( $self->name() );
-    return unless $dataref;
-    $dataref->{yggdrasil} = $self->yggdrasil();
-    return bless $dataref, 'Yggdrasil::Remote::Instance';
+
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					__PACKAGE__,
+					$self->storage()->{protocol}->get_all_instances( $self->name() ),
+				       );
 }
 
 sub properties {
     my $self = shift;
     
-    my $dataref = $self->storage()->{protocol}->get_all_properties( $self->name() );
-    return unless $dataref;
-    $dataref->{yggdrasil} = $self->yggdrasil();
-    return bless $dataref, 'Yggdrasil::Remote::Property';
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					'Yggdrasil::Remote::Property',
+					$self->storage()->{protocol}->get_all_properties( $self->name() ),
+				       );
 }
 
 1;
