@@ -325,7 +325,7 @@ sub expire_property {
 sub entities {
     my $self = shift;
     
-    return Yggdrasil::Entity->get_all( yggdrasil => $self, @_ );
+    return Yggdrasil::Entity->get_all( yggdrasil => $self );
 }
 
 # instances, returns all the instances of a specific entitity.
@@ -333,7 +333,7 @@ sub instances {
     my $self   = shift;
     my $entity = shift;
     
-    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity, @_ );
+    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity );
     return undef unless $e;    
     return $e->instances();
 }
@@ -343,7 +343,7 @@ sub properties {
     my $self   = shift;
     my $entity = shift;
     
-    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity, @_ );
+    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity );
     return undef unless $e;
     return $e->properties();
 }
@@ -359,7 +359,7 @@ sub relations {
 # users, returns all users known to Yggdrasil. 
 sub users {
     my $self = shift;
-    
+
     return Yggdrasil::User->get_all( yggdrasil => $self, @_ );
 }
 
@@ -375,12 +375,12 @@ sub roles {
 # to Yggdrasil.
 sub usernames {
     my $self = shift;
-    return map { $_->username() } Yggdrasil::User->get_all( yggdrasil => $self );
+    return map { $_->username() } $self->users();
 }
 
 sub rolenames {
     my $self = shift;
-    return map { $_->rolename() } Yggdrasil::Role->get_all( yggdrasil => $self );
+    return map { $_->rolename() } $self->roles();
 }
 
 # to access defined storage types
