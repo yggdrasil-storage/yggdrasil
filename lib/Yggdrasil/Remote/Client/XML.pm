@@ -101,6 +101,7 @@ sub _execute {
     my $xmlout = $self->xmlout( yggdrasil => { request => { @_ } } );
 
     my $stream = $self->{stream};
+#    print $xmlout, "\n";
     print $stream $xmlout;
 }
 
@@ -288,6 +289,7 @@ sub _get_reply {
     my $reply_node = shift;
     
     my $reply = $self->parser()->read_document();
+#    $reply->dump();
     my $s = $self->_get_reply_status( $reply );
     return unless $s->OK();
 
@@ -308,6 +310,8 @@ sub _get_reply {
     } elsif ($reply_node eq 'ticks') {
 	$reply_node = 'hash';
     } elsif ($reply_node eq 'user_value') {
+	$reply_node = 'value';
+    } elsif ($reply_node eq 'property_types') {
 	$reply_node = 'value';
     }
 
@@ -343,23 +347,24 @@ sub _pair {
     my $type = shift;
     return unless @_;
     my @sets;
+
+    if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
+	return map { $_->text() } @_;
+    }
     
     for my $data (@_) {
 	my %pair;
-	if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
-	    return $data->text();
-	} else {
-	    for my $k ( $data->children() ) {
-		my $tag = $k->tag();
-		if ($tag eq 'id') {
-		    $pair{'name'} = $k->text();
-		} elsif ($tag eq 'start' || $tag eq 'stop') {
-		    $pair{"_$tag"} = $k->text();
-		    next;
-		}
-		
-		$pair{$tag} = $k->text() || '';
+
+	for my $k ( $data->children() ) {
+	    my $tag = $k->tag();
+	    if ($tag eq 'id') {
+		$pair{'name'} = $k->text();
+	    } elsif ($tag eq 'start' || $tag eq 'stop') {
+		$pair{"_$tag"} = $k->text();
+		next;
 	    }
+	    
+	    $pair{$tag} = $k->text() || '';
 	}
 	push @sets, \%pair;
     }
