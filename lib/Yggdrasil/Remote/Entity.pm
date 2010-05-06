@@ -23,6 +23,16 @@ sub fetch {
 					       instance  => $instance );
 }
 
+sub get_property {
+    my $self = shift;
+    my $prop = shift;
+
+    return Yggdrasil::Remote::Property->get( yggdrasil => $self->yggdrasil(),
+					     entity    => $self->{id},
+					     property  => $prop,
+					     @_ );
+}
+
 sub get_all {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
