@@ -585,7 +585,7 @@ sub property_create {
     my $pobj = $eobj->get_property( $property );
     print "'$property' already exists.\n" and return if $pobj;
 
-    $y->define_property( $property, entity => $eobj, type => $type );
+    $y->define_property( $eobj, $property, type => $type );
     
     if( $y->get_status()->OK() ) {
 	print "'$property' created as $type\n";

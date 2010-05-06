@@ -21,7 +21,7 @@ sub define {
     my $self = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $dataref = $self->storage()->{protocol}->define_property( $params{entity}, $params{property} );
+    my $dataref = $self->storage()->{protocol}->define_property( $params{entity}->{id}, $params{property} );
     return unless $dataref;
     $dataref->{yggdrasil} = $self->yggdrasil();
     return bless $dataref, __PACKAGE__;
