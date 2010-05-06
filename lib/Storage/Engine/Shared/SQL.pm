@@ -285,6 +285,7 @@ sub _fetch {
 #    }  
     
 #    $self->{logger}->debug( $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]" );
+    $status->set( 200 );
     return $self->_sql( $sql, @params ); 
 }
 
