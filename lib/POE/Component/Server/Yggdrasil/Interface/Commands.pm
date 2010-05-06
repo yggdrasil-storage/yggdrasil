@@ -75,7 +75,7 @@ sub _define_property {
     my $entity = $ygg->get_entity( $params{entityid} );
     return unless $entity;
 
-    my $defined = $entity->define_property( $params{propertyid}, type => $params{type}, null => $params{null} );
+    my $defined = $entity->define_property( $params{propertyid}, type => $params{type}, nullp => $params{nullp} );
     return unless defined $defined;
 
     # There is some weird things happening when creating properties,

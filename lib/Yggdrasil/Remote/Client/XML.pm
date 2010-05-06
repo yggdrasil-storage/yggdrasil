@@ -128,8 +128,8 @@ sub get_property {
 }
 
 sub define_property {
-    my ($self, $eid, $pid) = @_;
-    return $self->_define( 'property', entityid => $eid, propertyid => $pid );    
+    my ($self, $eid, $pid, $type, $nullp) = @_;
+    return $self->_define( 'property', entityid => $eid, propertyid => $pid, type => $type, nullp => $nullp );
 }
 
 sub expire_property {
@@ -349,7 +349,7 @@ sub _pair {
     my @sets;
 
     if ($type eq 'value' || $type eq 'uptime' || $type eq 'whoami') {
-	return map { $_->text() } @_;
+	return wantarray ? map { $_->text() } @_ : $_[0]->text();
     }
     
     for my $data (@_) {

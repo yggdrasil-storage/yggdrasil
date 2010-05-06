@@ -58,7 +58,7 @@ sub define {
     # --- Set the default data type.
     $params{type} = uc $params{type} if $params{type};
     $params{type} ||= 'TEXT';
-    $params{null} = 1 if $params{null} || ! defined $params{null};
+    $params{nullp} = 1 if $params{nullp} || ! defined $params{nullp};
 
     unless ($storage->is_valid_type( $params{type} )) {
 	my $ptype = $params{type};
@@ -81,7 +81,7 @@ sub define {
     $storage->define( $name,
 		      fields   => { id    => { type => "INTEGER" },
 				    value => { type => $params{type},
-					       null => $params{null}}},
+					       null => $params{nullp}}},
 		      
 		      temporal => 1,
 		      hints => { id => { index => 1, foreign => 'Instances', key => 1 } },
@@ -129,7 +129,7 @@ sub define {
 		    fields => { entity   => $idref->[0]->{id},
 				property => $property,
 				type     => $params{type},
-				nullp    => $params{null},
+				nullp    => $params{nullp},
 			      } ) unless $params{raw};
     if ($status->status() == 202) {
 	$status->set( 202, "Property '$property' already existed for '$entity'." );
