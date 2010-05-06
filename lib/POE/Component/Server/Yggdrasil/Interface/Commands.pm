@@ -195,9 +195,9 @@ sub _get_set_value {
     
     return undef unless $instance;
     if (exists $params{value}) {
-	return ($instance->property( $params{propertyid}, $params{value} ), $instance);
+	return [ $instance->property( $params{propertyid}, $params{value} ), $instance ];
     } else {
-	return ($instance->property( $params{propertyid} ), $instance);
+	return [ $instance->property( $params{propertyid} ), $instance ];
     }
     
 }
