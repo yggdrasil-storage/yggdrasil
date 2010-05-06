@@ -30,6 +30,7 @@ sub new {
 		get_all_relations  => sub { _get_all_relations( $y, @_ ) },
 
 		get_property_meta  => sub { _get_property_meta( $y, @_ ) },
+		get_property_types => sub { _get_property_types( $y, @_ ) },
 		
 		get_value        => sub { _get_set_value( $y, @_ ) },
 		set_value        => sub { _get_set_value( $y, @_ ) },
@@ -264,6 +265,13 @@ sub _get_property_meta {
 	$ygg->get_status()->set( 406, "Unknown meta request ($params{meta})" );
 	return undef;
     }
+}
+
+sub _get_property_types {
+    my $ygg = shift;
+    my @types = $ygg->property_types(@_);
+
+    return \@types;
 }
 
 1;

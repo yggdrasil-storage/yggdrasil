@@ -262,11 +262,6 @@ sub get_property {
     return Yggdrasil::Property->get( yggdrasil => $self, entity => $entity, property => $prop, @_ );
 }
 
-sub get_property_types {
-    my $self = shift;
-    return $self->{storage}->get_defined_types();
-}
-
 ###############################################################################
 # Expire / undefine.
 sub expire_user {
