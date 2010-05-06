@@ -213,6 +213,7 @@ my %cmd;
 		 _entity_property => \&property_info,
 	    },
 	},
+	types => \&property_types,
     },
 
     instance => {
@@ -607,6 +608,10 @@ sub property_info {
     printf "%-15s - %s\n%-15s - %s\n", 'Type', lc $pobj->type(), 'Null legal', $pobj->null()?'TRUE':'FALSE';
     
     &display_tick( $pobj->start() );
+}
+
+sub property_types {
+    print join( ", ", sort $y->property_types() ), "\n";
 }
 
 # Instance interface
