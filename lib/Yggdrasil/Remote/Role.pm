@@ -79,4 +79,24 @@ sub members {
 					);
 }
 
+sub add {
+    my $self = shift;
+    my $user = shift;
+
+    $user = $self->_check_user($user);
+    return unless $user;
+
+    return $self->storage()->{protocol}->role_add_user( $self->id(), $user->id() );
+}
+
+sub remove {
+    my $self = shift;
+    my $user = shift;
+
+    $user = $self->_check_user($user);
+    return unless $user;
+
+    return $self->storage()->{protocol}->role_remove_user( $self->id(), $user->id() );
+}
+
 1;

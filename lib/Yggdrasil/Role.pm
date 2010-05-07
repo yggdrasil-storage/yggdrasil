@@ -44,4 +44,23 @@ sub get_all {
     }
 }
 
+sub _check_user {
+    my $self = shift;
+    my $user = shift;
+
+    if (ref $user && ! $user->isa('Yggdrasil::User') ) {
+	$self->get_status()->set( 406, "Unexpected user type (" . ref $user .
+				  "), expected Yggdrasil::User" );
+	return;
+    }
+    
+    unless( $user ) {
+	$self->get_status()->set( 406, "Unable to resolve the user" );
+	return;
+    }
+    
+    return $user;
+}
+
+
 1;

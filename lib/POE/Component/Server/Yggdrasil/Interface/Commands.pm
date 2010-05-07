@@ -47,6 +47,9 @@ sub new {
 		get_roles_of     => sub { _get_roles_of( $y, @_ ) },
 		get_members      => sub { _get_members( $y, @_ ) },
 		
+		role_add_user    => sub { _role_addremove_user( $y, 'add', @_ ) },
+		role_remove_user => sub { _role_addremove_user( $y, 'remove', @_ ) },
+
 		info             => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
 		yggdrasil        => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
 		whoami           => sub { $y->get_status()->set( 200 ); return $_[1] },
@@ -260,6 +263,24 @@ sub _get_members {
 
     my @users = $role->members();
     return \@users;
+}
+
+sub _role_addremove_user {
+    my $ygg    = shift;
+    my $type   = shift;
+    my %params = @_;
+
+    my $role = $ygg->get_role( $params{roleid} );
+    return unless $role;
+
+    my $user = $ygg->get_user( $params{userid} );
+    return unless $user;
+
+    if( $type eq 'add' ) {
+	return $role->add( $user );
+    } else {
+	return $role->remove( $user );
+    }
 }
 
 sub _get_ticks {

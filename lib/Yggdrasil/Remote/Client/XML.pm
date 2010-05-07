@@ -52,7 +52,7 @@ sub _exec {
     my $req  = $self->{nextrequestid}->();
     my $exec = $command_type . '_' . $type;
 
-    if ($type eq 'whoami' || $type eq 'uptime' || $type eq 'info') {
+    if ($type eq 'whoami' || $type eq 'uptime' || $type eq 'info' || $type eq 'role_add_user' || $type eq 'role_remove_user') {
 	$exec = $type;
 	$type = 'value';
     }
@@ -238,6 +238,16 @@ sub get_members {
     return $self->_get( 'members', roleid => $rid );
 }
 
+sub role_add_user {
+    my ($self, $rid, $uid ) = @_;
+    return $self->_get( 'role_add_user', roleid => $rid, userid => $uid );
+}
+
+sub role_remove_user {
+    my ($self, $rid, $uid ) = @_;
+    return $self->_get( 'role_remove_user', roleid => $rid, userid => $uid );
+}
+
 
 # Slurps.
 sub get_all_entities {
@@ -346,6 +356,8 @@ sub _get_reply {
     } elsif ($reply_node eq 'role_value') {
 	$reply_node = 'value';
     } elsif ($reply_node eq 'property_types') {
+	$reply_node = 'value';
+    } elsif ($reply_node eq 'addremove_user') {
 	$reply_node = 'value';
     }
 

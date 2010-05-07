@@ -157,14 +157,8 @@ sub add {
     my $self = shift;
     my $user = shift;
 
-    if (ref $user && ref $user ne 'Yggdrasil::Local::User') {
-	$self->get_status()->set( 406, "Unexpected user type (" . ref $user .
-				  ") given to role->add(), expected Yggdrasil::Local::User" );
-	return;
-    }
-    
-    $self->get_status()->set( 406, "Unable to resolve the user passed to role->add()" )
-      unless $user;
+    $user = $self->_check_user($user);
+    return unless $user;
 
     # Encapsulation...
     $self->{_role_obj}->add( $user->{_user_obj} );
@@ -177,14 +171,8 @@ sub remove {
     my $self = shift;
     my $user = shift;
 
-    if (ref $user && ref $user ne 'Yggdrasil::Local::User') {
-	$self->get_status()->set( 406, "Unexpected user type (" . ref $user .
-				  ") given to role->remove(), expected Yggdrasil::Local::User" );
-	return;
-    }
-    
-    $self->get_status()->set( 406, "Unable to resolve the user passed to role->remove()" )
-      unless $user;
+    $user = $self->_check_user($user);
+    return unless $user;
 
     # Encapsulation...
     $self->{_role_obj}->remove( $user->{_user_obj} );
