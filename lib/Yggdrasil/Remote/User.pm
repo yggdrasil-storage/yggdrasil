@@ -106,8 +106,11 @@ sub id {
 sub member_of {
     my $self = shift;
     my @r = $self->storage()->{protocol}->get_roles_of( $self->id() );
-    @r = map { $_->{yggdrasil} = $self->yggdrasil(); bless $_, 'Yggdrasil::Remote::Role' } @r;
-    return @r;
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					'Yggdrasil::Remote::Role',
+					@r
+					);
 }
 
 1;

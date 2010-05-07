@@ -44,6 +44,7 @@ sub new {
 		set_user_value   => sub { _get_set_uservalue( $y, @_ ) },
 
 		get_roles_of     => sub { _get_roles_of( $y, @_ ) },
+		get_members      => sub { _get_members( $y, @_ ) },
 		
 		info             => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
 		yggdrasil        => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
@@ -240,7 +241,17 @@ sub _get_roles_of {
     
     my @roles = $user->member_of();
     return \@roles;
-    
+}
+
+sub _get_members {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $role = $ygg->get_role( $params{roleid} );
+    return unless $role;
+
+    my @users = $role->members();
+    return \@users;
 }
 
 sub _get_ticks {

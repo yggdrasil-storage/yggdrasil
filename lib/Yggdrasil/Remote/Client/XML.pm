@@ -228,6 +228,12 @@ sub set_role_value {
     return $self->_set( 'role_value', roleid => $rid, propertyid => $key, value => $val );
 }
 
+sub get_members {
+    my ($self, $rid) = @_;
+    return $self->_get( 'members', roleid => $rid );
+}
+
+
 # Slurps.
 sub get_all_entities {
     my $self = shift;
@@ -324,6 +330,8 @@ sub _get_reply {
 	$reply_node = 'property';
     } elsif ($reply_node eq 'roles_of') {
 	$reply_node = 'role';
+    } elsif ($reply_node eq 'members') {
+	$reply_node = 'user';
     } elsif ($reply_node eq 'ticks') {
 	$reply_node = 'hash';
     } elsif ($reply_node eq 'user_value') {

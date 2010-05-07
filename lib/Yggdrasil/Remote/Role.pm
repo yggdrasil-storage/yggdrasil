@@ -57,4 +57,14 @@ sub description {
     return $self->_setter_getter( description => @_ );
 }
 
+sub members {
+    my $self = shift;
+    my @r = $self->storage()->{protocol}->get_members( $self->id() );
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					'Yggdrasil::Remote::User',
+					@r
+					);
+}
+
 1;
