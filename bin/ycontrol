@@ -344,6 +344,10 @@ while ( defined (my $input = $term->readline($prompt)) ) {
     my @this_path;
     my $context = \%cmd;
     for my $key ( shellwords($input) ) {
+	unless (ref $context eq 'HASH') {
+	    print "Spurious input '$key' ignored\n";
+	    next;
+	} 
 	if (exists $context->{$key}) {
 	    # static command part
 	    # "user", "info" etc.
@@ -527,7 +531,12 @@ sub entity_info {
     my ($entity_command, $info_command, $entity) = @_;
     my $eobj = $y->get_entity( $entity );
 
-    print "'$entity', no such entity.\n" and return unless $eobj;
+    my $status = $y->get_status();
+
+    unless ($status->OK()) {
+	print $status->status(), ", ", $status->message(), "\n";
+	return;
+    }
     
     printf "%-15s - %s\n", 'Name', $entity;
 
