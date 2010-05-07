@@ -12,6 +12,7 @@ sub new {
     my $self = {	
 		define_entity    => sub { _define_entity( $y, @_ ) },
 		define_property  => sub { _define_property( $y, @_ ) },
+		define_role      => sub { _define_role( $y, @_ ) },
 
 		create_instance  => sub { _create_instance( $y, @_ ) },
 	       
@@ -83,6 +84,13 @@ sub _define_property {
     # not everything is properly objectified, so we have an extra call
     # here to solve that.  The FIXME should go into Property->define().    
     return $entity->get_property( $params{propertyid} );
+}
+
+sub _define_role {
+    my $ygg = shift;
+    my %params = @_;
+    
+    return $ygg->define_role( $params{roleid} );    
 }
 
 sub _create_instance {

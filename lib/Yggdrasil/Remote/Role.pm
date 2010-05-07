@@ -5,6 +5,18 @@ use warnings;
 
 use base qw/Yggdrasil::Role/;
 
+sub define {
+    my $class = shift;
+    my $self  = $class->SUPER::new(@_);
+    my %params = @_;
+    
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					__PACKAGE__,
+					$self->storage()->{protocol}->define_role( $params{role} ),  
+				       );
+}
+
 sub get {
     my $class = shift;
     my $self  = $class->SUPER::new(@_);

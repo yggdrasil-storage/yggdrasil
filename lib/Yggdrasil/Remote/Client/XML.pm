@@ -213,6 +213,11 @@ sub get_roles_of {
 }
 
 # Role interface
+sub define_role {
+    my ($self, $rid) = @_;
+    return $self->_define( 'role', roleid => $rid );
+}
+
 sub get_role {
     my ($self, $rid) = @_;
     return $self->_get( 'role', roleid => $rid );
