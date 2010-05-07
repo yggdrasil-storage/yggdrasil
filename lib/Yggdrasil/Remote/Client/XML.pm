@@ -329,6 +329,8 @@ sub _get_reply {
 	$reply_node = 'instance';
     } elsif ($reply_node eq 'all_properties') {
 	$reply_node = 'property';
+    } elsif ($reply_node eq 'all_relations') {
+	$reply_node = 'relation';
     } elsif ($reply_node eq 'property_meta') {
 	$reply_node = 'value';
     } elsif ($reply_node eq '') {
