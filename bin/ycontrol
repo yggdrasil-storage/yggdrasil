@@ -812,7 +812,7 @@ sub relation_instances {
 
 sub relation_list {
     my ($relation_command, $list_command) = @_;
-    print join ", ", $y->relations();
+    print join ", ", map { $_->label() } $y->relations();
     print "\n";
 }
 
@@ -998,9 +998,8 @@ sub display_tick {
 }
 
 # Yggdrasil expand interface.
-# WARNING, Yggdrasil is returning labels, not objects here!
 sub expand_label {
-    return $y->relations();
+    return map { $_->label() } $y->relations();
 }
 
 sub expand_user {

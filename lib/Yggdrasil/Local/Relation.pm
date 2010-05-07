@@ -52,31 +52,49 @@ sub get {
 				     );
 
     if( $ref && defined $ref->[0]->{id} ) {
-	my $new = Yggdrasil::Local::Relation->new( @_ );
-	$new->{_id} = $ref->[0]->{id};
-	$new->{_start} = $ref->[0]->{start};
-	$new->{_stop}  = $ref->[0]->{stop};
-	
-	$new->{lval} = Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $ref->[0]->{lval} );
-	$new->{rval} = Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $ref->[0]->{rval} );
-
-	$new->{label} = $param{label};
-
 	$status->set( 200 );
-	return $new;
+	return objectify(
+			 label     => $ref->[0]->{label},
+			 id        => $ref->[0]->{id},
+			 start     => $ref->[0]->{start},
+			 stop      => $ref->[0]->{stop},
+			 lval      => Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $ref->[0]->{lval} ),
+			 rval      => Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $ref->[0]->{rval} ),
+			 yggdrasil => $self->{yggdrasil},
+			);
     } else {
 	$status->set( 404 );
 	return undef;	
     }    
 }
 
+sub objectify {
+    my %params = @_;
+    
+    my $obj = new Yggdrasil::Local::Relation( label => $params{label}, yggdrasil => $params{yggdrasil} );
+    $obj->{_id}     = $params{id};
+    $obj->{_start}  = $params{start};
+    $obj->{_stop}   = $params{stop};
+    $obj->{lval}    = $params{lval};
+    $obj->{rval}    = $params{rval};
+    $obj->{label}   = $params{label};
+    return $obj;
+}
+
 sub get_all {
     my $class = shift;
     my $self  = $class->SUPER::new(@_);
 
-    my $aref = $self->{storage}->fetch( 'MetaRelation', { return => [ 'rval', 'lval', 'label' ] });
+    my $aref = $self->storage()->fetch( 'MetaRelation', { return => [ 'start', 'stop', 'rval', 'lval', 'label' ] });
 
-    return map { $_->{label} } @$aref;
+    return map { objectify( label     => $_->{label},
+			    id        => $_->{id},
+			    start     => $_->{start},
+			    stop      => $_->{stop},
+			    lval      => Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $_->{lval} ),
+			    rval      => Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $_->{rval} ),
+			    yggdrasil => $self->{yggdrasil},
+			  ) } @$aref;
     
 }
 

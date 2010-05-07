@@ -38,9 +38,9 @@ sub get_all {
    
    my $yggdrasil = $params{yggdrasil};
    if( $yggdrasil->is_remote() ) {
-	return Yggdrasil::Remote::Relation->get_all( @_ );
+	return sort { $a->label() cmp $b->label() } Yggdrasil::Remote::Relation->get_all( @_ );
     } else {
-	return Yggdrasil::Local::Relation->get_all( @_ );	
+	return sort { $a->label() cmp $b->label() } Yggdrasil::Local::Relation->get_all( @_ );	
     }
 }
 
