@@ -298,7 +298,7 @@ sub properties {
 
     my $storage = $self->{yggdrasil}->{storage};
     my @ancestors = $self->ancestors($start, $stop);
-    my %properties;
+    my @rets;
 
     foreach my $e ( @ancestors ) {
 	my $aref = $storage->fetch(
@@ -322,13 +322,13 @@ sub properties {
 		$eobj = __PACKAGE__->get( entity => $e, yggdrasil => $self->{yggdrasil} );
 	    }
 	    
-	    $properties{ $p->{property} } = Yggdrasil::Local::Property::objectify( name      => $p->{property},
-										   yggdrasil => $self->{yggdrasil},
-										   entity    => $eobj );
+	    push @rets, Yggdrasil::Local::Property::objectify( name      => $p->{property},
+							       yggdrasil => $self->{yggdrasil},
+							       entity    => $eobj );
 	}
     }
 
-    return sort values %properties;
+    return sort { $a->name() cmp $b->name() } @rets;
 }
 
 # Word of warnings, ancestors returns *names* not objects.  However,
