@@ -225,9 +225,9 @@ sub _get_set_rolevalue {
     return undef unless $role;
 
     if (exists $params{value}) {
-	return ($role->property( $params{propertyid}, $params{value} ), $role);
+	return $role->property( $params{propertyid}, $params{value} );
     } else {
-	return ($role->property( $params{propertyid} ), $role);
+	return $role->property( $params{propertyid} );
     }
 }
 

@@ -103,7 +103,7 @@ sub property {
 	return;
     }
     
-    return $self->_setter_getter( $key, $value );    
+    return $self->_setter_getter( $key, $value );
 }
 
 sub members {
