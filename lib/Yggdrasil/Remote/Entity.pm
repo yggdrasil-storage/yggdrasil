@@ -5,6 +5,15 @@ use warnings;
 
 use base qw/Yggdrasil::Entity/;
 
+sub define {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %params = @_;
+
+    my $dataref = $self->storage()->{protocol}->define_entity( $params{entity} );
+    return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );    
+}
+
 sub get {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
