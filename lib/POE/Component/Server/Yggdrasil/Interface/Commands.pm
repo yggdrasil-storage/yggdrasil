@@ -157,7 +157,7 @@ sub _get_all_properties {
 
 sub _get_all_relations {
     my $ygg = shift;    
-    my @data = $ygg->entities( @_ );
+    my @data = $ygg->relations( @_ );
     return \@data;
 }
 
