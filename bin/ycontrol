@@ -455,7 +455,7 @@ sub user_password {
 
     my $pass;
     my $display_pass;
-    if ($username eq $y->user()->username()) {
+    if ($username eq $y->user()) {
 	$pass = _read_password();
 	unless ($pass) {
 	    print "Passwords not entered correctly, aborting.\n";
