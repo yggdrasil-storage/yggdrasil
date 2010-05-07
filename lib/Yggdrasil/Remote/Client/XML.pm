@@ -202,6 +202,11 @@ sub get_user_value {
     return $self->_get( 'user_value', userid => $uid, propertyid => $key );
 }
 
+sub set_user_value {
+    my( $self, $uid, $key, $val ) = @_;
+    return $self->_set( 'user_value', userid => $uid, propertyid => $key, value => $val );
+}
+
 sub get_roles_of {
     my ($self, $uid) = @_;
     return $self->_get( 'roles_of', userid => $uid );

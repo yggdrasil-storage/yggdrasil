@@ -37,10 +37,10 @@ sub _setter_getter {
     my $self = shift;
     my $key  = shift;
 
-#    if( @_ ) {
-#	$self->storage()->{protocol}->set_user_value( $self->id(), $key, $_[0] );
-#	return $_[0];
-#    }
+    if( @_ ) {
+	$self->storage()->{protocol}->set_user_value( $self->id(), $key, $_[0] );
+	return $_[0];
+    }
 
     return $self->storage()->{protocol}->get_user_value( $self->id(), $key );
 }
