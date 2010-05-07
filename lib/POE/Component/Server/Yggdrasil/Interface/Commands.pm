@@ -46,6 +46,8 @@ sub new {
 
 		get_roles_of     => sub { _get_roles_of( $y, @_ ) },
 		get_members      => sub { _get_members( $y, @_ ) },
+
+		get_relation_participants => sub { _get_relation_participants( $y, @_ ) },
 		
 		role_add_user    => sub { _role_addremove_user( $y, 'add', @_ ) },
 		role_remove_user => sub { _role_addremove_user( $y, 'remove', @_ ) },
@@ -263,6 +265,23 @@ sub _get_members {
 
     my @users = $role->members();
     return \@users;
+}
+
+sub _get_relation_participants {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $relation = $ygg->get_relation( $params{relationid} );
+    return unless $relation;
+
+    my @instance_sets;
+    for my $set ($relation->participants()) {
+	my %container;
+	$container{lval} = $set->[0]->id();
+	$container{rval} = $set->[1]->id();
+	push @instance_sets, \%container;
+    }
+    return \@instance_sets;
 }
 
 sub _role_addremove_user {

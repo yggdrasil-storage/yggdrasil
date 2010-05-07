@@ -53,6 +53,8 @@ sub _create_xml_chunk {
     if (ref $data) {
 	if (ref $data eq 'HASH') {
 	    return $self->_hash_xml( $data );	    
+	} elsif (ref $data eq 'ARRAY') {
+	    return $self->_array_xml( $data );	    
 	} elsif ($data->isa( 'Yggdrasil::Entity' )) {
 	    return $self->_entity_xml( $data );
 	} elsif ($data->isa( 'Yggdrasil::Instance' )) {
@@ -162,6 +164,19 @@ sub _scalar_xml {
 sub _hash_xml {
     my ($self, $hashref) = @_;
     return ( hash => { map { $_ => $hashref->{$_ } } keys %$hashref } );
+}
+
+# Generic array of hashes returns, useful for Relations' participants
+# code paths.
+sub _array_xml {
+    my ($self, $arrayref) = @_;
+
+    my @rets;
+    for my $hashref (@$arrayref) {
+	push @rets, $self->_hash_xml( $hashref );
+	
+    }    
+    return ( array => { @rets } );
 }
 
 sub _user_or_role_xml {
