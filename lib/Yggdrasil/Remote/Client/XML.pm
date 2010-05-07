@@ -302,6 +302,8 @@ sub _get_reply {
 	$reply_node = 'entity';
     } elsif ($reply_node eq 'all_users') {
 	$reply_node = 'user';
+    } elsif ($reply_node eq 'all_roles') {
+	$reply_node = 'role';
     } elsif ($reply_node eq 'all_instances') {
 	$reply_node = 'instance';
     } elsif ($reply_node eq 'all_properties') {
