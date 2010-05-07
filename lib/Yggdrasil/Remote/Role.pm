@@ -79,6 +79,24 @@ sub members {
 					);
 }
 
+sub grant {
+   my $self   = shift;
+   my $schema = shift;
+
+   # Take either the name, or an object as a parameter.
+   $schema = $schema->name() if ref $schema;
+   $self->storage()->{protocol}->role_grant( $self->id(), $schema, @_ );
+}
+
+sub revoke {
+    my $self   = shift;
+    my $schema = shift;
+    
+    # Take either the name, or an object as a parameter.
+    $schema = $schema->name() if ref $schema;
+    $self->storage()->{protocol}->role_revoke( $self->id(), $schema, @_ );
+}
+
 sub add {
     my $self = shift;
     my $user = shift;

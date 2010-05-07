@@ -52,7 +52,7 @@ sub _exec {
     my $req  = $self->{nextrequestid}->();
     my $exec = $command_type . '_' . $type;
 
-    if ($type eq 'whoami' || $type eq 'uptime' || $type eq 'info' || $type eq 'role_add_user' || $type eq 'role_remove_user') {
+    if ($type eq 'whoami' || $type eq 'uptime' || $type eq 'info' || $type eq 'role_add_user' || $type eq 'role_remove_user' || $type eq 'role_grant' || $type eq 'role_revoke') {
 	$exec = $type;
 	$type = 'value';
     }
@@ -248,6 +248,23 @@ sub role_remove_user {
     return $self->_get( 'role_remove_user', roleid => $rid, userid => $uid );
 }
 
+sub role_grant {
+    my ($self, $rid, $schema, $mode, $id, $idvalue) = @_;
+    return $self->_get( 'role_grant',
+			roleid => $rid,
+			schema => $schema,
+			mode   => $mode,
+			id     => $idvalue );
+}
+
+sub role_revoke {
+    my ($self, $rid, $schema, $mode, $id, $idvalue) = @_;
+    return $self->_get( 'role_revoke',
+			roleid => $rid,
+			schema => $schema,
+			mode   => $mode,
+			id     => $idvalue );
+}
 
 # Slurps.
 sub get_all_entities {

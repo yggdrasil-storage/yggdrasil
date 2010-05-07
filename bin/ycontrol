@@ -963,10 +963,10 @@ sub grant_revoke {
     print "'$privilege', no such privilege.\n" and return unless $tag{$privilege};
 
     if( $type eq "grant" ) {
-	$robj->grant( MetaEntity => $tag{$privilege}, id => $eobj->{_id} );
+	$robj->grant( MetaEntity => $tag{$privilege}, id => $eobj->{id} );
 	print "Granted role '$role' $privilege privileges to $entity\n"; 
     } elsif( $type eq "revoke" ) {
-	$robj->revoke( MetaEntity => $tag{$privilege}, id => $eobj->{_id} );
+	$robj->revoke( MetaEntity => $tag{$privilege}, id => $eobj->{id} );
 	print "Revoked role '$role' $privilege privileges to $entity\n"; 
     } else {
 	print "'$type', no such type.\n";

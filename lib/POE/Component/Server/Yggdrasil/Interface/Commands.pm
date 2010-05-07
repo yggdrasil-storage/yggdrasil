@@ -51,6 +51,8 @@ sub new {
 		
 		role_add_user    => sub { _role_addremove_user( $y, 'add', @_ ) },
 		role_remove_user => sub { _role_addremove_user( $y, 'remove', @_ ) },
+		role_grant       => sub { _role_grant( $y, @_ ) },
+		role_revoke      => sub { _role_revoke( $y, @_ ) },
 
 		info             => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
 		yggdrasil        => sub { $y->get_status()->set( 200 ); _info( $y, @_ ) },
@@ -300,6 +302,26 @@ sub _role_addremove_user {
     } else {
 	return $role->remove( $user );
     }
+}
+
+sub _role_grant {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $role = $ygg->get_role( $params{roleid} );
+    return unless $role;
+
+    $role->grant( $params{schema}, $params{mode}, id => $params{id} );
+}
+
+sub _role_revoke {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $role = $ygg->get_role( $params{roleid} );
+    return unless $role;
+
+    $role->revoke( $params{schema}, $params{mode}, id => $params{id} );
 }
 
 sub _get_ticks {
