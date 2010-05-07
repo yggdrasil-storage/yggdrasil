@@ -62,9 +62,9 @@ sub get_all_properties {
 
     my $yggdrasil = $params{yggdrasil};
     if( $yggdrasil->is_remote() ) {
-	return Yggdrasil::Remote::Entity->get_all_properties( @_ );
+	return sort { $a->name() <=> $b->name() } Yggdrasil::Remote::Entity->get_all_properties( @_ );
     } else {
-	return Yggdrasil::Local::Entity->get_all_properties( @_ );
+	return sort { $a->name() <=> $b->name() } Yggdrasil::Local::Entity->get_all_properties( @_ );
     }
 }
 
