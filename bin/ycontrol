@@ -822,6 +822,7 @@ sub relation_info {
     my $rel = $y->get_relation( $label );
     print $status->message(), "\n" and return unless $status->OK();
 
+    print "$label\n";
     my ($e1o, $e2o) = $rel->entities();
     my @pairs = $rel->participants();
     
@@ -829,8 +830,7 @@ sub relation_info {
 	print "Participants:\n";
 	for my $p (@pairs) {
 	    my ($li, $ri) = @$p;
-	    print join ", ", %$li, "\n";
-	    printf "  %20s <-> %20s\n", $li->id(), $ri->id();
+	    printf "  %20s <-> %-20s\n", $li->id(), $ri->id();
 	}
     }
     
