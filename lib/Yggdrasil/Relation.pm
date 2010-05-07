@@ -44,4 +44,21 @@ sub get_all {
     }
 }
 
+sub entities {
+    my $self = shift;
+
+    return ( $self->{lval}, $self->{rval} );
+}
+
+sub label {
+    my $self = shift;
+
+    return $self->{label};
+}
+
+sub id {
+    my $self = shift;    
+    return $self->{_id};
+}
+
 1;

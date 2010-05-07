@@ -47,7 +47,7 @@ sub get {
     my %param = @_; 
     
     my $status = $param{yggdrasil}->get_status();
-    my $ref = $self->storage()->fetch( "MetaRelation" => { return => [qw/id lval rval start stop/],
+    my $ref = $self->storage()->fetch( "MetaRelation" => { return => [qw/id label lval rval start stop/],
 							   where  => [ 'label' => $param{label} ] },
 				     );
 
@@ -98,11 +98,6 @@ sub get_all {
     
 }
 
-sub id {
-    my $self = shift;    
-    return $self->{_id};
-}
-
 sub _get_real_val {
     my $self  = shift;
     my $side  = shift;
@@ -151,18 +146,6 @@ sub participants {
     }
 
     return @participants;
-}
-
-sub entities {
-    my $self = shift;
-
-    return ( $self->{lval}, $self->{rval} );
-}
-
-sub label {
-    my $self = shift;
-
-    return $self->{label};
 }
 
 sub link :method {

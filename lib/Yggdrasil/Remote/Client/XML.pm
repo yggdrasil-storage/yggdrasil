@@ -161,6 +161,11 @@ sub expire_relation {
     return $self->_expire( 'relation', relationid => $id );    
 }
 
+sub relation_participants {
+    my ($self, $id) = @_;
+    return $self->_get( 'relation_participants', relationid => $id );
+}
+
 # Instance interface.  Interestingly enough, instances aren't defined,
 # only created.
 sub get_instance {
@@ -360,8 +365,6 @@ sub _get_reply {
 	$reply_node = 'relation';
     } elsif ($reply_node eq 'property_meta') {
 	$reply_node = 'value';
-    } elsif ($reply_node eq '') {
-	$reply_node = 'property';
     } elsif ($reply_node eq 'roles_of') {
 	$reply_node = 'role';
     } elsif ($reply_node eq 'members') {
@@ -374,6 +377,8 @@ sub _get_reply {
 	$reply_node = 'value';
     } elsif ($reply_node eq 'property_types') {
 	$reply_node = 'value';
+    } elsif ($reply_node eq 'relation_participants') {
+	$reply_node = 'hash';
     } elsif ($reply_node eq 'addremove_user') {
 	$reply_node = 'value';
     }
