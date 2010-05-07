@@ -13,6 +13,7 @@ use Fcntl qw|:mode|;
 our $ROOT_DIR = File::Spec->rootdir();
 our $CFG_DIR  = 'yggdrasil';
 
+our $ROOT    = File::Spec->catdir( '/etc', $CFG_DIR );
 our $GLOBAL  = File::Spec->catdir( $ROOT_DIR, 'etc', $CFG_DIR );
 our $LOCAL   = File::Spec->catdir( ($ENV{HOME} || (getpwuid($>))[7]), 
 				   '.'.$CFG_DIR );
@@ -44,7 +45,7 @@ sub _init {
     my $self = shift;
 
     # --- Parse global config first, then user defined
-    foreach my $path ( $GLOBAL, $LOCAL ) {
+    foreach my $path ( $ROOT, $GLOBAL, $LOCAL ) {
 	$self->_parse_all_configuration( $path );
     }
 
