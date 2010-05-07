@@ -77,6 +77,8 @@ sub _parse_all_configuration {
 	my $mode = (stat( $fqp ))[2];
 
 	my $config = $self->_parse( $fqp );
+	return unless $config;
+
 	if ($config->get( 'authpass' ) || $config->get( 'enginepass' )) {
 	    warn "Warning, label '$file' is group readable and contains a password.\n"
 	      if ($mode & S_IRGRP) >> 3;
