@@ -3,22 +3,32 @@
 use strict;
 use warnings;
 
+BEGIN { our $VERSION = '0.03' };
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
 use DBI;
+use Yggdrasil::Common::CommandLine;
+use Yggdrasil::Common::Config;
 
-my $db   = $ENV{YGG_DB};
-my $host = $ENV{YGG_HOST};
-my $port = $ENV{YGG_PORT};
-my $user = $ENV{YGG_USER};
-my $pass = $ENV{YGG_PASSWORD};
-my $engine = $ENV{YGG_ENGINE};
+my $cmdline = Yggdrasil::Common::CommandLine->new();
+my $label   = $cmdline->get('label') || 'default';
 
-unless ($port) {
-    if ($engine eq 'mysql') {
-	$port = 3306;	
-    } elsif ($engine eq 'Pg') {
-	$port = 5432;
-    }
+my $c = Yggdrasil::Common::Config->new();
+my $config = $c->get($label);
+
+unless ($config) {
+    $config = $c->get('ENV');
+    die "No such label as $label and falling back to ENV failed\n"
+	unless $config->get( 'engineuser' );
 }
+
+my ($user, $pass, $host, $port, $db, $engine) =
+  ($config->get( 'engineuser' ), $config->get( 'enginepassword' ), $config->get( 'enginehost' ),
+   $config->get( 'engineport' ), $config->get( 'enginedb' ), $config->get( 'enginetype' ));
+
+
 
 my $dbh = DBI->connect( "DBI:$engine:database=$db;host=$host;port=$port", $user, $pass );
 unless( $dbh ) {
