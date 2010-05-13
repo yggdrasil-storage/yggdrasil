@@ -96,6 +96,15 @@ sub new {
     }
 }
 
+sub debug {
+    my $self = shift;
+    my %params = @_;
+
+    for my $key ( keys %params ) {
+	$self->{_debug}->{$key} = $params{$key};
+    }
+}
+
 sub _set_default_user {
     my $self = shift;
     my $user = shift;
