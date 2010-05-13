@@ -99,8 +99,8 @@ sub define {
 		      nomap    => 1,
 		      hints    => {
 				   relationid => { index => 1, foreign => 'MetaRelation', key => 1 },
-				   lval => { foreign => 'Instances', key => 1 },
-				   rval => { foreign => 'Instances', key => 1 },
+				   lval => { index => 1, foreign => 'Instances', key => 1 },
+				   rval => { index => 1, foreign => 'Instances', key => 1 },
 				  },
 		      authschema => 1,
 		      auth => {
