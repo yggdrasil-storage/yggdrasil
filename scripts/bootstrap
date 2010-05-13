@@ -3,36 +3,50 @@
 use strict;
 use warnings;
 
+BEGIN { our $VERSION = '0.03' };
+
 use FindBin qw($Bin);
-use lib qq($Bin/test-parts);
 use lib qq($Bin/../lib);
 
-use Preamble qw|getopts status status_die|;
 use Yggdrasil;
+use Yggdrasil::Common::CommandLine;
+use Yggdrasil::Common::Config;
 
-my $opts = getopts();
-$opts->{bootstrap} = 1;
+my $cmdline = Yggdrasil::Common::CommandLine->new();
+my $label   = $cmdline->get('label') || 'default';
 
-my $ygg = new Yggdrasil( %$opts );
-my $status = $ygg->get_status();
+my $c = Yggdrasil::Common::Config->new();
+my $config = $c->get($label);
 
-_die( "Unable to load Yggdrasil" ) unless $status->OK();
+unless ($config) {
+    $config = $c->get('ENV');
+    die "No such label as $label and falling back to ENV failed\n"
+	unless $config->get( 'engineuser' );
+}
 
-my $connect = $ygg->connect( %$opts );
-_die( "Unable to connect to Yggdrasil" ) unless $status->OK();
+my ($dbuser, $password, $host, $port, $db, $engine) =
+  ($config->get( 'engineuser' ), $config->get( 'enginepassword' ), $config->get( 'enginehost' ),
+   $config->get( 'engineport' ), $config->get( 'enginedb' ), $config->get( 'enginetype' ));
 
-my $bootstrap = $ygg->bootstrap( terjekv => 'flappa', davidra => 'bah' );
-_die( "Unable to bootstrap" ) unless $status->OK();
+my $y = new Yggdrasil();
+my $status = $y->get_status();
+
+$y->connect( 
+	    user      => $dbuser,
+	    password  => $password,
+	    host      => $host,
+	    port      => $port,
+	    db        => $db,
+	    engine    => $engine,
+	   );
+
+die $status->message() unless $status->OK();
+
+my $bootstrap = $y->bootstrap( terjekv => 'flappa', davidra => 'bah' );
+die $status->message() unless $status->OK();
 
 print "Yggdrasil is now bootstrapped with the following users:\n";
 printf "%20s | %s\n", 'Username', 'Password';
 for my $u (keys %{$bootstrap}) {
     printf "%20s | %s\n", $u, $bootstrap->{$u};
-}
-
-sub _die {
-    my $msg = shift;
-
-    print "$msg: ", join ", ", $status->status(), $status->english(), "<" . $status->message() . ">\n";
-    exit;
 }

@@ -60,11 +60,7 @@ sub new {
 	}
 	
 	my $storage = $engine_class->new(@_);
-	if ($data{bootstrap}) {
-	    $storage->_set_bootstrap_user( $storage );
-	} else {
-	    $storage->_set_default_user("nobody");
-	}
+	$storage->_set_default_user("nobody");
 
 	$storage->{transaction} = $TRANSACTION;
 	$storage->{type} = new Storage::Type();
@@ -115,7 +111,6 @@ sub _set_default_user {
 
 sub _set_bootstrap_user {
     my $self = shift;
-    my $user = shift;
 
     my $u = Storage::Auth::User->get_bootstrap( $self );
     $self->{user} = $u;
@@ -137,6 +132,7 @@ sub bootstrap {
     my %users = @_;
 
     my $status = $self->{status};
+    $self->_set_bootstrap_user();
 
     # Create main infrastructure
     $self->{structure}->bootstrap();
@@ -1060,7 +1056,7 @@ sub set_auth {
 					 authtable => $authschema,
 					 type      => $action,
 					 bindings  => $bindings,
-					 committer => $self->{bootstrap}?'bootstrap':$self->{user}->id(),
+					 committer => $self->_is_bootstrapping()?'bootstrap':$self->{user}->id(),
 			     } );
 }
 
