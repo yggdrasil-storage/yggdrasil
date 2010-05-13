@@ -428,7 +428,6 @@ sub fetch_related {
 
   # FIX: relative can either be an Y::E object or the name of an Entity
   #      for now, only objects
-
   my $source = $self->{entity};
   my $paths = $self->_fetch_related( $source->{_id}, $relative->{_id}, undef, undef, $start, $stop );
 
@@ -444,31 +443,33 @@ sub fetch_related {
       };
 
       my $first = shift @$path;
-      $alias = $alias_generator->();
-      push( @schema, Relations => {
-	  where => [ lval => $self->{_id},
-		     rval => $self->{_id} ], 
-	  bind => "or",
-	  alias => $alias } );
-      
+      my @id = ( $self->{_id} );
+      my $res;
       foreach my $step ( @$path ) {
-	  $prev_alias = $alias;
-	  $alias = $alias_generator->();
-	  push( @schema, Relations => { where => [ lval => \qq<$prev_alias.lval>,
-						   lval => \qq<$prev_alias.rval>,
-						   rval => \qq<$prev_alias.lval>, 
-						   rval => \qq<$prev_alias.rval> ], 
+	  my $alias = $alias_generator->();
+	  my @schema = ( Relations => {
+				       where => [ lval => \@id,
+						  rval => \@id ], 
+				       bind => "or" } );
+	  
+	  push( @schema, Relations => { where => [ lval => \qq<Relations.lval>,
+						   lval => \qq<Relations.rval>,
+						   rval => \qq<Relations.lval>, 
+						   rval => \qq<Relations.rval> ], 
 					bind => "or", alias => $alias } );
+
+	  push(@schema,
+	       Instances => { return => [ qw/id visual_id/ ], 
+			      where => [ id     => \qq<$alias.lval>,
+					 id     => \qq<$alias.rval> ],
+			      bind => "or" },
+	       Instances => { where => [ entity => $step ] } );
+
+	  $res = $self->storage()->fetch( @schema, { start => $start, stop => $stop } );
+	  @id = map { $_->{id} } @$res;
+	  last unless @id;
       }
 
-      push(@schema,
-	   Instances => { return => "visual_id", 
-			 where => [ id     => \qq<$alias.lval>,
-				    id     => \qq<$alias.rval> ],
-			 bind => "or" },
-	   Instances => { where => [ entity => $path->[-1] ] } );
-
-      my $res = $self->storage()->fetch( @schema, { start => $start, stop => $stop } );
 
       foreach my $r ( uniq(map { $_->{visual_id} } @$res) ) {
 	  my $obj = $relative->fetch( $r );
