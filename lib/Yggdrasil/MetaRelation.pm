@@ -107,16 +107,20 @@ sub define {
 			       # Create a new link.
 			       create => [
 					  'Instances:Auth' => {
-							       id  => \qq<lval>,
-							       'm' => 1,
+							       where => [ id  => \qq<lval>,
+									  'm' => 1,
+									],
 							      },
 					  'Instances:Auth' => {
-							       id  => \qq<rval>,
-							       'm' => 1,
+							       where => [ id  => \qq<rval>,
+									  'm' => 1,
+									  ],
 							      },
-					  'MetaRelation:Auth' => { 
-								  id => \qq<relationid>,
-								  w  => 1,
+					  'MetaRelation:Auth' => {
+								  where => [ 
+									    id => \qq<relationid>,
+									    w  => 1,
+									   ],
 								 },
 					 ],
 			       # Expire a link.  Oddly similar to create (above).
