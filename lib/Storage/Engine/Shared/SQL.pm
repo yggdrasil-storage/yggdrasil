@@ -47,8 +47,9 @@ sub _define {
     for my $fieldname (keys %$hints) {
 	my $field = $hints->{$fieldname};
 	$keys{$fieldname}++ if $field->{key};
+
+	push @indexes, $fieldname if $field->{index}; # && (keys %keys > 1);
 	
-	push @indexes, $fieldname if $field->{index} && ! $keys{$fieldname};
 	# FIXME: Foregin keys isn't supported as of yet.  The issue is
 	# MetaEntity and its friends requiring the key to be both ID
 	# and START, but we can't make the foreign key contain both
