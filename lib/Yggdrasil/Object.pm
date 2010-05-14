@@ -29,7 +29,7 @@ sub yggdrasil {
     my $self = shift;
 
     unless( ref $self ) {
-	Yggdrasil::fatal( "\$self not ref ($self)\n" );
+	Yggdrasil::fatal( "\$self is not a reference ($self)" );
     }
     return $self->{yggdrasil};
 }
