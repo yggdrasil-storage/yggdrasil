@@ -239,8 +239,10 @@ sub get_instance {
     my $entity = shift;
     my $instance = shift;
 
-    $entity = $self->get_entity( $entity ) unless ref $entity;
-    return unless $self->get_status()->OK();
+    unless (ref $entity) {
+	$entity = $self->get_entity( $entity );
+	return unless $self->get_status()->OK();
+    }
     
     return Yggdrasil::Instance->fetch(
 				      yggdrasil => $self,
