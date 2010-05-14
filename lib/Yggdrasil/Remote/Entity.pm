@@ -74,4 +74,16 @@ sub properties {
 				       );
 }
 
+sub create {
+    my $self = shift;
+    my $id   = shift;
+    
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					'Yggdrasil::Remote::Instance',
+					$self->storage()->{protocol}->create_instance( $self->name(), $id ),
+				       );
+    
+}
+
 1;
