@@ -5,6 +5,21 @@ use warnings;
 
 use base qw(Yggdrasil::Relation);
 
+# FIXME: Constraints and such.
+sub define {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    my %params = @_;
+    my ($lval, $rval) = @{$params{entities}};
+
+    return Yggdrasil::Object::objectify(
+					$self->yggdrasil(),
+					__PACKAGE__,
+					$self->storage()->{protocol}->define_relation( $params{label}, $lval, $rval ),
+				       );
+    
+}
+
 sub get {
     my $class = shift;
     my $self = $class->SUPER::new(@_);

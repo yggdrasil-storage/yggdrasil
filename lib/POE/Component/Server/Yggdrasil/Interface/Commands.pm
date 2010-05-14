@@ -12,6 +12,7 @@ sub new {
     my $self = {	
 		define_entity    => sub { _define_entity( $y, @_ ) },
 		define_property  => sub { _define_property( $y, @_ ) },
+		define_relation  => sub { _define_relation( $y, @_ ) },
 		define_role      => sub { _define_role( $y, @_ ) },
 
 		create_instance  => sub { _create_instance( $y, @_ ) },
@@ -75,6 +76,19 @@ sub _define_entity {
     my %params = @_;
     
     return $ygg->define_entity( $params{entityid} );    
+}
+
+sub _define_relation {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $lval = $ygg->get_entity( $params{lval} );
+    return unless $lval;
+
+    my $rval = $ygg->get_entity( $params{rval} );
+    return unless $rval;
+
+    return $ygg->define_relation( $lval, $rval, @_ );
 }
 
 sub _define_property {

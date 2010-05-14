@@ -152,8 +152,12 @@ sub get_relation {
 }
 
 sub define_relation {
-    my ($self, $id) = @_;
-    return $self->_define( 'relation', relationid => $id );    
+    my ($self, $id, $lval, $rval) = @_;
+
+    my @idlist = ();
+    @idlist = ( 'relationid' => $id ) if $id;
+    
+    return $self->_define( 'relation', @idlist, lval => $lval->name(), rval => $rval->name() );
 }
 
 sub expire_relation {
