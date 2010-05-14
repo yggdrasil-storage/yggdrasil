@@ -15,7 +15,8 @@ sub define {
     return Yggdrasil::Object::objectify(
 					$self->yggdrasil(),
 					__PACKAGE__,
-					$self->storage()->{protocol}->define_relation( $params{label}, $lval, $rval ),
+					$self->storage()->{protocol}->define_relation( $params{label},
+										       $lval->name(), $rval->name() ),
 				       );
     
 }
@@ -25,10 +26,18 @@ sub get {
     my $self = $class->SUPER::new(@_);
     my %params = @_;
 
-    return Yggdrasil::Object::objectify(
+    my $rel = $self->storage()->{protocol}->get_relation( $params{label} );
+    return unless $rel;
+    
+    $rel->{lval} = $self->yggdrasil()->get_entity( $rel->{lval} );
+    return unless $rel->{lval};
+    $rel->{rval} = $self->yggdrasil()->get_entity( $rel->{rval} );
+    return unless $rel->{rval};
+    
+    return Yggdrasil::Object::objectify(					
 					$self->yggdrasil(),
 					__PACKAGE__,
-					$self->storage()->{protocol}->get_relation( $params{label} ),
+					$rel,
 				       );
 }
 
@@ -56,6 +65,21 @@ sub participants {
 	push @ret, [ $lval, $rval ];
     }
     return @ret;    
+}
+
+sub link :method {
+  my $self = shift;
+  my $lval = shift;
+  my $rval = shift;
+
+  my $label = $self->{label};
+
+  return Yggdrasil::Object::objectify(
+				      $self->yggdrasil(),
+				      __PACKAGE__,
+				      $self->storage()->{protocol}->relation_bind( $label,
+										   $lval->name(), $rval->name() ),
+				     );
 }
 
 1;

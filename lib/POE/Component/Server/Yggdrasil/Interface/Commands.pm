@@ -15,6 +15,8 @@ sub new {
 		define_relation  => sub { _define_relation( $y, @_ ) },
 		define_role      => sub { _define_role( $y, @_ ) },
 
+		define_relation_bind  => sub { _define_relation_bind( $y, @_ ) },
+
 		create_instance  => sub { _create_instance( $y, @_ ) },
 	       
 		get_entity       => sub { _get_entity( $y, @_ ) },
@@ -89,6 +91,25 @@ sub _define_relation {
     return unless $rval;
 
     return $ygg->define_relation( $lval, $rval, @_ );
+}
+
+sub _define_relation_bind {
+    my $ygg = shift;
+    my %params = @_;
+    
+    my $relation = $ygg->get_relation( $params{relationid} );
+    return unless $relation;
+
+    my $le = $relation->{lval};
+    my $re = $relation->{rval};
+
+    my $lval = $ygg->get_instance( $le, $params{lval} );
+    return unless $lval;
+
+    my $rval = $ygg->get_instance( $re, $params{rval} );
+    return unless $rval;
+   
+    return $relation->link( $lval, $rval, @_ );
 }
 
 sub _define_property {

@@ -157,7 +157,13 @@ sub define_relation {
     my @idlist = ();
     @idlist = ( 'relationid' => $id ) if $id;
     
-    return $self->_define( 'relation', @idlist, lval => $lval->name(), rval => $rval->name() );
+    return $self->_define( 'relation', @idlist, lval => $lval, rval => $rval );
+}
+
+sub relation_bind {
+    my ($self, $id, $lval, $rval) = @_;
+
+    return $self->_define( 'relation_bind', relationid => $id, lval => $lval, rval => $rval );
 }
 
 sub expire_relation {
@@ -385,6 +391,8 @@ sub _get_reply {
 	$reply_node = 'hash';
     } elsif ($reply_node eq 'addremove_user') {
 	$reply_node = 'value';
+    } elsif ($reply_node eq 'relation_bind') {
+	$reply_node = 'relation';
     }
 
     my @data = $reply->get( 'reply', $reply_node );
