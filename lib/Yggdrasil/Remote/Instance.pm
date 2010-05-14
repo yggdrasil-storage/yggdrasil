@@ -10,7 +10,9 @@ sub fetch {
     my $self = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $dataref = $self->storage()->{protocol}->get_instance( $params{entity}, $params{instance} );
+    my $e = ref $params{entity}?$params{entity}->name():$params{entity};
+
+    my $dataref = $self->storage()->{protocol}->get_instance( $e, $params{id} );
     return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );
 }
 
