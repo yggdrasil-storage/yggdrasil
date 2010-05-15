@@ -152,7 +152,7 @@ sub create {
 
     return Yggdrasil::Local::Instance->create( yggdrasil => $self,
 					       entity    => $self,
-					       id        => $name );
+					       instance  => $name );
 }
 
 # fetch instance
@@ -176,7 +176,7 @@ sub fetch {
 
     return Yggdrasil::Local::Instance->fetch( yggdrasil => $self,
 					      entity    => $self,
-					      id        => $name, 
+					      instance  => $name, 
 					      time      => [@time] );
 }
 
@@ -187,7 +187,7 @@ sub delete :method {
 
     return Yggdrasil::Local::Instance->delete( yggdrasil => $self,
 					       entity    => $self,
-					       id        => $name );
+					       instance  => $name );
 }
 
 # all instances

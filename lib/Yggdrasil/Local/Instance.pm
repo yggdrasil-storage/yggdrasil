@@ -12,7 +12,7 @@ sub create {
     my $self   = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $vid    = $self->{visual_id} = $params{id};
+    my $vid    = $self->{visual_id} = $params{instance};
     my $entity = $self->{entity}    = $params{entity};
 
     # Check if the instance already exists
@@ -54,7 +54,7 @@ sub fetch {
     my $self   = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $vid    = $self->{visual_id} = $params{id};
+    my $vid    = $self->{visual_id} = $params{instance};
     my $entity = $self->{entity}    = $params{entity};
     my $time   = $params{time} || [];
 
