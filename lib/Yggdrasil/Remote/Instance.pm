@@ -12,7 +12,7 @@ sub fetch {
 
     my $e = ref $params{entity}?$params{entity}->name():$params{entity};
 
-    my $dataref = $self->storage()->{protocol}->get_instance( $e, $params{id} );
+    my $dataref = $self->storage()->{protocol}->get_instance( $e, $params{instance} );
     return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );
 }
 

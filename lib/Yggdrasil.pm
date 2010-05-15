@@ -256,7 +256,7 @@ sub get_instance {
     return Yggdrasil::Instance->fetch(
 				      yggdrasil => $self,
 				      entity    => $entity,
-				      id        => $instance,
+				      instance  => $instance,
 				      @_
 				     );
 }
