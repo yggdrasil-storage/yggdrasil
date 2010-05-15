@@ -45,4 +45,19 @@ sub get_all {
     }
 }
 
+sub expire {
+    my $class  = shift;
+    my %params = @_;
+    
+    my $yggdrasil = $params{yggdrasil};
+    my $user;
+    if( $yggdrasil->is_remote() ) {
+	$user = Yggdrasil::Remote::User->get( @_ );	
+    } else {
+	$user = Yggdrasil::Local::User->get( @_ );	
+    }
+    return unless $yggdrasil->get_status()->OK();
+    return $user->expire();
+}
+
 1;

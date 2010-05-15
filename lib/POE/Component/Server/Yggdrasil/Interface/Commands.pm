@@ -26,6 +26,8 @@ sub new {
 		get_user         => sub { _get_user( $y, @_ ) },
 		get_role         => sub { _get_role( $y, @_ ) },
 
+		expire_user      => sub { _expire_user( $y, @_ ) },
+
 		get_all_users      => sub { _get_all_users( $y, @_ ) },
 		get_all_roles      => sub { _get_all_roles( $y, @_ ) },
 		get_all_entities   => sub { _get_all_entities( $y, @_ ) },
@@ -133,6 +135,13 @@ sub _define_role {
     my %params = @_;
     
     return $ygg->define_role( $params{roleid} );    
+}
+
+sub _expire_user {
+    my $ygg = shift;
+    my %params = @_;
+
+    return $ygg->expire_user( $params{userid} );    
 }
 
 sub _create_instance {
