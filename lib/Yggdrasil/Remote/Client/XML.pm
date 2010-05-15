@@ -101,7 +101,7 @@ sub _execute {
     my $xmlout = $self->xmlout( yggdrasil => { request => { @_ } } );
 
     my $stream = $self->{stream};
-#    print $xmlout, "\n";
+    print $xmlout, "\n" if $self->{_debug}->{protocol};
     print $stream $xmlout;
 }
 
@@ -210,6 +210,11 @@ sub set_value {
 sub get_user {
     my ($self, $uid) = @_;
     return $self->_get( 'user', userid => $uid );
+}
+
+sub expire_user {
+    my ($self, $uid) = @_;
+    return $self->_expire( 'user', userid => $uid );
 }
 
 sub get_user_value {

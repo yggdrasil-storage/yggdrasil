@@ -174,7 +174,7 @@ sub _sql {
 	$sqlinline =~ s/\?/"'$value'"/e;
     }
     $self->{transaction}->engine( $sqlinline );
-    print "$sqlinline\n" if $self->{_debug}->{"show_sql"};
+    print "$sqlinline\n" if $self->{_debug}->{protocol};
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
 	return;

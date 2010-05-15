@@ -215,6 +215,12 @@ my %cmd;
 		 _entity_property => \&property_info,
 	    },
 	},
+	expire => {
+	    _help => 'Expire a property, this will also expire all values of any instance using this property',
+	    _entity => {
+		_entity_property => \&property_expire,
+		},		   
+	    },
 	types => \&property_types,
     },
 
@@ -290,6 +296,13 @@ my %cmd;
 	current => \&tick_current,
     },
 
+    debug => {
+	_help => 'Turn on / off debugging options',
+	_DEBUGOPTIONS_ => {
+	    _DEBUGTOGGLE_ => \&debug,
+        },
+    },
+
     whoami     => \&whoami,
     uptime     => \&uptime,
     protocols  => \&protocols,
@@ -299,6 +312,11 @@ my %cmd;
     exit       => sub { exit },
 );
 
+my %debug_switches;
+
+for my $switch ($y->debug_switches()) {
+    $debug_switches{$switch} = 0;
+} 
 
 my %cmd_handler = (
     _user => \&expand_user,
@@ -325,6 +343,8 @@ my %cmd_handler = (
     _TICK_         => sub { return ("<ticknumber>") },
     _DATE_         => sub { return ("<isodate>") },
     _BOOLEAN_      => sub { return qw/true false/ },
+    _DEBUGTOGGLE_  => sub { return $debug_switches{$_[1]}?'off':'on'; },
+    _DEBUGOPTIONS_ => sub { return keys %debug_switches },
     );
 
 my $prompt = " > ";
@@ -405,6 +425,25 @@ sub help {
 	$help = $help ? $top->{$key}->{_help} : '';
 
 	printf( "%-25s - %s\n", join(" ", $prefix, $key), $help );
+    }
+}
+
+sub debug {
+    my ($debug, $command, $switch) = @_;
+    
+    unless (exists $debug_switches{$command}) {
+	print "Unknown debug command, '$command'\n";
+	return;
+    }
+    
+    if ($switch =~ m/(true|on)/i) {
+	$y->storage()->debug( $command => 1 );
+	print "Toggled debug command '$command' on\n";
+	$debug_switches{$command} = 1;
+    } else {
+	$y->storage()->debug( $command => 0 );	
+	print "Toggled debug command '$command' off\n";
+	$debug_switches{$command} = 0;
     }
 }
 
@@ -523,10 +562,8 @@ sub user_create {
 sub user_delete {
     my($user_command, $delete_command, $uname) = @_;
 
-    my $uobj = $y->get_user( $uname );
-    print "'$uname' does not exist.\n" and return unless $uobj;
-
-    print "Not implemented\n";
+    $y->expire_user( $uname );
+    print $status->message(), "\n";
 }
 
 # Entity interface
@@ -657,7 +694,7 @@ sub instance_expire {
     my ($instance_command, $info_command, $entity, $instance) = @_;
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
-    
+
     my $iobj = $eobj->fetch( $instance );
     print "'$instance', no such instance in $entity.\n" and return unless $iobj;
 

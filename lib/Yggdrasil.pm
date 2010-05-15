@@ -47,6 +47,15 @@ sub version {
     return $VERSION;
 }
 
+sub debug_switches {
+    return qw/protocol/;
+}
+
+sub storage {
+    my $self = shift;
+    return $self->{storage};
+}
+
 sub new {
     my $class = shift;
     my $self  = bless {}, $class;
@@ -294,13 +303,18 @@ sub expire_instance {
     my $self     = shift;
     my $entity   = shift;
     my $instance = shift;
+    
+    unless (ref $entity) {
+	$entity = $self->get_entity( $entity );
+	return unless $self->get_status()->OK();
+    }
 
     return Yggdrasil::Instance->expire(
-					 yggdrasil => $self,
-					 entity    => $entity,
-					 instance  => $instance,
-					 @_
-					);
+				       yggdrasil => $self,
+				       entity    => $entity,
+				       instance  => $instance,
+				       @_
+				      );
 }
 
 sub expire_relation {
