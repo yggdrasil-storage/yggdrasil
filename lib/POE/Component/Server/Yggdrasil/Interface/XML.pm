@@ -33,11 +33,19 @@ sub xmlify {
     $data = [ $data ] unless ref $data eq 'ARRAY';
 
     for my $entry (@$data) {
-	return $self->generate_status_reply( $requestid, 500, "No data passed to the XML backend" )
-	  unless $entry;
-	my ($key, $val) = $self->_create_xml_chunk( $entry );
+	my ($key, $val);
+	if (! defined $entry) {
+	    return $self->generate_status_reply( $requestid,
+						 $status->code(),
+						 "No data passed to the XML backend of the server" )
+	      if $status->OK();	    
+	    ($key, $val) = $self->_create_xml_chunk( 0 );
+	} else {
+	    ($key, $val) = $self->_create_xml_chunk( $entry );	    
+	}
+	
 	return $self->generate_status_reply( $requestid, 406, "Unknown data type ($entry) passed to XML backend" )
-	  unless $val;
+	  unless defined $val;
 	push @{$data{$key}}, $val;
     }
     
@@ -49,7 +57,7 @@ sub xmlify {
 sub _create_xml_chunk {
     my $self = shift;
     my $data = shift;
-    
+
     if (ref $data) {
 	if (ref $data eq 'HASH') {
 	    return $self->_hash_xml( $data );	    
@@ -71,7 +79,7 @@ sub _create_xml_chunk {
 	    # Unknown data reference, that's not good.
 	    return undef;
 	}
-    } elsif ($data) {
+    } elsif (defined $data) {
 	return $self->_scalar_xml( $data );	
     }
     return undef;
