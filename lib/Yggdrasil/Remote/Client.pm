@@ -51,7 +51,7 @@ sub login {
 
     my $con = $self->{connection};
     print $con "username: $params{username}\n";
-    print $con "password: $params{password}\n";    
+    print $con "password: $params{password}\n";
     $self->_parse_client_line_reply( $con );
 
     if ($status->OK()) {
@@ -94,6 +94,15 @@ sub enable_protocol {
     } else {
 	$status->set( 400, "No protocol '$protocol_name' defined, unable to load" );
 	return undef;
+    }
+}
+
+sub debug {
+    my $self = shift;
+    my %params = @_;
+
+    for my $key ( keys %params ) {
+	$self->{protocol}->{_debug}->{$key} = $params{$key};
     }
 }
 
