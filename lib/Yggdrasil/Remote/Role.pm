@@ -59,6 +59,11 @@ sub rolename {
     return $self->id();
 }
 
+sub name {
+    my $self = shift;
+    return $self->id();    
+}
+
 sub id {
     my $self = shift;
     return $self->{name};
