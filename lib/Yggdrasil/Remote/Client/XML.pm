@@ -362,7 +362,7 @@ sub _get_reply {
     my $reply_node = shift;
     
     my $reply = $self->parser()->read_document();
-#    $reply->dump();
+    $reply->dump() if $self->{_debug}->{protocol};
     my $s = $self->_get_reply_status( $reply );
     return unless $s->OK();
 

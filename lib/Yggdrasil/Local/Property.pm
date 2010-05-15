@@ -146,8 +146,11 @@ sub objectify {
     my $obj = new Yggdrasil::Local::Property( name      => $params{name},
 					      entity    => $params{entity},
 					      yggdrasil => $params{yggdrasil} );
-    $obj->{name} = $params{name};
+    $obj->{name}   = $params{name};
     $obj->{entity} = $params{entity};
+    $obj->{_id}    = $params{id};
+    $obj->{start}  = $params{start};
+    $obj->{stop}   = $params{stop};
     return $obj;
 }
 
@@ -204,6 +207,7 @@ sub get {
     if ($prop) {
 	$self->{name}   = $propname;
 	$self->{entity} = $entityobj;
+	$self->{_id}    = $prop->{id};
 	$self->{_start} = $prop->{start};
 	$self->{_stop}  = $prop->{stop};
 	$status->set( 200 );
@@ -214,8 +218,18 @@ sub get {
     }
 }
 
-sub undefine {
+sub expire {
+    my $self = shift;
+    my $storage = $self->storage();
 
+    # You might not have permission to do this, can fails now either way.
+#    for my $instance ($self->{entity}->instances()) {
+#	$storage->expire( $self->{entity}->name() . ':' . $self->name(), id => $self->{_id} );
+#    }
+    
+    $storage->expire( 'MetaProperty', id => $self->{_id} );
+    return 1 if $self->get_status()->OK();
+    return;
 }
 
 sub null {

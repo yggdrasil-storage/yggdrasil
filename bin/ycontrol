@@ -193,6 +193,10 @@ my %cmd;
 	    _help   => "Create new entity",
 	    _ENTITYNAME_ => \&entity_create,
 	},
+	expire => {
+	    _help   => "Expire an entity, its properties and its instances.",
+	    _entity => \&entity_expire,
+	},
     },
 
     property => {
@@ -624,6 +628,19 @@ sub entity_create {
     }
 }
 
+sub entity_expire {
+    my($entity_command, $expire_command, $entity) = @_;
+    
+    my $e = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $e;
+    $e->expire();
+
+    if( $y->get_status()->OK() ) {
+	print "'$entity' expired.\n";
+    } else {
+	print $y->get_status()->message, "\n";
+    }
+}
 
 # Property interface
 sub property_create {
@@ -659,6 +676,19 @@ sub property_info {
     printf "%-15s - %s\n%-15s - %s\n", 'Type', lc $pobj->type(), 'Null legal', $pobj->null()?'TRUE':'FALSE';
     
     &display_tick( $pobj->start() );
+}
+
+sub property_expire {
+    my($property_command, $info_command, $entity, $property) = @_;
+
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+    
+    my $pobj = $eobj->get_property( $property );
+    print "'$property', no such property in '$entity'.\n" and return unless $pobj;
+    
+    $pobj->expire();
+    print $status->message(), "\n";
 }
 
 sub property_types {

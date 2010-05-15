@@ -28,6 +28,8 @@ sub new {
 
 		expire_user      => sub { _expire_user( $y, @_ ) },
 		expire_instance  => sub { _expire_instance( $y, @_ ) },
+		expire_property  => sub { _expire_property( $y, @_ ) },
+		expire_entity    => sub { _expire_entity( $y, @_ ) },
 
 		get_all_users      => sub { _get_all_users( $y, @_ ) },
 		get_all_roles      => sub { _get_all_roles( $y, @_ ) },
@@ -155,6 +157,13 @@ sub _expire_instance {
     } 
 }
 
+sub _expire_entity {
+    my $ygg = shift;
+    my %params = @_;
+
+    return $ygg->expire_entity( $params{entityid} );
+}
+
 sub _create_instance {
     my $ygg = shift;
     my %params = @_;
@@ -180,6 +189,18 @@ sub _get_property {
     return unless defined $entity;
     return $entity->get_property( $params{propertyid} );
 }
+
+sub _expire_property {
+    my $ygg = shift;
+    my %params = @_;
+
+    my $entity = $ygg->get_entity( $params{entityid} );
+    return unless $entity;
+    my $property = $entity->get_property( $params{propertyid} );
+    return unless $property;
+    return $property->expire();
+}
+
 
 # Get all objects of a given type.
 sub _get_all_users {

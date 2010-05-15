@@ -44,4 +44,17 @@ sub get_all {
     }
 }
 
+sub expire {
+    my $class  = shift;
+    my %params = @_;
+
+    my $yggdrasil = $params{yggdrasil};
+    if( $yggdrasil->is_remote() ) {
+	return Yggdrasil::Remote::Property->get_all( @_ );
+    } else {
+	return Yggdrasil::Local::Property->get_all( @_ );
+    }
+}
+
+
 1;

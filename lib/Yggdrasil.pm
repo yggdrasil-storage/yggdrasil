@@ -325,10 +325,19 @@ sub expire_relation {
 }
 
 sub expire_property {
-    my $self = shift;
-    my $prop = shift;
+    my $self   = shift;
+    my $entity = shift;
+    my $prop   = shift;
 
-    return Yggdrasil::Property->expire( yggdrasil => $self, property => $prop,  @_ );
+    unless (ref $entity) {
+	$entity = $self->get_entity( $entity );
+	return unless $self->get_status()->OK();
+    }
+
+    my $property = $entity->get_property( $prop );
+    return unless $property;
+   
+    return $property->expire();
 }
 
 

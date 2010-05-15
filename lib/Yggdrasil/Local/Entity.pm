@@ -141,8 +141,35 @@ sub objectify {
     return $obj;
 }
 
-sub undefine {
+sub expire {
+    my $self = shift;
 
+    my $status  = $self->get_status();
+    my $storage = $self->storage();
+
+    # Do not expire UNIVERSAL.  That's bad.
+    if ($self->{_id} == 1) {
+	$status->set( 403, "Unable to expire the root entity, 'UNIVERSAL'");
+	return 0;
+    }
+    
+    # Expire all instances
+    for my $instance ($self->instances()) {
+	$instance->delete();
+    }
+
+    # Expire all properties
+    for my $instance ($self->instances()) {
+	$instance->expire();
+    }
+
+    $storage->expire( 'MetaEntity', id => $self->{_id} );
+
+    if ($status->OK()) {
+	return 1;
+    } else {
+	return 0;
+    }
 }
 
 # create instance
@@ -249,7 +276,12 @@ sub define_property {
 }
 
 sub undefine_property {
-
+    my $self = shift;
+    my $prop = shift;
+    
+    my $propobj = $self->get_property( $prop );
+    return $propobj->expire() if $propobj;    
+    return;
 }
 
 sub get_property {
@@ -274,7 +306,7 @@ sub property_exists {
 		where => [ entity => $e ],
 	    },
 	    MetaProperty => { 
-		return => [ 'property', 'start', 'stop' ],
+		return => [ 'id', 'property', 'start', 'stop' ],
 		where  => [ 
 		    property => $property,
 		    entity   => \q<MetaEntity.id>,
@@ -285,6 +317,7 @@ sub property_exists {
 
 	# The property name might be "0".
 	return { name  => join(":", $e, $property ),
+		 id    => $aref->[0]->{id},
 		 start => $aref->[0]->{start},
 		 stop  => $aref->[0]->{stop} } if defined $aref->[0]->{property};
     }
@@ -306,7 +339,7 @@ sub properties {
 		where => [ entity => $e ]
 	    },
 	    MetaProperty => {
-		return => 'property',
+		return => [ 'property', 'id', 'start', 'stop' ],
 		where  => [ entity => \q<MetaEntity.id> ]
 	    },
 
@@ -324,6 +357,9 @@ sub properties {
 	    
 	    push @rets, Yggdrasil::Local::Property::objectify( name      => $p->{property},
 							       yggdrasil => $self->{yggdrasil},
+							       id        => $p->{id},
+							       start     => $p->{start},
+							       stop      => $p->{stop},
 							       entity    => $eobj );
 	}
     }

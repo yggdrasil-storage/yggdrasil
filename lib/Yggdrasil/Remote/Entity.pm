@@ -23,6 +23,12 @@ sub get {
     return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );    
 }
 
+sub property_exists {
+    my $self = shift;
+
+    return $self->get_property( @_ );
+}
+
 sub fetch {
     my $self = shift;
     my $instance = shift;
@@ -32,12 +38,18 @@ sub fetch {
 					       instance  => $instance );
 }
 
+sub expire {
+    my $self = shift;
+
+    return $self->storage()->{protocol}->expire_entity( $self->name() );
+}
+
 sub get_property {
     my $self = shift;
     my $prop = shift;
 
     return Yggdrasil::Remote::Property->get( yggdrasil => $self->yggdrasil(),
-					     entity    => $self->{id},
+					     entity    => $self,
 					     property  => $prop,
 					     @_ );
 }

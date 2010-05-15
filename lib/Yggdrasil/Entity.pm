@@ -32,6 +32,21 @@ sub get {
     }
 }
 
+sub expire {
+    my $class = shift;
+    my %params = @_;
+
+    my $yggdrasil = $params{yggdrasil};
+    my $entity;
+    if( $yggdrasil->is_remote() ) {
+	$entity = Yggdrasil::Remote::Entity->get( @_ );
+    } else {
+	$entity = Yggdrasil::Local::Entity->get( @_ );
+    }
+    return unless $yggdrasil->get_status()->OK();
+    return $entity->expire();
+}
+
 sub get_all {
     my $class = shift;
     my %params = @_;
