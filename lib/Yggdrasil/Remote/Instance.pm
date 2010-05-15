@@ -13,7 +13,15 @@ sub fetch {
     my $e = ref $params{entity}?$params{entity}->name():$params{entity};
 
     my $dataref = $self->storage()->{protocol}->get_instance( $e, $params{instance} );
-    return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );
+    my $instance = Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );
+    return unless $instance;
+
+    if ($instance->{entity}) {
+	$instance->{entity} = Yggdrasil::Remote::Entity->get( yggdrasil => $self->yggdrasil(), 
+							      entity => $instance->{entity} );
+	return $instance;    
+    }
+    return;
 }
 
 sub get {
@@ -33,10 +41,16 @@ sub property {
     $key = $key->{id} if ref $key;
     
     if (@_ == 2) {
-	return $self->storage()->{protocol}->set_value( $self->{entity}, $key, $self->{id}, $val );
+	return $self->storage()->{protocol}->set_value( $self->{entity}->name(), $key, $self->{id}, $val );
     } else {
-	return $self->storage()->{protocol}->get_value( $self->{entity}, $key, $self->{id} );
+	return $self->storage()->{protocol}->get_value( $self->{entity}->name(), $key, $self->{id} );
     }
+}
+
+sub delete :method {
+    my $self = shift;
+    
+    return $self->storage()->{protocol}->expire_instance( $self->{entity}->name(), $self->{id} );
 }
 
 sub name {
