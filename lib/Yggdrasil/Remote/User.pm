@@ -31,6 +31,9 @@ sub get_all {
 
 sub expire {
     my $self = shift;
+    my %params = @_;
+
+    $self->storage()->{protocol}->expire_user( $self->id() );
 }
 
 sub _setter_getter {
@@ -47,7 +50,7 @@ sub _setter_getter {
 
 # Instance-like interface.
 sub property {
-    my ($self, $key, $value) = @_;
+    my ($self, $key) = (shift, shift);
     
     my $status = $self->get_status();
     my %accepted_properties = (
@@ -61,36 +64,53 @@ sub property {
 	$status->set( 404, "Users have no property '$key'" );
 	return;
     }
+
+    if (@_) {
+	return $self->_setter_getter( $key, $_[0] );
+    } else {
+	return $self->_setter_getter( $key );
+    }
     
-    return $self->_setter_getter( $key, $value );    
 }
 
 sub password {
     my $self = shift;
-    my $value = shift;
 
-    return $self->_setter_getter( password => $value );
+    if (@_) {
+	return $self->_setter_getter( 'password', $_[0] );
+    } else {
+	return $self->_setter_getter( 'password' );
+    }
 }
 
 sub session {
     my $self = shift;
-    my $value = shift;
 
-    return $self->_setter_getter( session => $value );
+    if (@_) {
+	return $self->_setter_getter( 'session', $_[0] );
+    } else {
+	return $self->_setter_getter( 'session' );
+    }
 }
 
 sub fullname {
     my $self = shift;
-    my $value = shift;
 
-    return $self->_setter_getter( fullname => $value );
+    if (@_) {
+	return $self->_setter_getter( 'fullname', $_[0] );
+    } else {
+	return $self->_setter_getter( 'fullname' );
+    }
 }
 
 sub cert {
     my $self = shift;
-    my $value = shift;
 
-    return $self->_setter_getter( cert => $value );
+    if (@_) {
+	return $self->_setter_getter( 'cert', $_[0] );
+    } else {
+	return $self->_setter_getter( 'cert' );
+    }
 }
  
 sub username {
