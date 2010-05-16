@@ -162,6 +162,13 @@ sub fullname {
 
 sub expire {
     my $self = shift;
+
+    # remove from all role
+    foreach my $role ( $self->member_of() ) {
+	$role->remove( $self );
+    }
+
+    # expire ourselves
     $self->{_storage}->expire(
 			      $self->{_storage}->get_structure( "authuser" ),
 			      id => $self->id(),
