@@ -14,7 +14,6 @@ sub new {
 		config        => 'config',
 		ticker        => 'ticker',
 		authschema    => 'authschema',
-		authaccess    => 'auth_access',
 		authuser      => 'auth_user',
 		authrole      => 'auth_role',
 		authmember    => 'auth_membership',
@@ -268,53 +267,10 @@ sub _bootstrap_hasauthschema {
 
 sub _bootstrap_user_auth {
     my $self = shift;
-    my $accessschema = $self->get( 'authaccess' );
     my $userschema   = $self->get( 'authuser' );
     my $roleschema   = $self->get( 'authrole' );
     my $memberschema = $self->get( 'authmember' );
     
-    $self->{_storage}->define(
-	$accessschema,
-	    nomap => 1,
-	    temporal => 1,
-	    fields => {
-		roleid => { type => 'INTEGER', null => 0 },
-	    },
-	    hints => {
-		roleid => { foreign => $roleschema, index => 1 },
-	    },
-	    authschema => 1,
-	    auth => {
-		create =>
-		    [
-		     ':Auth' => {
-			 where => [ roleid => \qq<$accessschema.roleid>,
-				    'm' => 1 ]
-		     }
-		    ],
-		fetch => 
-		    [
-		     ':Auth' => {
-			 where => [ roleid => \qq<$accessschema.roleid>,
-				    'r' => 1 ]
-		     }
-		    ],
-		update => 
-		    [
-		     ':Auth' => {
-			 where => [ roleid => \qq<$accessschema.roleid>,
-				    'w' => 1 ],
-		     }
-		    ],
-		expire => 
-		    [
-		     ':Auth' => {
-			 where => [ roleid => \qq<$accessschema.roleid>,
-				    'm' => 1 ],
-		     },
-		    ]
-	    }, );
-
     $self->{_storage}->define( $roleschema,
 			       nomap  => 1,
 			       temporal => 1,
@@ -350,10 +306,9 @@ sub _bootstrap_user_auth {
 					
 					expire =>
 					[
-					 ':Auth' => {
-						     where => [ id  => \qq<$roleschema.id>,
-								'm' => 1 ],
-						    },
+					 qq<$memberschema> => {
+							       where => [ roleid  => 1 ],
+							      },
 					],
 				       } );
 
@@ -392,11 +347,10 @@ sub _bootstrap_user_auth {
 					
 					expire =>
 					[
-					 ':Auth' => {
-						     where => [ id  => \qq<$userschema.id>,
-								'm' => 1 ],
-						    },
-					],
+					 qq<$memberschema> => {
+							       where => [ roleid => 1 ],
+							       }
+					 ],
 				       } );
 
     $self->{_storage}->define( $memberschema,

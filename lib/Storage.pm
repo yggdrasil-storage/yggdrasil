@@ -144,11 +144,6 @@ sub bootstrap {
 	$roles{$role} = $r;
     }
 
-    # Grant admin role access to users/roles
-    $self->store( $self->get_structure( 'authaccess' ),
-		  key => qw/roleid/, fields => { roleid => $roles{admin}->id() } );
-		  
-
     # create bootstrap and nobody, the order is relevant as bootstrap
     # is required to be ID1 and nobody is ID2.    
     my $nobody_role    = Storage::Auth::Role->define( $self, "nobody" );
