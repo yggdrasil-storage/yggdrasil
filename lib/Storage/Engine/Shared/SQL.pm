@@ -5,8 +5,6 @@ use warnings;
 
 use base 'Storage';
 
-# use Yggdrasil::Debug qw|debug_if debug_level|;
-
 # Define a structure, it is assumed that the Storage layer has called
 # _structure_exists() with the name of the structure to check its
 # existance before _define is called.  If _define is called, the
@@ -67,12 +65,10 @@ sub _define {
     $sql .= $self->_engine_post_create_details();
     $sql .= ";\n";
     
-#    $self->{logger}->debug( $sql );
     $self->_sql( $sql );
 
     for my $field (@indexes) {
 	my $indexsql = $self->_create_index_sql($schema, $field );
-	$self->{logger}->fatal( $indexsql );
 	$self->_sql( $indexsql );
     }
     
@@ -164,8 +160,6 @@ sub _sql {
 
     # Log + debugging.
     my $args_str = join(", ", map { defined()?$_:"NULL" } @attr);    
-#    $self->{logger}->debug( "$sql -> Args: [$args_str]" );
-#    debug_if( 5, "SQL: $sql -> Args: [$args_str]" );
 
     # Transaction information.
     my $sqlinline = $sql;
@@ -285,7 +279,6 @@ sub _fetch {
 #	print STDERR "$sql with [" . join(", ", map { defined()?$_:"NULL" } @params) . "]\n";
 #    }  
     
-#    $self->{logger}->debug( $sql, " with [", join(", ", map { defined()?$_:"NULL" } @params), "]" );
     $status->set( 200 );
     return $self->_sql( $sql, @params ); 
 }

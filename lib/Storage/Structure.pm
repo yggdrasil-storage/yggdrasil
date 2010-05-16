@@ -505,8 +505,7 @@ sub _initialize_config {
 	    $self->set( 'temporal', $value ) if lc $key eq 'temporalstruct' && $value && $value =~ /^Storage_/;
 
 	    if (lc $key eq 'mapper') {
-		my $logger = $self->{_storage}->{logger};
-		$logger->warn( "Ignoring request to use $mapper_name as the mapper, the Storage requires $value" )
+		warn( "Ignoring request to use $mapper_name as the mapper, the Storage requires $value\n" )
 		  if $mapper_name && $mapper_name ne $value;
 		my $mapper = $self->{_storage}->set_mapper( $value );
 		return undef unless $mapper;

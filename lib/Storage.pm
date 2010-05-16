@@ -72,7 +72,6 @@ sub new {
 
 	$storage->{status} = $status;
 	$storage->{mapper} = $data{mapper};
-	$storage->{logger} = Yggdrasil::get_logger( ref $storage );
 
 	if ($data{cache}) {
 	    if (ref $data{cache} eq 'HASH') {
@@ -231,7 +230,6 @@ sub define {
 	my $type = uc $fieldhash->{type};
 	if ($type eq 'SERIAL' && $fieldhash->{null}) {
 	    $fieldhash->{null} = 0;
-	    $self->{logger}->warn( "Serial fields cannot allow unset values, overriding request." );
 	}
 	$fieldhash->{type} = $self->_check_valid_type( $type );	
     }
@@ -287,7 +285,6 @@ sub define {
 
     if ($retval) {
 	unless ($data{nomap}) {
-	    $self->{logger}->warn( "Remapping $originalname to $schema." );
 	    $self->cache( 'mapperh2m', $originalname, $schema );
 	    $self->cache( 'mapperm2h', $schema, $originalname );
 	    $self->store( $self->get_structure( 'mapper' ), key => "humanname",

@@ -8,7 +8,6 @@ use Cwd qw(abs_path);
 use File::Basename;
 use File::Spec;
 use Time::Local;
-use Log::Log4perl qw(get_logger :levels :nowarn);
 use Carp;
 
 use Storage::Status;
@@ -25,8 +24,6 @@ use Yggdrasil::Role;
 
 use Yggdrasil::Local;
 use Yggdrasil::Remote;
-
-use Yggdrasil::Debug;
 
 our $VERSION = '0.11';
 
@@ -63,8 +60,6 @@ sub new {
 
     if ( ref $self eq __PACKAGE__ ) {
 	$self->{status} = new Storage::Status();
-	$self->_setup_logger( $params{logconfig} );
-	Yggdrasil::Debug->new( $params{debug} );
 	$self->{strict} = $params{strict} || 1;
 	$self->{status}->set( 200 );
     } else {
@@ -492,21 +487,6 @@ sub transaction_stack_clear {
   
 ###############################################################################
 # Helper functions
-sub _setup_logger {
-    my $self = shift;
-    
-    my $project_root = $self->_project_root() || ".";
-    my $logconfig = shift || "$project_root/etc/log4perl-debug";
-    
-    if( -e $logconfig ) {
-	Log::Log4perl->init( $logconfig );
-    } else {
-	# warn( "No working Log4perl configuration found in $logconfig." );
-    }
-
-    $self->{logger} = get_logger();
-}
-
 sub _project_root {
     my $self = shift;
 
