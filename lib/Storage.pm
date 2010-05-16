@@ -139,8 +139,7 @@ sub bootstrap {
     # Create default users and roles
     my %roles;
     for my $role ( qw/admin user/ ) {
-	my $r = Storage::Auth::Role->define( $self, $role );
-	$roles{$role} = $r;
+	$roles{$role} = Storage::Auth::Role->define( $self, $role );
     }
 
     # create bootstrap and nobody, the order is relevant as bootstrap
