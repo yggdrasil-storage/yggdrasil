@@ -36,7 +36,7 @@ sub xmlify {
 	my ($key, $val);
 	if (! defined $entry) {
 	    return $self->generate_status_reply( $requestid,
-						 $status->code(),
+						 $status->status(),
 						 "No data passed to the XML backend of the server" )
 	      if $status->OK();	    
 	    ($key, $val) = $self->_create_xml_chunk( 0 );
