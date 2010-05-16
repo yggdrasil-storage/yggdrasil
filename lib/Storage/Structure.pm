@@ -306,8 +306,9 @@ sub _bootstrap_user_auth {
 					
 					expire =>
 					[
-					 qq<$memberschema> => {
-							       where => [ roleid  => 1 ],
+					 ':Auth' => {
+						     where => [ id  => \qq<$roleschema.id>,
+								'm' => 1 ],
 							      },
 					],
 				       } );
@@ -347,9 +348,10 @@ sub _bootstrap_user_auth {
 					
 					expire =>
 					[
-					 qq<$memberschema> => {
-							       where => [ roleid => 1 ],
-							       }
+					 ':Auth' => {
+						     where => [ id  => \qq<$userschema.id>,
+								'm' => 1 ],
+						    },
 					 ],
 				       } );
 
@@ -401,6 +403,7 @@ sub _bootstrap_user_auth {
 sub _bootstrap_fields {
     my $self = shift;
     my $structhash = $self->internal( 'userfields' );
+    my $memberschema = $self->get( 'authmember' );
 
     for my $structure (keys %{$structhash}) {
 	for my $fieldname (keys %{$structhash->{$structure}}) {
@@ -428,44 +431,39 @@ sub _bootstrap_fields {
 							   },
 						 },
 				       hints  => { id => { foreign => $self->get( 'authuser' ), index => 1 } },
-# 				      auth => {
-# 					       create =>
-# 					       [
-# 						':Auth' => {
-# 							    where => [ id  => \qq<$schema.id>,
-# 								       'm' => 1 ],
-# 							   },						
-# 					       ],
-			   
-# 					       fetch => 
-# 					       [
-# 						':Auth' => {
-# 							    where => [ id => \qq<$schema.id>,
-# 								       r  => 1],
-# 							   },
-# 						$authrole => {
-# 							      where => 
-# 							      }
-# 									    },
+				       authschema => 1,
+				       auth => {
+						create =>
+						[
+						 qq<$memberschema> => {
+								       where => [ roleid => 1 ],
+								      }
+						],
 						
-# 					       ],
-			   
-# 					       update => 
-# 					       [
-# 						':Auth' => {
-# 							    where => [ id => \qq<$schema.id>,
-# 								       w  => 1 ],
-# 							   },
-# 					       ],
-					       
-# 					       expire =>
-# 					       [
-# 						':Auth' => {
-# 							    where => [ id  => \qq<$schema.id>,
-# 								       'm' => 1 ],
-# 							   },
-# 					       ],
-# 					      }
+						fetch => 
+						[
+						 ':Auth' => {
+							     where => [ id => \qq<$schema.id>,
+									r  => 1],
+							    },
+						],
+						
+						update => 
+						[
+						 ':Auth' => {
+							     where => [ id => \qq<$schema.id>,
+									w  => 1 ],
+							    },
+						],
+						
+						expire =>
+						[
+						 ':Auth' => {
+							     where => [ id  => \qq<$schema.id>,
+									'm' => 1 ],
+							    }
+						],
+					       }
 				     );
 	}
     }
