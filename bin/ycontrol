@@ -554,7 +554,8 @@ sub user_create {
     print "'$uname', already taken.\n" and return if $y->get_user( $uname );
 
     my $uobj = $y->define_user( $uname );
-    
+    print $status->message(), "\n" and return unless $status->OK();
+
     my $name = $term->readline(" Full name > ");
     print "'$name' is invalid.\n" and return unless defined $name;
     $uobj->fullname( $name );

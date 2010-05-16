@@ -30,7 +30,8 @@ sub define {
     my $uid = $storage->store( $storage->get_structure( 'authuser' ),
 			       key => qw/name/,
 			       fields => { name => $user } );
-
+    return unless $uid;
+    
     $storage->store( $storage->get_structure( 'authuser:password' ),
 		     key => qw/id/,
 		     fields => {
@@ -45,7 +46,6 @@ sub define {
     $nobody_role->grant( $storage->get_structure( 'authuser:password' ),
 			 'r', id => $uid );
 
-    return unless $uid;
     return $class->_new( $storage, $uid, $user );
 }
 
