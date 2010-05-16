@@ -509,7 +509,11 @@ sub user_password {
 	$display_pass = 1;
     }
     $user->password( $pass );
-    printf "New password for '$username' is %s.\n", $display_pass?"'$pass'":'active';
+    if( $status->OK() ) {
+	printf "New password for '$username' is %s.\n", $display_pass?"'$pass'":'active';
+    } else {
+	print $status->message(), "\n";
+    }
 }
 
 sub user_fullname {
@@ -520,9 +524,12 @@ sub user_fullname {
 
     my $name = $term->readline(" New full name for '$username' > ");
     print "'$name' is invalid.\n" and return unless defined $name;
-
     $user->fullname( $name );
-    print "New full name for '$username' is '$name'.\n";
+    if( $status->OK() ) {
+	print "New full name for '$username' is '$name'.\n";
+    } else {
+	print $status->message(), "\n";
+    }
 }
 
 sub user_role_add {

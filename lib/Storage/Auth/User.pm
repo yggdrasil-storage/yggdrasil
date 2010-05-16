@@ -202,6 +202,8 @@ sub _getter_setter {
 						 });
     } 
 
+    return unless $self->{_storage}->get_status()->OK();
+
     $r = $self->{_storage}->fetch( $structure => {
 						  return => 'value',
 						  where  => [ id => $self->id() ],
