@@ -79,11 +79,19 @@ sub instances {
 sub properties {
     my $self = shift;
     
-    return Yggdrasil::Object::objectify(
-					$self->yggdrasil(),
-					'Yggdrasil::Remote::Property',
-					$self->storage()->{protocol}->get_all_properties( $self->name() ),
-				       );
+    my @props = Yggdrasil::Object::objectify(
+					     $self->yggdrasil(),
+					     'Yggdrasil::Remote::Property',
+					     $self->storage()->{protocol}->get_all_properties( $self->name() ),
+					    );
+    for my $prop (@props) {
+	if ($prop->{entity} eq $self->name()) {
+	    $prop->{entity} = $self;
+	} else {
+	    $prop->{entity} = $self->yggdrasil()->get_entity( $prop->{entity} );
+	}
+    }
+    return @props;
 }
 
 sub create {
