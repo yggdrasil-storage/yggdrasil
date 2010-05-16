@@ -89,9 +89,9 @@ my %cmd;
 	    _user => \&user_create,
 	},
 
-	delete   => {
-	    _help => "Delete a user",
-	    _user => \&user_delete,
+	expire   => {
+	    _help => "Expire a user",
+	    _user => \&user_expire,
 	},
 
 	role => {
@@ -571,8 +571,8 @@ sub user_create {
     print "'$uname' created with password '$pass'.\n";
 }
 
-sub user_delete {
-    my($user_command, $delete_command, $uname) = @_;
+sub user_expire {
+    my($user_command, $expire_command, $uname) = @_;
 
     $y->expire_user( $uname );
     print $status->message(), "\n";
@@ -735,8 +735,8 @@ sub instance_expire {
 
     my $iobj = $eobj->fetch( $instance );
     print "'$instance', no such instance in $entity.\n" and return unless $iobj;
-
-    $iobj->delete();
+    
+    $iobj->expire();
     if ($status->OK()) {
 	print "Instance " . $iobj->id() . " in " . $eobj->name() . " has been expired\n";
     } else {

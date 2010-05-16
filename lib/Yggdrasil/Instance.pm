@@ -44,21 +44,6 @@ sub get_all {
     }
 }
 
-sub expire {
-    my $class  = shift;
-    my %params = @_;
-
-    my $yggdrasil = $params{yggdrasil};
-    my $instance;
-    if( $yggdrasil->is_remote() ) {
-	$instance = Yggdrasil::Remote::Instance->fetch( @_ );
-    } else {
-	$instance = Yggdrasil::Local::Instance->fetch( @_ );
-    }
-    return unless $yggdrasil->get_status()->OK();
-    return $instance->delete();
-}
-
 1;
 
 

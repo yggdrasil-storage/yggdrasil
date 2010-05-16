@@ -107,7 +107,7 @@ sub fetch {
 # multiple calls like the loop for properties?  We can only send one
 # return value back to userland... This should be a singular
 # transaction, right?  Rollback on failure?
-sub delete :method {
+sub expire {
     my $self = shift;
 
     my $storage = $self->storage();

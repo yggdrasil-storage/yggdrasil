@@ -304,12 +304,9 @@ sub expire_instance {
 	return unless $self->get_status()->OK();
     }
 
-    return Yggdrasil::Instance->expire(
-				       yggdrasil => $self,
-				       entity    => $entity,
-				       instance  => $instance,
-				       @_
-				      );
+    $instance = $entity->fetch( $instance );
+    return unless $self->get_status()->OK();
+    $instance->expire();
 }
 
 sub expire_relation {

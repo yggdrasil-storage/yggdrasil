@@ -17,9 +17,13 @@ sub fetch {
     return unless $instance;
 
     if ($instance->{entity}) {
-	$instance->{entity} = Yggdrasil::Remote::Entity->get( yggdrasil => $self->yggdrasil(), 
-							      entity => $instance->{entity} );
-	return $instance;    
+	if (ref $params{entity}) {
+	    $instance->{entity} = $params{entity};
+	} else {
+	    $instance->{entity} = Yggdrasil::Remote::Entity->get( yggdrasil => $self->yggdrasil(), 
+								  entity => $instance->{entity} );	    
+	}
+	return $instance;
     }
     return;
 }
@@ -32,6 +36,11 @@ sub get {
 sub set {
     my $self = shift;
     $self->property( @_ );
+}
+
+sub expire {
+    my $self  = shift;
+    return $self->storage()->{protocol}->expire_instance( $self->{entity}->name(), $self->name() );    
 }
 
 sub property {

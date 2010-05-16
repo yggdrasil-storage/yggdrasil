@@ -155,7 +155,7 @@ sub expire {
     
     # Expire all instances
     for my $instance ($self->instances()) {
-	$instance->delete();
+	$instance->expire();
     }
 
     # Expire all properties
@@ -205,16 +205,6 @@ sub fetch {
 					      entity    => $self,
 					      instance  => $name, 
 					      time      => [@time] );
-}
-
-# delete instance
-sub delete :method {
-    my $self = shift;
-    my $name = shift;
-
-    return Yggdrasil::Local::Instance->delete( yggdrasil => $self,
-					       entity    => $self,
-					       instance  => $name );
 }
 
 # all instances

@@ -168,11 +168,6 @@ sub expire {
 			     );
 }
 
-sub delete :method {
-    my $self = shift;
-    return $self->expire();
-}
-
 sub get_field {
     my $self = shift;
     return $self->_getter_setter( @_ );
