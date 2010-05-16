@@ -282,6 +282,7 @@ sub define {
     }
     
     $transaction->log( "Defined $originalname" );
+    $self->tick( 'define', $schema ) unless $schema eq $self->get_structure( 'ticker' );
     my $retval = $self->_define( $schema, %data );
 
     if ($retval) {
@@ -427,7 +428,7 @@ sub store {
     }
 
     # Tick
-    my $tick = $self->tick();
+    my $tick = $self->tick( $update?'update':'store', $real_schema );    
     unless( $self->_schema_is_temporal($real_schema) ) {
 	$params{fields}->{tick} = $tick;
     }
@@ -455,11 +456,17 @@ sub store {
 }
 
 sub tick {
-    my $self = shift;
+    my $self   = shift;
+    my $event  = shift;
+    my $schema = shift;
     my $c = $self->{user}->name();
 
-    my $schema = $self->_get_schema_name($self->get_structure( 'ticker' )) || $self->get_structure( 'ticker' );
-    return $self->_store( $schema, fields => { committer => $c } );
+    my $tickerschema = $self->_get_schema_name($self->get_structure( 'ticker' )) || $self->get_structure( 'ticker' );
+    return $self->_store( $tickerschema, fields => {
+						    committer => $c,
+						    event     => $event,
+						    target    => $schema,
+						   } );
 }
 
 # At this point we should be getting epochs to work with.
@@ -829,7 +836,7 @@ sub expire {
     }
 
     # Tick
-    my $tick = $self->tick();
+    my $tick = $self->tick( 'expire', $real_schema );
 
     # Do not test return values, just pass them back to the caller.
     $self->_expire( $real_schema, $tick, @_ );
@@ -1038,15 +1045,16 @@ sub set_auth {
     }
 
     my $bindings = $restrictions ? Storable::nfreeze( $restrictions ) : undef;
-    my $tick = $self->tick();
-    $self->_store( $self->{structure}->get( 'authschema' ), 
-			      key => [ qw/usertable authtable type/ ],
-			      fields => {
-					 usertable => $realschema,
-					 authtable => $authschema,
-					 type      => $action,
-					 bindings  => $bindings,
-					 tick      => $tick,
+    my $schemaname = $self->{structure}->get( 'authschema' );
+    my $tick = $self->tick( 'store', $schemaname );
+    $self->_store( $schemaname, 
+		   key => [ qw/usertable authtable type/ ],
+		   fields => {
+			      usertable => $realschema,
+			      authtable => $authschema,
+			      type      => $action,
+			      bindings  => $bindings,
+			      tick      => $tick,
 			     } );
 }
 

@@ -197,10 +197,13 @@ sub _bootstrap_ticker {
 			       fields => {
 					  id        => { type => 'SERIAL' },
 					  committer => { type => 'TEXT' },
+					  event     => { type => 'TEXT' },
+					  target    => { type => 'TEXT' },
 					  stamp     => { type => 'TIMESTAMP', 
 							 null => 0,
 							 default => "current_timestamp" },
 					 }, );
+    $self->{_storage}->tick( 'define', $self->get( 'ticker' ));
 }
 
 sub _initialize_filter {
