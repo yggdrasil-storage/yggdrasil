@@ -355,7 +355,7 @@ my $prompt = " > ";
 my @cmd_path = ();
 $attribs->{completion_function} = sub { completion(@_, \%cmd, \@cmd_path) };
 $attribs->{completer_quote_characters} = q<"'>;
-$attribs->{filename_quote_characters} = q< >;
+$attribs->{filename_quote_characters} = q( <->);
 
 while ( defined (my $input = $term->readline($prompt)) ) {
     chomp $input;
