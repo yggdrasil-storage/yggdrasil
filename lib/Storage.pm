@@ -247,8 +247,10 @@ sub define {
 	$data{hints}->{start}  = { foreign => $self->get_structure( 'ticker' ), key => 1 };
 	$data{hints}->{stop}   = { foreign => $self->get_structure( 'ticker' ) };
     } else {
-	# Add commiter field
-	$data{fields}->{committer} = { type => 'VARCHAR(255)', null => 0 };
+	# Add tick field unless we're dealing with the ticker schema.
+	unless ( $schema eq $self->get_structure( 'ticker' ) ) {
+	    $data{fields}->{tick} = { type => 'INTEGER', null => 0 };
+	}
     }
 
     for my $field (keys %{$data{fields}}) {
@@ -425,13 +427,9 @@ sub store {
     }
 
     # Tick
-    my $tick;
-    if( $self->_schema_is_temporal($real_schema) ) {
-	# tick when we commit changes to temporal tables
-	$tick = $self->tick();
-    } else {
-	# don't tick, but add committer instead
-	$params{fields}->{committer} = $uname;
+    my $tick = $self->tick();
+    unless( $self->_schema_is_temporal($real_schema) ) {
+	$params{fields}->{tick} = $tick;
     }
 
     # If we are updating, expire the old value
@@ -459,7 +457,7 @@ sub store {
 sub tick {
     my $self = shift;
     my $c = $self->{user}->name();
-    
+
     my $schema = $self->_get_schema_name($self->get_structure( 'ticker' )) || $self->get_structure( 'ticker' );
     return $self->_store( $schema, fields => { committer => $c } );
 }
@@ -1040,6 +1038,7 @@ sub set_auth {
     }
 
     my $bindings = $restrictions ? Storable::nfreeze( $restrictions ) : undef;
+    my $tick = $self->tick();
     $self->_store( $self->{structure}->get( 'authschema' ), 
 			      key => [ qw/usertable authtable type/ ],
 			      fields => {
@@ -1047,7 +1046,7 @@ sub set_auth {
 					 authtable => $authschema,
 					 type      => $action,
 					 bindings  => $bindings,
-					 committer => $self->_is_bootstrapping()?'bootstrap':$self->{user}->id(),
+					 tick      => $tick,
 			     } );
 }
 

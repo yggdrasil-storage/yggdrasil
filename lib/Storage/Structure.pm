@@ -47,10 +47,10 @@ sub new {
 sub bootstrap {
     my $self = shift;
 
+    $self->_bootstrap_ticker();
     $self->_bootstrap_config();
     $self->_bootstrap_filter();
     $self->_bootstrap_mapper();
-    $self->_bootstrap_ticker();
     $self->_bootstrap_temporal();
     $self->_bootstrap_auth();
     $self->_bootstrap_fields();
@@ -195,10 +195,11 @@ sub _bootstrap_ticker {
     $self->{_storage}->define( $self->get( 'ticker' ),
 			       nomap  => 1,
 			       fields => {
-					  id    => { type => 'SERIAL' },
-					  stamp => { type => 'TIMESTAMP', 
-						     null => 0,
-						     default => "current_timestamp" },
+					  id        => { type => 'SERIAL' },
+					  committer => { type => 'TEXT' },
+					  stamp     => { type => 'TIMESTAMP', 
+							 null => 0,
+							 default => "current_timestamp" },
 					 }, );
 }
 
