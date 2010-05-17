@@ -7,7 +7,7 @@ use base 'Storage::Engine::Shared::SQL';
 
 use DBI;
 
-our $VERSION = '0.15';
+our $VERSION = '0.1.5';
 
 our %TYPEMAP = (
 		DATE     => 'DATETIME',

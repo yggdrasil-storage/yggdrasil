@@ -25,7 +25,7 @@ use Yggdrasil::Role;
 use Yggdrasil::Local;
 use Yggdrasil::Remote;
 
-our $VERSION = '0.11';
+our $VERSION = '0.1.1';
 
 # $SIG{__DIE__} = sub {
 #     $Carp::CarpLevel = 1;

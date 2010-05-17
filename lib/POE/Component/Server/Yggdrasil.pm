@@ -18,7 +18,7 @@ use POE::Component::SSLify qw( Server_SSLify SSLify_Options );
 
 use POE::Component::Server::Yggdrasil::Interface;
 
-our $VERSION = '0.03';
+our $VERSION = '0.0.3';
 
 sub spawn {
     my $package = shift;

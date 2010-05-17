@@ -7,7 +7,7 @@ use base 'Storage::Engine::Shared::SQL';
 
 use DBI;
 
-our $VERSION = '0.1';
+our $VERSION = '0.0.1';
 
 our %TYPEMAP = (
     SERIAL   => 'INTEGER PRIMARY KEY',

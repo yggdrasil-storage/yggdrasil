@@ -17,7 +17,7 @@ use Storage::Auth::Role;
 
 use Digest::MD5 qw(md5_hex);
 
-our $VERSION = '0.01';
+our $VERSION = '0.0.1';
 
 our $TRANSACTION = Storage::Transaction->create_singleton();
 

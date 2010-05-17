@@ -7,7 +7,7 @@ use Getopt::Long;
 
 use Yggdrasil::Common::Config;
 
-our $VERSION = 0.01;
+our $VERSION = '0.0.1';
 our $SELF = bless {}, __PACKAGE__;
 
 sub new {
