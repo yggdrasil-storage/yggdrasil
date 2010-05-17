@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+BEGIN { our $VERSION = '0.01' };
+
+use Getopt::Long;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Storage;
+use Storage::Status;
+
+our( $EUSER, $EPASS, $EHOST, $EPORT, $EDB, $ETYPE );
+our( $USER, $PASS );
+
+GetOptions( 'engine-user:s'     => \$EUSER,
+	    'engine-password:s' => \$EPASS,
+	    'engine-host:s'     => \$EHOST,
+	    'engine-port:s'     => \$EPORT,
+	    'engine-db:s'       => \$EDB,
+	    'engine-type:s'     => \$ETYPE,
+	    'user:s'            => \$USER,
+	    'password:s'        => \$PASS,
+	    'help'              => \&help,
+	  );
+
+my $status  = Storage::Status->new();
+my $storage = Storage->new( user     => $EUSER,
+			    password => $EPASS,
+			    host     => $EHOST,
+			    port     => $EPORT,
+			    db       => $EDB,
+			    engine   => $ETYPE,
+			    status   => $status,
+			  );
+die $status->message() unless $status->OK();
+
+$storage->authenticate( username => $USER, password => $PASS );
+die $status->message() unless $status->OK();
+
+my $ticks = $storage->get_ticks( start => 1 );
+foreach my $tick ( @$ticks ) {
+    print $tick->{id}, "@", $tick->{stamp}, " by ", $tick->{committer}, ": ", $tick->{event}, " on ", $tick->{target}, "\n";
+}
+
+sub help {
+    print <DATA>;
+    exit;
+}
+
+__DATA__
+Usage: storage-dump [options]
+
+Options
+-------
+--engine-user
+--engine-password
+--engine-host
+--engine-port
+--engine-port
+--engine-db
+--engine-type
+--user
+--password
+--help
+

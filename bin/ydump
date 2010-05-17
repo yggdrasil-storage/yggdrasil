@@ -3,207 +3,37 @@
 use strict;
 use warnings;
 
-use MIME::Base64;
+BEGIN { our $VERSION = '0.01' };
+
 use Getopt::Long;
 
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
 
-use Yggdrasil;
+use Yggdrasil::Common::CommandLine;
+use Yggdrasil::Common::Config;
 
-my ($user, $password, $host, $port, $db, $engine, $NAMESPACE, $VERSION, $comments) =
-  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, 'Ygg', '0.01');
+my $cmdline = Yggdrasil::Common::CommandLine->new();
+my $label   = $cmdline->get('label') || 'default';
 
-GetOptions(
-	   "user=s"       => \$user,
-	   "engine=s"     => \$engine,
-	   "password=s"   => \$password,
-	   "host=s"       => \$host,
-	   "database=s"   => \$db,
-	   "engine=s"     => \$engine,
-	   "port=s"       => \$port,
-	   "help"         => \&help,
-	   "version"      => \&version,
-	   "namespace=s"  => \$NAMESPACE,
-	   "comments"     => \$comments,
-    );
+my $c = Yggdrasil::Common::Config->new();
+my $config = $c->get($label);
 
-new Yggdrasil(
-	      user      => $user,
-	      password  => $password,
-	      host      => $host,
-	      port      => $port,
-	      db        => $db,
-	      engine    => $engine,
-	      namespace => $NAMESPACE,
-	      admin     => 1,
-	     );
-
-# --- MetaEntity
-print "[MetaEntity]\n";
-my %seen_entity;
-my $entities = Yggdrasil::MetaEntity->admin_dump();
-foreach my $entry ( @$entities ) {
-    dumper( $entry, exclude => { id => 1 } );
-    print "\n";
-
-    my $entity = $entry->{entity};
-    my $id     = $entry->{id};
-    $seen_entity{$id} = $entity;
-}
-print "\n";
-
-# --- MetaProperty
-print "[MetaProperty]\n";
-my %seen_property;
-my $properties = Yggdrasil::MetaProperty->admin_dump();
-foreach my $entry ( @$properties ) {
-    my $entity   = $entry->{entity};
-    my $property = $entry->{property};
-    $seen_property{$entity}->{$property} = 1;
-
-    dumper( $entry, 
-	    exclude => { id => 1 },
-	    usemap  => { entity => \%seen_entity },
-	    map => { entity => "entity" } );
-	
-    print "\n";
-}
-print "\n";
-
-# --- MetaRelation
-print "[MetaRelation]\n";
-my %seen_relation;
-my $relations = Yggdrasil::MetaRelation->admin_dump();
-foreach my $entry ( @$relations ) {
-    my $label = $entry->{label};
-    my $id    = $entry->{id};
-    $seen_relation{$id} = $label;
-
-    dumper( $entry, 
-	    exclude => { id => 1 },
-	    usemap  => { entity => \%seen_entity },
-	    map     => { lval => "entity",
-			 rval => "entity" } );
-    print "\n";
-}
-print "\n";
-
-# --- MetaInheritance
-print "[MetaInheritance]\n";
-my $inheritance = Yggdrasil::MetaInheritance->admin_dump();
-foreach my $entry ( @$inheritance ) {
-    dumper( $entry,
-	    usemap => { entity => \%seen_entity },
-	    map    => { parent => "entity",
-			child  => "entity" } );
-    print "\n";
-}
-print "\n";
-
-my %id_map;
-# --- Instance Entities
-foreach my $eid ( keys %seen_entity ) {
-    my $entity = $seen_entity{$eid};
-    print "[Entity: ", encode_base64($entity, ""), "]\n";
-
-    my $instances = Yggdrasil::Entity->admin_dump( $eid );
-    foreach my $instance ( @$instances ) {
-	$id_map{$instance->{id}} = $instance->{visual_id};
-	dumper($instance, 
-	       exclude => { id => 1, entity => 1 },
-	       usemap  => { entity => \%seen_entity },
-	       map     => { entity => "entity" } );
-	print "\n";
-    }
+unless ($config) {
+    $config = $c->get('ENV');
+    die "No such label as $label and falling back to ENV failed\n"
+	unless $config->get( 'engineuser' );
 }
 
-# --- Instance Properties
-foreach my $eid ( keys %seen_property ) {
-    my $entity = $seen_entity{$eid};
-    my $properties = $seen_property{$eid};
-    foreach my $property ( keys %$properties ) {
-	print "[Property: ", encode_base64($entity, ""), " ", encode_base64($property, ""), "]\n";
-	print "# $entity _ $property\n" if $comments;
-	
-	my $instance_property = Yggdrasil::Property->admin_dump( $entity, $property );
-	foreach my $ip ( @$instance_property ) {
-	    dumper($ip, 
-		   usemap => { instance => \%id_map }, 
-		   map    => { id => "instance" } );
-	    print "\n";
-	}
-	print "\n";
-    }
-}
+my $uname = $cmdline->get( 'username' ) || $config->get( 'authuser' ) || (getpwuid($>))[0];
+my $upass = $cmdline->get( 'password' ) || $config->get( 'authpass' ) || $cmdline->read_password();
 
-# --- Instance Relations
-foreach my $rid ( keys %seen_relation ) {
-    my $label = $seen_relation{$rid};
-    my $instance_relation = Yggdrasil::Relation->admin_dump( $rid );
-    print "[Relation: ", encode_base64($label, ""), "]\n";
-    
-    foreach my $ir ( @$instance_relation ) {
-	dumper($ir, usemap => { val => \%id_map },
-	       map => { rval => "val", lval => "val" },
-	       exclude => { id => 1 } );
-	print "\n";
-    }
-}
-
-sub dumper {
-    my $data  = shift;
-    my %param = @_;
-
-    my $exclude = $param{exclude} || {};
-    my $usemap  = $param{usemap} || {};
-    my $map     = $param{map} || {};
-    
-    foreach my $key ( keys %$data ) {
-	next if $exclude->{$key};
-
-	my $value = $data->{$key};
-
-	if( exists $map->{$key} ) {
-	    $value = $usemap->{ $map->{$key} }->{$value};
-	}
-
-	my $dvalue = $value || 'NULL';
-	print "# $key => $dvalue\n" if $comments;
-
-	$value = defined $value ? encode_base64($value, "") : "";
-	print "$key => $value\n";
-    }
-}
-
-sub help {
-    print <<USAGE;
-Usage: $0
-
-Dumps entire Yggdrasil databases to standard out. Use yrestore to
-recreate the database.
-
-USAGE
-
-    print <DATA>;
-    exit;
-}
-
-sub version {
-    print "ydump version $VERSION\n";
-    exit;
-}
-
-__DATA__
-Options:
---------
---help               Prints out usage help
---version            Prints version information
---user <name>        Specify database login name
---password <pass>    Specify database password
---host <host>        Specify database host
---port <port>        Specify database port
---db <name>          Specify database name
---engine <name>      Specify database engine
---namespace <space>  Specify Yggdrasil namespace
---comments           Print comments in the dump
+system( join("/", $Bin, "storage-dump"),
+	"--engine-user",     $config->get( 'engineuser' ),
+	"--engine-password", $config->get( 'enginepassword' ),
+	"--engine-host",     $config->get( 'enginehost' ),
+	"--engine-port",     $config->get( 'engineport' ),
+	"--engine-db",       $config->get( 'enginedb' ),
+	"--engine-type",     $config->get( 'enginetype' ),
+	"--user",            $uname,
+	"--password",        $upass );
