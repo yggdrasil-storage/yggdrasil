@@ -83,7 +83,7 @@ sub enable_protocol {
 	my $protocol_class = join("::", __PACKAGE__, $protocol_name );
 	eval qq( require $protocol_class );
 	if ($@) {
-	    $status->set( 500, "Unable to load '$protocol_name': $@" );
+	    $status->set( 500, "Unable to load the requested protocol '$protocol_name':\n$@" );
 	    return;
 	}
 	$self->{protocol} = $protocol_class->new( status => $self->get_status(),
@@ -140,7 +140,8 @@ sub _parse_client_line_reply {
     
     my $server_reply = <$con>;
     my ($ss, $sm) = split /\s*,\s*/, $server_reply, 2;
- 
+    $sm =~ s/\r\n$//g;
+
     $status->set( $ss, $sm );
 }
 

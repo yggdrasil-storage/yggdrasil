@@ -129,7 +129,6 @@ sub login {
 	return $self->user();
     } 
     
-    $status->set( 403, 'Login to Yggdrasil denied.' );
     return;
 }
 

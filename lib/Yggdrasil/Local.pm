@@ -60,8 +60,13 @@ sub login {
     my $self = shift;
 
     my $storage_user_object = $self->{storage}->authenticate( @_ );
-    $self->{user} = $storage_user_object->name() if $storage_user_object;
-    return $self->{user};
+    my $status = $self->get_status();
+    if ($status->OK()) {
+	$self->{user} = $storage_user_object->name();
+	return $self->{user};
+    } 
+    $status->set( 403, 'Login to Yggdrasil denied.' ) unless $status->message();
+    return;
 }
 
 sub info {
