@@ -50,13 +50,13 @@ $y->connect(
 	    daemonport => $config->get( 'daemonport' ),
 	   );
 
-die $status->message() unless $status->OK();
+die $status->message(), "\n" unless $status->OK();
 
 my $uname = $cmdline->get( 'username' ) || $config->get( 'authuser' ) || (getpwuid($>))[0];
 my $upass = $cmdline->get( 'password' ) || $config->get( 'authpass' ) || $cmdline->read_password();
 my $iam = $y->login( username => $uname, password => $upass );    
 
-die $status->message() unless $status->OK();
+die $status->message(), "\n" unless $status->OK();
 
 my $term = new Term::ReadLine 'ycontrol';
 my $attribs = $term->Attribs;
