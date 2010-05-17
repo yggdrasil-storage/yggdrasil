@@ -230,7 +230,7 @@ sub get_status {
 sub define {
     my $self = shift;
     my $schema = shift;
-
+    
     my $transaction = $TRANSACTION->init( path => 'define' );
 
     my %data = @_;
@@ -294,9 +294,22 @@ sub define {
     }
     
     $transaction->log( "Defined $originalname" );
-    $self->tick( 'define', $schema ) unless $schema eq $self->get_structure( 'ticker' );
+    my $tick = $self->tick( 'define', $schema ) unless $schema eq $self->get_structure( 'ticker' );
     my $retval = $self->_define( $schema, %data );
 
+    # Store the define statement for reference to help dump / restore.
+    # Use _store to avoid ticking.  FIXME, check return value?
+    my $storage_prefix = $self->{structure}->internal( 'prefix' );
+    unless ($originalname =~ /^$storage_prefix/) {
+	my @define = ( $originalname => %data );
+	$self->_store( $self->get_structure( 'defines' ),
+		       key => 'tick',
+		       fields => {
+				  tick   => $tick,
+				  define => Storable::nfreeze( \@define ),
+				 });
+    }
+    
     if ($retval) {
 	unless ($data{nomap}) {
 	    $self->cache( 'mapperh2m', $originalname, $schema );

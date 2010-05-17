@@ -12,6 +12,7 @@ sub new {
 		temporal      => 'temporals',
 		filter        => 'filter',
 		config        => 'config',
+		defines       => 'defines',
 		ticker        => 'ticker',
 		authschema    => 'authschema',
 		authuser      => 'auth_user',
@@ -48,6 +49,7 @@ sub bootstrap {
     my $self = shift;
 
     $self->_bootstrap_ticker();
+    $self->_bootstrap_defines();
     $self->_bootstrap_config();
     $self->_bootstrap_filter();
     $self->_bootstrap_mapper();
@@ -158,6 +160,17 @@ sub _bootstrap_mapper {
 			       fields => {
 					  humanname  => { type => 'TEXT' },
 					  mappedname => { type => 'TEXT' },
+					 },
+			     );
+}
+
+sub _bootstrap_defines {
+    my $self = shift;
+
+    $self->{_storage}->define( $self->get( 'defines' ),
+			       nomap  => 1,
+			       fields => {
+					  define => { type => 'BINARY' },
 					 },
 			     );
 }
