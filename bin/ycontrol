@@ -928,7 +928,7 @@ sub tick_info {
 	}
     }
 
-    my @ret = $y->get_ticks( @ticks );
+    my @ret = $y->get_ticks( id => \@ticks );
     print "'$tick', no such tick.\n" and return unless $ret[0];
     
     for my $t (@ret) {

@@ -403,7 +403,7 @@ sub _role_revoke {
 sub _get_ticks {
     my $ygg = shift;
     $ygg->get_status()->set( 200 );
-    my @ticks = $ygg->get_ticks( grep { /^\d+$/ } @_ );
+    my @ticks = $ygg->get_ticks( @_ );
     return \@ticks;
 }
 

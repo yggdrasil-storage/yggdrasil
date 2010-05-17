@@ -322,8 +322,8 @@ sub get_all_properties {
 # Metaish stuff
 # FIXME: Need to be able to send requests for multiple ticks.
 sub get_ticks {
-    my $self = shift;
-    return $self->_get( 'ticks', tickid => $_[0] );
+    my $self   = shift;
+    return $self->_get( 'ticks', @_ );
 }
 
 sub property_types {

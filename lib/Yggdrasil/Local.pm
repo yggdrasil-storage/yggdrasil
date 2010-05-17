@@ -109,21 +109,12 @@ sub get_ticks_by_time {
 
 sub get_ticks {
     my $self  = shift;
-    my @ticks;
-    
-    for my $t (@_) {
-	push @ticks, 'id' => $t;
-    }
     
     # FIXME, return the 'stamp' field in an ISO date format.
-    my $fetchref = $self->{storage}->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
-								where  => [ @ticks ],
-								bind   => 'or',
-							      } );
-    
-    if (! $fetchref->[0]->{stamp}) {
+    my $fetchref = $self->{storage}->get_ticks( @_ );
+    unless( $fetchref && @$fetchref ) {
 	$self->{status}->set( 400, 'Tick not found' );
-	return undef;
+	return;
     }
 
     return @$fetchref;

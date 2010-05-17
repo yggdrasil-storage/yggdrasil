@@ -494,6 +494,30 @@ sub tick {
 						   } );
 }
 
+sub get_ticks {
+    my $self   = shift;
+    my %params = @_;
+
+    my %fetch = ( return => '*' );
+    if( $params{start} ) {
+	my @where = ( id => $params{start} );
+	my @op    = ( '>=' );
+
+	if( $params{stop} ) {
+	    push( @where, id => $params{stop} );
+	    push( @op, '<=' );
+	}
+	$fetch{where} = \@where;
+	$fetch{operator} = \@op;
+    } elsif( $params{id} ) {
+	$fetch{where} = [ id => $params{id} ];
+    } else {
+	return;
+    }
+    
+    return $self->fetch( $self->get_structure('ticker') => \%fetch );
+}
+
 # At this point we should be getting epochs to work with.
 sub get_ticks_from_time {
     my ($self, $from, $to) = @_;
