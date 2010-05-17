@@ -63,7 +63,7 @@ sub info {
       $self->{host}, $self->{port}, $self->{dbuser}, $self->{db};
 }
 
-sub yggdrasil_is_empty {
+sub storage_is_empty {
     my $self = shift;
     my $prefix = $self->prefix();
     

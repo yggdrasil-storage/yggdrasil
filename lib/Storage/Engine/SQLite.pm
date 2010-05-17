@@ -49,7 +49,7 @@ sub _engine_supports_primary_keys {
     return undef;
 }
 
-sub yggdrasil_is_empty {
+sub storage_is_empty {
     my $self = shift;
 
     for my $struct ($self->_list_structures()) {

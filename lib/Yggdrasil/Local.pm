@@ -28,7 +28,7 @@ sub bootstrap {
     my %userlist = @_;
     
     my $status = $self->get_status();
-    if ($self->{storage}->yggdrasil_is_empty()) {
+    if ($self->{storage}->storage_is_empty()) {
 	my %usermap = $self->{storage}->bootstrap( %userlist );
 	Yggdrasil::MetaEntity->define( yggdrasil => $self );
 	Yggdrasil::MetaRelation->define( yggdrasil => $self );
