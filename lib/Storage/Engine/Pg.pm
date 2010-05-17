@@ -7,6 +7,8 @@ use base 'Storage::Engine::Shared::SQL';
 
 use DBI;
 
+our $VERSION = '0.1';
+
 our %TYPEMAP = (
 		DATE     => 'TIMESTAMP WITH TIME ZONE',
 		BINARY   => 'BYTEA',
@@ -32,12 +34,19 @@ sub new {
   return $self;
 }
 
+sub engine_version {
+    return $VERSION;
+}
+
+sub engine_type {
+    my $self = shift;
+    return $self->_engine();
+}
+
 sub info {
     my $self = shift;
 
-    my $engine = ref $self;
-    $engine =~ s/^.*:://;
-
+    my $engine = $self->_engine();
     return sprintf "$engine storage backend, connected to %s:%s as the user '%s' to the database '%s'.",
       $self->{host}, $self->{port}, $self->{dbuser}, $self->{db};
 }

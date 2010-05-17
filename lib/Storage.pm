@@ -91,6 +91,18 @@ sub new {
     }
 }
 
+sub version {
+    return $VERSION;
+}
+
+sub _engine {
+    my $self = shift;
+
+    my $engine = ref $self;
+    $engine =~ s/^.*:://;
+    return $engine;
+}
+
 sub debug {
     my $self = shift;
     my %params = @_;

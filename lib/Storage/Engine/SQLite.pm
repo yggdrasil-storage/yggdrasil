@@ -7,6 +7,8 @@ use base 'Storage::Engine::Shared::SQL';
 
 use DBI;
 
+our $VERSION = '0.1';
+
 our %TYPEMAP = (
     SERIAL   => 'INTEGER PRIMARY KEY',
     PASSWORD => 'VARCHAR(255)',
@@ -26,6 +28,15 @@ sub new {
     $self->{dbh} = DBI->connect( "dbi:SQLite:dbname=$data{db}", "", "" );
 
     return $self;
+}
+
+sub engine_version {
+    return $VERSION;
+}
+
+sub engine_type {
+    my $self = shift;
+    return $self->_engine();
 }
 
 sub info {

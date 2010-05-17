@@ -549,7 +549,16 @@ sub _bootstrap_config {
 
     $self->{_storage}->store( $schema, key => "id",
 			      fields => { id => 'temporalstruct', value => $self->get( 'temporal' ) });
-	
+
+    $self->{_storage}->store( $schema, key => "id",
+			      fields => { id => "storageversion", value => $self->{_storage}->version() });
+
+    $self->{_storage}->store( $schema, key => "id",
+			      fields => { id => "engineversion", value => $self->{_storage}->engine_version() });
+
+    $self->{_storage}->store( $schema, key => "id",
+			      fields => { id => "enginetype", value => $self->{_storage}->engine_type() });
+
     my $mappername = ref $mapper_object;
     $mappername =~ s/.*::(.*)$/$1/;
     $self->{_storage}->store( $schema, key => "id",
