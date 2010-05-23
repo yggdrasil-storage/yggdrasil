@@ -170,7 +170,8 @@ sub _bootstrap_defines {
     $self->{_storage}->define( $self->get( 'defines' ),
 			       nomap  => 1,
 			       fields => {
-					  define => { type => 'BINARY' },
+					  schemaname => { type => 'TEXT' },
+					  define     => { type => 'BINARY' },
 					 },
 			     );
 }

@@ -305,8 +305,9 @@ sub define {
 	$self->_store( $self->get_structure( 'defines' ),
 		       key => 'tick',
 		       fields => {
-				  tick   => $tick,
-				  define => Storable::nfreeze( \@define ),
+				  schemaname => $originalname,
+				  tick       => $tick,
+				  define     => Storable::nfreeze( \@define ),
 				 });
     }
     
@@ -1119,6 +1120,46 @@ sub get_defined_types {
     return $self->{type}->valid_types();
 }
 
+sub get_schema_definition {
+    my $self   = shift;
+    my $schema = shift;
+    my $tick   = shift;
+    
+    $schema = $self->_get_schema_name( $schema ) || $schema;
+    unless ($self->exists( $schema )) {
+	$self->get_status()->set( 404, "Schema '$schema' not found" );
+	return;
+    }
+
+    my $defschema = $self->get_structure( 'defines' );
+    my @tick = ( tick => $tick ) if $tick;
+
+    my $fetchref = $self->_fetch( $defschema => { return => '*',
+						  where  => [
+							     schemaname => $schema,
+							     @tick,
+							    ]});
+    my @hits;
+    for my $hit (sort { $a->{tick} <=> $b->{tick} } @$fetchref) {
+	my %this_hit;
+	$this_hit{schema} = $hit->{schemaname};
+	$this_hit{tick}   = $hit->{tick};
+	$this_hit{define} = $hit->{define};
+	push @hits, \%this_hit;
+    }
+
+    unless (@hits) {
+	$self->get_status()->set( 404, "No matching data" );
+	return;
+    }
+    
+    if (wantarray) {
+	return @hits;
+    } else {
+	return $hits[-1];
+    }
+}
+  
 # Checks and verifies a type, doesn't handle SET yet.  Returns the
 # default of 'TEXT' if the type is undefined.
 sub _check_valid_type {
