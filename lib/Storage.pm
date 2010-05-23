@@ -898,7 +898,10 @@ sub exists :method {
     my $schema = shift;
 
     my $mapped_schema = $self->_get_schema_name( $schema ) || $schema;
-    return undef unless $self->_structure_exists( $mapped_schema );
+    unless ($mapped_schema && $self->_structure_exists( $mapped_schema )) {
+	$self->get_status()->set( 404, "Schema not found" );
+	return undef;
+    }
     return $self->fetch( $mapped_schema, { return => '*', where => [ @_ ] });
 }
 
