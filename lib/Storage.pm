@@ -1144,7 +1144,7 @@ sub get_schema_definition {
 	my %this_hit;
 	$this_hit{schema} = $hit->{schemaname};
 	$this_hit{tick}   = $hit->{tick};
-	$this_hit{define} = $hit->{define};
+	$this_hit{define} = Storable::thaw( $hit->{define} );
 	push @hits, \%this_hit;
     }
 
