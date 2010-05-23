@@ -59,33 +59,29 @@ sub get_all {
     }
 }
 
-sub get_all_instances {
+sub instances {
     my $class = shift;
     my %params = @_;
-
     my $yggdrasil = $params{yggdrasil};
-    if( $yggdrasil->is_remote() ) {
-	return Yggdrasil::Remote::Entity->get_all_instances( @_ );
-    } else {
-	return Yggdrasil::Local::Entity->get_all_instances( @_ );
-    }
+    my $entity = $yggdrasil->get_entity( $params{entity} );
+    
+    return unless $yggdrasil->get_status()->OK();
+    return $entity->instances( @_ );
 }
 
-sub get_all_properties {
+sub properties {
     my $class = shift;
     my %params = @_;
 
     my $yggdrasil = $params{yggdrasil};
-    if( $yggdrasil->is_remote() ) {
-	return sort { $a->name() <=> $b->name() } Yggdrasil::Remote::Entity->get_all_properties( @_ );
-    } else {
-	return sort { $a->name() <=> $b->name() } Yggdrasil::Local::Entity->get_all_properties( @_ );
-    }
+    my $entity = $yggdrasil->get_entity( $params{entity} );
+    
+    return unless $yggdrasil->get_status()->OK();
+    return sort { $a->name() <=> $b->name() } $entity->properties( @_ );
 }
 
 sub name {
     my $self = shift;
-
     return $self->{name};
 }
 

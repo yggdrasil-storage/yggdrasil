@@ -499,6 +499,11 @@ sub get_ticks {
     my $self   = shift;
     my %params = @_;
 
+    if (@_ % 2) {
+	use Carp;
+	confess;
+    }
+    
     my %fetch = ( return => '*' );
     if( $params{start} ) {
 	my @where = ( id => $params{start} );

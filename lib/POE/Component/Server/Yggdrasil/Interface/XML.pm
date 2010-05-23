@@ -232,8 +232,8 @@ sub generate_status_reply {
 sub _get_times {
     my ($self, $object) = @_;
     my ($start, $stop) = ($object->start(), $object->stop());
-    my ($startinfo) = $object->yggdrasil()->get_ticks( $start );
-    my ($stopinfo) = $object->yggdrasil()->get_ticks( $stop ) if $stop;
+    my ($startinfo) = $object->yggdrasil()->get_tick( $start );
+    my ($stopinfo) = $object->yggdrasil()->get_tick( $stop ) if $stop;
 
     my $starttime  = $startinfo->{stamp};
     my $stoptime   = $stopinfo->{stamp} || '';

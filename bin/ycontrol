@@ -920,18 +920,17 @@ sub tick_info {
     
     for my $s (@sequences) {
 	if ($s =~ /^(\d+)-(\d+)/) {
-	    push @ticks, $_ for ( $1 .. $2 );
+	    push @ticks, $y->get_ticks( start => $1, stop => $2 );
 	} elsif ($s =~ /^(\d+)$/) {
-	    push @ticks, $s;
+	    push @ticks, $y->get_tick( $1 );
 	} else {
 	    print "Unable to parse input, '$s', skipping.\n";
 	}
     }
 
-    my @ret = $y->get_ticks( id => \@ticks );
-    print "'$tick', no such tick.\n" and return unless $ret[0];
+    print "'$tick', no such tick.\n" and return unless $ticks[0];
     
-    for my $t (@ret) {
+    for my $t (@ticks) {
 	print "Tick ", $t->{id}, ":\n";
 	printf "%20s - %s\n", 'Timestamp', $t->{stamp};
 	printf "%20s - %s\n", 'Committer', $t->{committer};
