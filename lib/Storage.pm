@@ -902,7 +902,9 @@ sub exists :method {
 	$self->get_status()->set( 404, "Schema not found" );
 	return undef;
     }
-    return $self->fetch( $mapped_schema, { return => '*', where => [ @_ ] });
+
+    $self->get_status()->set( 200, "Schema found" );
+    return 1;
 }
 
 
