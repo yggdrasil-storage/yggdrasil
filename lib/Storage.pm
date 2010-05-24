@@ -305,7 +305,7 @@ sub define {
 	$self->_store( $self->get_structure( 'defines' ),
 		       key => 'tick',
 		       fields => {
-				  schemaname => $originalname,
+				  schemaname => $schema,
 				  tick       => $tick,
 				  define     => Storable::nfreeze( \@define ),
 				 });
