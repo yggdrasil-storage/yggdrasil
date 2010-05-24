@@ -36,4 +36,4 @@ system( join("/", $Bin, "storage-dump"),
 	"--engine-db",       $config->get( 'enginedb' ),
 	"--engine-type",     $config->get( 'enginetype' ),
 	"--user",            $uname,
-	"--password",        $upass );
+	"--password",        $upass , @ARGV);
