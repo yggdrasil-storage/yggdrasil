@@ -87,32 +87,36 @@ sub storage_dump {
 	my $event     = $tick->{event};
 	my $target    = $tick->{target};
 	
-	next if $target =~/^Storage_/;
+	my $real = $storage->_get_real_name( $target ) || $target;
+
+	next if $real =~/^Storage_/;
 
 	my $file = File::Spec->catfile( $wdir, $t );
 	open( my $fh, '>', $file ) || die "Unable to dump: $!\n";
 	print $fh "stamp: ", $stamp, "\n";
 	print $fh "committer: ", $committer, "\n";
 	print $fh "event: ", $event, "\n";
-	print $fh "target: ", $target, "\n";
-	
+	print $fh "target: ", $real, "\n";
+	print $fh "\n";
+
 	my $data;
 	if( $event eq "define" ) {
 	    $data = $storage->get_schema_definition( $target, $t );
 	    unless( defined $data ) {
 		die "Inconsistent data in Storage! Did not find schema that was supposed to be defined at tick $t\n";
 	    }
-
-	    $data = nfreeze($data);
-	} elsif( $event eq "store" ) {
-	    
-	} elsif( $event eq "update" ) {
-	    
+	} elsif( $event eq "store" || $event eq "update" || $event eq "expire" ) {
+	    $data = $storage->fetch( $real => { 
+					       return => [ "*" ],
+					       where => [ start => $t ] } );
+	    $data = $data->[0];
+	    delete $data->{stop};
+	    delete $data->{start};
 	} else {
 	    warn "Unknown event '$event' -- skipping.\n";
 	}
 	
-	print $fh $data if defined $data;
+	print $fh nfreeze($data) if defined $data;
 	close $fh;
     }
 }
