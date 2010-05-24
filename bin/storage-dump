@@ -3,9 +3,14 @@
 use strict;
 use warnings;
 
-BEGIN { our $VERSION = '0.01' };
+our  $VERSION;
+BEGIN { $VERSION = '0.01' };
 
 use Getopt::Long;
+use File::Temp qw/tempdir/;
+use File::Spec;
+use Storable qw/nfreeze/;
+use Archive::Tar;
 
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
@@ -14,7 +19,7 @@ use Storage;
 use Storage::Status;
 
 our( $EUSER, $EPASS, $EHOST, $EPORT, $EDB, $ETYPE );
-our( $USER, $PASS );
+our( $USER, $PASS, $OUTPUT );
 
 GetOptions( 'engine-user:s'     => \$EUSER,
 	    'engine-password:s' => \$EPASS,
@@ -24,7 +29,9 @@ GetOptions( 'engine-user:s'     => \$EUSER,
 	    'engine-type:s'     => \$ETYPE,
 	    'user:s'            => \$USER,
 	    'password:s'        => \$PASS,
+	    'output=s'          => \$OUTPUT,
 	    'help'              => \&help,
+	    'version'           => \&version,
 	  );
 
 my $status  = Storage::Status->new();
@@ -41,18 +48,99 @@ die $status->message() unless $status->OK();
 $storage->authenticate( username => $USER, password => $PASS );
 die $status->message() unless $status->OK();
 
-my $ticks = $storage->get_ticks( start => 1 );
-foreach my $tick ( @$ticks ) {
-    print $tick->{id}, "@", $tick->{stamp}, " by ", $tick->{committer}, ": ", $tick->{event}, " on ", $tick->{target}, "\n";
+# --- Create temporary work space
+my $wdir = tempdir( CLEANUP => 1 );
+
+# --- Dump metadata from Storage
+storage_meta_dump( $storage, $wdir );
+
+# --- Dump data from Storage
+storage_dump( $storage, $wdir );
+
+# --- create tgz
+create_dump_package( $wdir );
+
+sub create_dump_package {
+    my $wdir = shift;
+
+    opendir( my $dh, $wdir ) || die "Unable to create dump package: $!\n";
+    my @files = map { File::Spec->catfile($wdir, $_) } grep { /^\d+$/ } readdir $dh;
+    closedir $dh;
+
+    my $file = $OUTPUT || \*STDOUT;
+    my $r = Archive::Tar->create_archive( $file, 5, @files );
+    unless( $r ) {
+	die "Failed to create dump package: ", Archive::Tar->error(), "\n";
+    }    
+}
+
+
+sub storage_dump {
+    my $storage = shift;
+    my $wdir    = shift;
+
+    my $ticks = $storage->get_ticks( start => 1 );
+    foreach my $tick ( @$ticks ) {
+	my $t         = $tick->{id};
+	my $stamp     = $tick->{stamp};
+	my $committer = $tick->{committer};
+	my $event     = $tick->{event};
+	my $target    = $tick->{target};
+	
+	next if $target =~/^Storage_/;
+
+	my $file = File::Spec->catfile( $wdir, $t );
+	open( my $fh, '>', $file ) || die "Unable to dump: $!\n";
+	print $fh "stamp: ", $stamp, "\n";
+	print $fh "committer: ", $committer, "\n";
+	print $fh "event: ", $event, "\n";
+	print $fh "target: ", $target, "\n";
+	
+	my $data;
+	if( $event eq "define" ) {
+	    $data = $storage->get_schema_definition( $target, $t );
+	    unless( defined $data ) {
+		die "Inconsistent data in Storage! Did not find schema that was supposed to be defined at tick $t\n";
+	    }
+
+	    $data = nfreeze($data);
+	} elsif( $event eq "store" ) {
+	    
+	} elsif( $event eq "update" ) {
+	    
+	} else {
+	    warn "Unknown event '$event' -- skipping.\n";
+	}
+	
+	print $fh $data if defined $data;
+	close $fh;
+    }
+}
+
+sub storage_meta_dump {
+    my $storage = shift;
+    my $wdir    = shift;
+
+    my $file = File::Spec->catfile( $wdir, "0" );
+    open( my $fh, '>', $file ) || die "Unable to dump: $!\n";
+    print $fh "Storage version: ", $storage->version(), "\n";
+    print $fh "Dumper version: ", $VERSION, "\n";
+    close $fh;
 }
 
 sub help {
+    print "Usage: $0 [options]\n\n";
     print <DATA>;
     exit;
 }
 
+sub version {
+    print "Version ", $VERSION, "\n";
+    exit;
+}
+
 __DATA__
-Usage: storage-dump [options]
+Connects to a Storage backend and dumps all available data to file.
 
 Options
 -------
@@ -66,4 +154,5 @@ Options
 --user
 --password
 --help
-
+--version
+--output FILE
