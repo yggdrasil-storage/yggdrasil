@@ -103,7 +103,7 @@ sub read_password {
     my $password;
     print "Password: ";
     system("stty -echo");
-    chop($password = <>);
+    chop($password = <STDIN>);
     print "\n";
     system("stty echo");
     return $password;
