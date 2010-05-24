@@ -534,7 +534,7 @@ sub get_ticks_from_time {
 	$to = $self->_convert_time( $to );
 
 	$fetchref = $self->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
-						      where  => [ 'stamp' => \qq<$from>, stamp => \qq<$to> ],
+						      where  => [ 'stamp' => qq<$from>, stamp => qq<$to> ],
 						      operator => [ '>=', '<='],
 						      bind   => 'and',
 						    } );
@@ -542,7 +542,7 @@ sub get_ticks_from_time {
     } else {
 	my $max_stamp = $self->fetch( Storage_ticker => { return   => "stamp",
 							  filter   => "MAX",
-							  where    => [ stamp => \qq<$from> ],
+							  where    => [ stamp => qq<$from> ],
 							  operator => "<=",
 							} );
 
