@@ -966,6 +966,13 @@ sub _get_schema_name {
     return $self->cache( 'mapperh2m', $schema );
 }
 
+sub _get_real_name {
+    my $self   = shift;
+    my $schema = shift;
+
+    return $self->cache( 'mapperm2h', $schema );
+}
+
 sub cache {
     my $self = shift;
     my ($map, $from, $to) = @_;
