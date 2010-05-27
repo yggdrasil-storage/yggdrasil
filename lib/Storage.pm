@@ -631,6 +631,12 @@ sub _add_auth {
     my $map        = shift;
     
     my @authdefs;
+	
+    my $current_alias_count = 0;
+    my $alias_counter = sub {
+	return ++$current_alias_count;
+    };
+
     for( my $i=0; $i<@$schemadefs; $i+=2 ) {
 	my $schema = $schemadefs->[$i];
 	my $schemabindings = $schemadefs->[$i+1];
@@ -652,12 +658,12 @@ sub _add_auth {
 	}
 	next unless $typebindings;
 
-	# 2. Assign uniq alias for each auth-table.  FIXME for rand.
+	# 2. Assign uniq alias for each auth-table.
 	for( my $j=1; $j<@$typebindings; $j+=2 ) {
 	    my $authschema_constraint = $typebindings->[$j];
 
-	    # Add a new uniq alias.  FIXME for rand.
-	    my $uniq_alias = join("_", "_auth", int(rand()*100_000) );
+	    # Add a new uniq alias.
+	    my $uniq_alias = join("_", "_auth", $alias_counter->() );
 	    $authschema_constraint->{_auth_alias} = $uniq_alias;
 	}
 
@@ -716,7 +722,7 @@ sub _add_auth {
 				    userid => $self->user()->id(),
 				    roleid => \qq<$alias.roleid>,
 				   ],
-			  alias => join("_", "_auth", int(rand() * 100_000) ),
+			  alias => join("_", "_auth", $alias_counter->() ),
 			 };
 	    
 	    push( @membership, $self->get_structure( 'authmember' ), $member );
