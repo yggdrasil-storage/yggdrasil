@@ -718,11 +718,14 @@ sub instance_info {
     printf "%-15s - %s\n", 'Property', 'Value' if @props;
     for my $prop (@props) {
 	my $value = $iobj->get( $prop ) || '';
+	my ($r, $w, $e)  = ('r',
+			    $iobj->can_write_value( $prop )?'w':'',
+			    $iobj->can_expire_value( $prop )?'e':'');
 	if (length $value > 65) {
 	    $value = substr( $value, 0, 60 ) . '[ ... ]';
 	}
 	
-	printf "  %-13s - %s\n", $prop->name(), $value ;
+	printf "  %-13s - %s ($r$w$e)\n", $prop->name(), $value;
     }
 
     &display_tick( $iobj->start() );
@@ -849,7 +852,7 @@ sub instance_history {
 sub relation_entities {
     my ($relation_command, $create_command, $entity1, $entity2) = @_;
     
-    return "Identical entities, aborting.\n" if $entity1 eq $entity2;
+    print "Identical entities, aborting.\n" and return if $entity1 eq $entity2;
 
     my $e1 = $y->get_entity( $entity1 );
     print "Unable to find entity '$e1'\n" and return unless $e1;
@@ -887,8 +890,16 @@ sub relation_instances {
 
 sub relation_list {
     my ($relation_command, $list_command) = @_;
-    print join ", ", map { $_->label() } $y->relations();
-    print "\n";
+
+    my @relations;
+    for my $r ( $y->relations() ) {
+	my $w = $r->can_write() ? 'w' : '';
+	my $e = $r->can_expire() ? 'e' : '';
+
+	push( @relations, join(" ", $r->label(), "(r$w$e)") );
+    }
+
+    print join( ", ", @relations ), "\n";
 }
 
 sub relation_info {
