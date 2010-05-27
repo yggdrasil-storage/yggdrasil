@@ -36,7 +36,6 @@ sub define {
 					   lval      => $lval->{_id},
 					   rval      => $rval->{_id},
 					   label     => $label) unless $param{raw};
-    #my $id = $self->_meta_add($lval, $rval, $label, %param) unless $param{raw};
     $self->{_id} = $id;
     return $self;
 }
@@ -85,7 +84,7 @@ sub get_all {
     my $class = shift;
     my $self  = $class->SUPER::new(@_);
 
-    my $aref = $self->storage()->fetch( 'MetaRelation', { return => [ 'start', 'stop', 'rval', 'lval', 'label' ] });
+    my $aref = $self->storage()->fetch( 'MetaRelation', { return => [ 'id', 'start', 'stop', 'rval', 'lval', 'label' ] });
 
     return map { objectify( label     => $_->{label},
 			    id        => $_->{id},
@@ -107,6 +106,41 @@ sub _get_real_val {
 							  where  => [ id => \qq<MetaRelation.$side> ]},
 					  'MetaRelation', { where => [ label => $label ]});
     return $retref->[0]->{entity};
+}
+
+sub can_write {
+    my $self = shift;
+    
+    return $self->storage()->can( update => 'MetaRelation', { id => $self->{_id} } );
+}
+
+sub can_expire {
+    my $self = shift;
+    
+    return $self->storage()->can( expire => 'MetaRelation', { id => $self->{_id} } );
+}
+
+sub can_link {
+    my $self = shift;
+    my $lval = shift;
+    my $rval = shift;
+    
+    return unless $self->_validate_link_objects( $lval, $rval );
+    return $self->storage()->can( create => 'Relation', { relationid => $self->{_id}, 
+							  lval => $lval->{_id},
+							  rval => $rval->{_id} } );
+}
+
+sub can_unlink {
+    my $self = shift;
+    my $lval = shift;
+    my $rval = shift;
+
+    return unless $self->_validate_link_objects( $lval, $rval );
+    return $self->storage()->can( expire => 'Relation', { relationid => $self->{_id}, 
+							  lval => $lval->{_id},
+							  rval => $rval->{_id} } );
+    
 }
 
 sub participants {
@@ -153,37 +187,12 @@ sub link :method {
   my $lval = shift;
   my $rval = shift;
 
-  my $label = $self->{label};
-
-  my $reallval = $self->_get_real_val( 'lval', $label );
-  my $realrval = $self->_get_real_val( 'rval', $label );
-
-  my $status = $self->get_status();
-
-  unless ($lval && ref $lval && ref $lval eq 'Yggdrasil::Local::Instance') {
-      $status->set( 406, "The first paramter to link has to be an instance object." );
-      return undef;      
-  }
-
-  unless ($rval && ref $rval && ref $rval eq 'Yggdrasil::Local::Instance') {
-      $status->set( 406, "The second paramter to link has to be an instance object." );
-      return undef;      
-  }
-  
-  unless ($lval->is_a( $reallval )) {
-      $status->set( 406, $lval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
-      return undef;
-  }
-
-  unless ($rval->is_a( $realrval )) {
-      $status->set( 406, $rval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
-      return undef;
-  }
+  return unless $self->_validate_link_objects( $lval, $rval );
 
   $self->storage()->store( 'Relations',
 			   key => ['relationid', 'lval', 'rval' ],
 			   fields => {
-			       'relationid' => $self->id(),
+			       'relationid' => $self->{_id},
 			       'lval' => $lval->{_id},
 			       'rval' => $rval->{_id} });
 }
@@ -196,6 +205,41 @@ sub unlink :method {
   $self->storage()->expire( 'Relations', lval => $lval->{_id}, rval => $rval->{_id} );
 }
 
+
+sub _validate_link_objects {
+    my $self = shift;
+    my $lval = shift;
+    my $rval = shift;
+
+    my $label = $self->{label};
+    
+    my $reallval = $self->_get_real_val( 'lval', $label );
+    my $realrval = $self->_get_real_val( 'rval', $label );
+    
+    my $status = $self->get_status();
+    
+    unless ($lval && ref $lval && ref $lval eq 'Yggdrasil::Local::Instance') {
+	$status->set( 406, "The first paramter to link has to be an instance object." );
+	return undef;      
+    }
+    
+    unless ($rval && ref $rval && ref $rval eq 'Yggdrasil::Local::Instance') {
+	$status->set( 406, "The second paramter to link has to be an instance object." );
+	return undef;      
+  }
+    
+    unless ($lval->is_a( $reallval )) {
+	$status->set( 406, $lval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
+	return undef;
+    }
+    
+    unless ($rval->is_a( $realrval )) {
+	$status->set( 406, $rval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
+	return undef;
+    }
+
+    return 1;
+}
 
 sub _admin_dump {
     my $self = shift;

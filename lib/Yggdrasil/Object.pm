@@ -55,6 +55,10 @@ sub stop {
     return $self->{_stop};
 }
 
+sub can_read {
+    return 1;
+}
+
 sub objectify {
     my ($ygg, $package, @refs) = @_;
     my @set = map { $_->{yggdrasil} = $ygg; bless $_, $package; } grep { defined } @refs;

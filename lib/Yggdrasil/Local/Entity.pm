@@ -250,6 +250,24 @@ sub search {
     return @hits;
 }
 
+sub can_write {
+    my $self = shift;
+    
+    return $self->storage()->can( update => 'MetaEntity', { id => $self->{_id} } );
+}
+
+sub can_expire {
+    my $self = shift;
+    
+    return $self->storage()->can( expire => 'MetaEntity', { id => $self->{_id} } );
+}
+
+sub can_instanciate {
+    my $self = shift;
+
+    return $self->storage()->can( create => 'Instances', { entity => $self->{_id} } );
+}
+
 sub parent {
     my $self = shift;
 

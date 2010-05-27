@@ -180,7 +180,8 @@ sub add {
 						 
 						 requirement => $params{requirement},				      
 						});
-    
+    return unless $self->get_status()->OK();
+
     my $user = $self->storage()->user();
     for my $role ( $user->member_of() ) {
 	$role->grant( 'MetaRelation' => 'm', id => $id );
