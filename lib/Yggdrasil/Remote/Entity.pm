@@ -34,14 +34,14 @@ sub fetch {
     my $instance = shift;
 
     return Yggdrasil::Remote::Instance->fetch( yggdrasil => $self->yggdrasil(),
-					       entity    => $self->{id},
+					       entity    => $self->_userland_id(),
 					       instance  => $instance );
 }
 
 sub expire {
     my $self = shift;
 
-    return $self->storage()->{protocol}->expire_entity( $self->name() );
+    return $self->storage()->{protocol}->expire_entity( $self->_userland_id() );
 }
 
 sub get_property {
@@ -72,7 +72,7 @@ sub instances {
     return Yggdrasil::Object::objectify(
 					$self->yggdrasil(),
 					__PACKAGE__,
-					$self->storage()->{protocol}->get_all_instances( $self->name() ),
+					$self->storage()->{protocol}->get_all_instances( $self->_userland_id() ),
 				       );
 }
 
@@ -82,10 +82,10 @@ sub properties {
     my @props = Yggdrasil::Object::objectify(
 					     $self->yggdrasil(),
 					     'Yggdrasil::Remote::Property',
-					     $self->storage()->{protocol}->get_all_properties( $self->name() ),
+					     $self->storage()->{protocol}->get_all_properties( $self->_userland_id() ),
 					    );
     for my $prop (@props) {
-	if ($prop->{entity} eq $self->name()) {
+	if ($prop->{entity} eq $self->_userland_id()) {
 	    $prop->{entity} = $self;
 	} else {
 	    $prop->{entity} = $self->yggdrasil()->get_entity( $prop->{entity} );
@@ -101,7 +101,7 @@ sub create {
     return Yggdrasil::Object::objectify(
 					$self->yggdrasil(),
 					'Yggdrasil::Remote::Instance',
-					$self->storage()->{protocol}->create_instance( $self->name(), $id ),
+					$self->storage()->{protocol}->create_instance( $self->_userland_id(), $id ),
 				       );
     
 }

@@ -10,18 +10,18 @@ sub fetch {
     my $self = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $e = ref $params{entity}?$params{entity}->name():$params{entity};
+    my $e = ref $params{entity}?$params{entity}->_userland_id():$params{entity};
 
     my $dataref = $self->storage()->{protocol}->get_instance( $e, $params{instance} );
     my $instance = Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );
     return unless $instance;
 
-    if ($instance->{entity}) {
+    if ($instance->entity()) {
 	if (ref $params{entity}) {
 	    $instance->{entity} = $params{entity};
 	} else {
 	    $instance->{entity} = Yggdrasil::Remote::Entity->get( yggdrasil => $self->yggdrasil(), 
-								  entity => $instance->{entity} );	    
+								  entity    => $instance->entity() );
 	}
 	return $instance;
     }
@@ -40,36 +40,26 @@ sub set {
 
 sub expire {
     my $self  = shift;
-    return $self->storage()->{protocol}->expire_instance( $self->{entity}->name(), $self->name() );    
+    return $self->storage()->{protocol}->expire_instance( $self->entity()->_userland_id(), $self->_userland_id() );    
 }
 
 sub property {
     my $self = shift;
     my ($key, $val) = @_;    
 
-    $key = $key->{id} if ref $key;
+    $key = $key->_userland_id() if ref $key;
     
     if (@_ == 2) {
-	return $self->storage()->{protocol}->set_value( $self->{entity}->name(), $key, $self->{id}, $val );
+	return $self->storage()->{protocol}->set_value( $self->entity()->_userland_id(), $key, $self->_userland_id(), $val );
     } else {
-	return $self->storage()->{protocol}->get_value( $self->{entity}->name(), $key, $self->{id} );
+	return $self->storage()->{protocol}->get_value( $self->entity()->_userland_id(), $key, $self->_userland_id() );
     }
 }
 
 sub delete :method {
     my $self = shift;
     
-    return $self->storage()->{protocol}->expire_instance( $self->{entity}->name(), $self->{id} );
-}
-
-sub name {
-    my $self = shift;
-    return $self->{name};
-}
-
-sub id {
-    my $self = shift;
-    return $self->name();
+    return $self->storage()->{protocol}->expire_instance( $self->entity()->_userland_id(), $self->_userland_id() );
 }
 
 1;

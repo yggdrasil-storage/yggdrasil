@@ -88,7 +88,7 @@ sub _create_xml_chunk {
 sub _entity_xml {
     my ($self, $entity) = @_;
 
-    my $name = $entity->name();
+    my $name = $entity->_userland_id();
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $entity );
     
     return entity => {
@@ -104,12 +104,12 @@ sub _entity_xml {
 sub _property_xml {
     my ($self, $property) = @_;
     
-    my $name = $property->name();
+    my $name = $property->_userland_id();
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $property );
 
     return property => {
 			id => $name,
-			entity => $property->entity()->name(),
+			entity => $property->entity()->_userland_id(),
 			start => $start,
 			stop => $stop,
 			starttime => $starttime,
@@ -126,7 +126,7 @@ sub _instance_xml {
 
     return instance => {
 			id => $name,
-			entity => $instance->entity()->name(),
+			entity => $instance->entity()->_userland_id(),
 			start => $start,
 			stop => $stop,
 			starttime => $starttime,
@@ -138,15 +138,15 @@ sub _instance_xml {
 sub _relation_xml {
     my ($self, $relation) = @_;
     
-    my $name = $relation->label();
+    my $name = $relation->_userland_id();
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $relation );
     my ($lval, $rval) = $relation->entities();
     
     return relation => {
 			id => $name,
 			label => $name,
-			lval => $lval->name(),
-			rval => $rval->name(),
+			lval => $lval->_userland_id(),
+			rval => $rval->_userland_id(),
 			start => $start,
 			stop => $stop,
 			starttime => $starttime,

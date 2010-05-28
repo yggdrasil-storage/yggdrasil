@@ -31,34 +31,14 @@ sub define {
     return bless $dataref, __PACKAGE__;
 }
 
-sub entity {
-    my $self = shift;
-    return $self->{entity};
-}
-
 sub expire {
     my $self = shift;
-    return $self->storage()->{protocol}->expire_property( $self->{entity}->name(), $self->name() );
-}
-
-sub name {
-    my $self = shift;
-    return $self->{name};
-}
-
-sub null {
-    my $self = shift;
-    return $self->_get_meta( 'null', @_ );
-}
-
-sub type {
-    my ($self, $property) = (shift, shift);
-    return $self->_get_meta( 'type', @_ );
+    return $self->storage()->{protocol}->expire_property( $self->entity()->_userland_id(), $self->_userland_id() );
 }
 
 sub _get_meta {
     my ($self, $type) = (shift, shift);
-    return $self->storage()->{protocol}->get_property_meta( $self->{entity}->name(), $self->{name}, $type );
+    return $self->storage()->{protocol}->get_property_meta( $self->entity()->_userland_id(), $self->_userland_id(), $type );
 }
 
 1;

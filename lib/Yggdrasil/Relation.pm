@@ -38,27 +38,25 @@ sub get_all {
    
    my $yggdrasil = $params{yggdrasil};
    if( $yggdrasil->is_remote() ) {
-	return sort { $a->label() cmp $b->label() } Yggdrasil::Remote::Relation->get_all( @_ );
+	return sort { $a->_userland_id() cmp $b->_userland_id() } Yggdrasil::Remote::Relation->get_all( @_ );
     } else {
-	return sort { $a->label() cmp $b->label() } Yggdrasil::Local::Relation->get_all( @_ );	
+	return sort { $a->_userland_id() cmp $b->_userland_id() } Yggdrasil::Local::Relation->get_all( @_ );	
     }
 }
 
 sub entities {
     my $self = shift;
-
     return ( $self->{lval}, $self->{rval} );
 }
 
-sub label {
+sub id {
     my $self = shift;
-
     return $self->{label};
 }
 
-sub id {
+sub _userland_id {
     my $self = shift;    
-    return $self->{_id};
+    return $self->id();
 }
 
 1;

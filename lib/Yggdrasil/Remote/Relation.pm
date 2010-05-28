@@ -16,7 +16,7 @@ sub define {
 					$self->yggdrasil(),
 					__PACKAGE__,
 					$self->storage()->{protocol}->define_relation( $params{label},
-										       $lval->name(), $rval->name() ),
+										       $lval->_userland_id(), $rval->_userland_id() ),
 				       );
     
 }
@@ -78,7 +78,7 @@ sub link :method {
 				      $self->yggdrasil(),
 				      __PACKAGE__,
 				      $self->storage()->{protocol}->relation_bind( $label,
-										   $lval->name(), $rval->name() ),
+										   $lval->_userland_id(), $rval->_userland_id() ),
 				     );
 }
 

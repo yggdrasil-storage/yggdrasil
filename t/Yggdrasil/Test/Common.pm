@@ -220,7 +220,7 @@ sub fetch_related {
 
     my $prefix = "$Y_E_I->fetch_related()";
     my $num = @$a;
-    my $ename = $e->name();
+    my $ename = $e->id();
     my $iname = $i->id();
 
     my %einstances;
@@ -364,7 +364,7 @@ sub _check_relation {
     my $prefix = "$pkg->$func()";
 
     isa_ok( $r, $Y_Re, "$prefix: Return value" );
-    my $rname = $r->label();
+    my $rname = $r->id();
     ok( $self->OK(), "$prefix: Created relation '$rname' with status " . $self->code() );
 
     if( defined $name ) {
@@ -403,10 +403,10 @@ sub _check_property {
 
     isa_ok( $p, $Y_P, "$prefix: Return value" );
     ok( $self->OK(), "$prefix: Created property '$name' with status ".$self->code() );
-    my $n = $p->name();
+    my $n = $p->id();
     is( $n, $name, "$prefix: Name is '$n'" );
 
-    my $e_name = $e->name();
+    my $e_name = $e->id();
     my $fqn = join(":", $e_name, $name);
     my $fn = $p->full_name();
     is( $fn, $fqn, "$prefix: Full name is '$fn'" );
@@ -430,7 +430,7 @@ sub _check_entity {
     isa_ok( $e, $Y_E, "$prefix: Return value" );
     ok( $self->OK(), "$prefix: Created entity '$name' with status ".$self->code() );
 
-    my $n = $e->name();
+    my $n = $e->id();
     is( $n, $name, "$prefix: Name is '$name'" );
 }
 

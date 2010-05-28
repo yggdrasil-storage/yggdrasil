@@ -47,7 +47,7 @@ sub define {
 	    return;
 	}
 
-	$parent_id = $pentity->{_id};
+	$parent_id = $pentity->_internal_id();
     }
 
     # --- Add to MetaEntity, noop if it exists.
@@ -148,7 +148,7 @@ sub expire {
     my $storage = $self->storage();
 
     # Do not expire UNIVERSAL.  That's bad.
-    if ($self->{_id} == 1) {
+    if ($self->_internal_id() == 1) {
 	$status->set( 403, "Unable to expire the root entity, 'UNIVERSAL'");
 	return 0;
     }
@@ -163,7 +163,7 @@ sub expire {
 	$instance->expire();
     }
 
-    $storage->expire( 'MetaEntity', id => $self->{_id} );
+    $storage->expire( 'MetaEntity', id => $self->_internal_id() );
 
     if ($status->OK()) {
 	return 1;
@@ -212,7 +212,7 @@ sub instances {
     my $self = shift;
     
     my $instances = $self->storage()->fetch( 
-	'MetaEntity' => { where  => [ entity => $self->name() ] },
+	'MetaEntity' => { where  => [ entity => $self->_userland_id() ] },
 	'Instances'   => { return => [ 'visual_id', 'id', 'start', 'stop' ],
 			  where  => [ entity => \qq{MetaEntity.id} ] } );
     
@@ -235,7 +235,7 @@ sub search {
     my ($self, $key, $value) = (shift, shift, shift);
     
     # Passing the possible time elements onwards as @_ to the Storage layer.
-    my ($nodes) = $self->storage()->search( $self->name(), $key, $value, @_);
+    my ($nodes) = $self->storage()->search( $self->_userland_id(), $key, $value, @_);
     
     my @hits;
     for my $hit (@$nodes) {
@@ -253,19 +253,19 @@ sub search {
 sub can_write {
     my $self = shift;
     
-    return $self->storage()->can( update => 'MetaEntity', { id => $self->{_id} } );
+    return $self->storage()->can( update => 'MetaEntity', { id => $self->_internal_id() } );
 }
 
 sub can_expire {
     my $self = shift;
     
-    return $self->storage()->can( expire => 'MetaEntity', { id => $self->{_id} } );
+    return $self->storage()->can( expire => 'MetaEntity', { id => $self->_internal_id() } );
 }
 
 sub can_instanciate {
     my $self = shift;
 
-    return $self->storage()->can( create => 'Instances', { entity => $self->{_id} } );
+    return $self->storage()->can( create => 'Instances', { entity => $self->_internal_id() } );
 }
 
 sub parent {
@@ -357,7 +357,7 @@ sub properties {
 	for my $p (@$aref) {
 	    my $eobj;
 
-	    if ($e eq $self->name()) {
+	    if ($e eq $self->_userland_id()) {
 		$eobj = $self;
 	    } else {
 		$eobj = __PACKAGE__->get( entity => $e, yggdrasil => $self->{yggdrasil} );
@@ -372,7 +372,7 @@ sub properties {
 	}
     }
 
-    return sort { $a->name() cmp $b->name() } @rets;
+    return sort { $a->_userland_id() cmp $b->_userland_id() } @rets;
 }
 
 # Word of warnings, ancestors returns *names* not objects.  However,
@@ -382,11 +382,11 @@ sub ancestors {
     my ($start, $stop) = @_;
 
     my @ancestors;
-    my %seen = ( $self->{_id} => 1 );
+    my %seen = ( $self->_internal_id() => 1 );
 
     my $storage = $self->storage();
     my $r = $storage->fetch( MetaEntity => { return => [qw/entity parent/],
-					     where  => [ id => $self->{_id} ] },
+					     where  => [ id => $self->_internal_id() ] },
 			     { start => $start, stop => $stop });
     
     while( @$r ) {

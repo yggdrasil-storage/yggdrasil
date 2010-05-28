@@ -80,14 +80,14 @@ sub properties {
     return sort { $a->name() <=> $b->name() } $entity->properties( @_ );
 }
 
-sub name {
+sub id {
     my $self = shift;
     return $self->{name};
 }
 
-sub id {
+sub _userland_id {
     my $self = shift;
-    return $self->name();
+    return $self->id();
 }
 
 1;

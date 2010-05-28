@@ -485,7 +485,7 @@ sub user_info {
     printf "%-15s - %s\n", 'Full name', $user->fullname() || '';
     printf "%-15s - %s\n", 'Session', $user->session() || '';
     printf "%-15s - %s\n", 'Password', $user->password() || '';
-    printf "%-15s - %s\n", 'Roles', join ", ", map { $_->name() } $user->member_of();
+    printf "%-15s - %s\n", 'Roles', join ", ", map { $_->id() } $user->member_of();
     
     &display_tick( $user->start() );
 }
@@ -609,11 +609,11 @@ sub entity_info {
 	for my $prop (@props) {
 	    my $prop_orig_entity = $prop->entity();
 	    next unless $prop_orig_entity;
-	    my $source = $prop_orig_entity->name();
+	    my $source = $prop_orig_entity->id();
 	    my $type = $prop->type();
-	    printf "  %-13s - %-10s - %-7s%s\n",  $prop->name(), lc $prop->type(),
+	    printf "  %-13s - %-10s - %-7s%s\n",  $prop->id(), lc $prop->type(),
 	      $prop->null()?'TRUE':'FALSE',
-		$source ne $eobj->name()?" [$source]":'';
+		$source ne $eobj->id()?" [$source]":'';
 	}
     } else {
 	printf "%-15s - NULL\n", "Properties";
@@ -725,7 +725,7 @@ sub instance_info {
 	    $value = substr( $value, 0, 60 ) . '[ ... ]';
 	}
 	
-	printf "  %-13s - %s ($r$w$e)\n", $prop->name(), $value;
+	printf "  %-13s - %s ($r$w$e)\n", $prop->id(), $value;
     }
 
     &display_tick( $iobj->start() );
@@ -741,7 +741,7 @@ sub instance_expire {
     
     $iobj->expire();
     if ($status->OK()) {
-	print "Instance " . $iobj->id() . " in " . $eobj->name() . " has been expired\n";
+	print "Instance " . $iobj->id() . " in " . $eobj->id() . " has been expired\n";
     } else {
 	print $status->message(), "\n";
     }
@@ -807,7 +807,7 @@ sub instance_history {
     for my $iobj (@iobjs) {
 	my %currentline;
 	for my $prop ('start', 'stop', @props) {
-	    my $propname = ref $prop?$prop->name():$prop;
+	    my $propname = ref $prop?$prop->id():$prop;
 	    my $value;
 
 	    if ($prop eq 'start') {
@@ -830,7 +830,7 @@ sub instance_history {
     my @maxwidth;
     my @header;
     for my $prop ('start', 'stop', @props) {
-	my $propname = ref $prop?$prop->name():$prop;
+	my $propname = ref $prop?$prop->id():$prop;
 	my $w = $maxwidth{$propname} || 1;
 	push @header, sprintf "%-${w}s", $propname;
     }
@@ -839,7 +839,7 @@ sub instance_history {
     for my $l (@lines) {
 	my @l;
 	for my $prop ('start', 'stop', @props) {
-	    my $propname = ref $prop?$prop->name():$prop;
+	    my $propname = ref $prop?$prop->id():$prop;
 	    my $w = $maxwidth{$propname} || 1;
 	    push @l, sprintf "%-${w}s", $l->{$propname} || '';
 	}
@@ -864,7 +864,7 @@ sub relation_entities {
     if (! $status->OK()) {
 	print $status->message(), "\n";
     } else {
-	my $lab = $r->label();
+	my $lab = $r->id();
 	print "Entities '$entity1' and '$entity2' related, with the label '$lab'.\n";
     }
 }
@@ -896,7 +896,7 @@ sub relation_list {
 	my $w = $r->can_write() ? 'w' : '';
 	my $e = $r->can_expire() ? 'e' : '';
 
-	push( @relations, join(" ", $r->label(), "(r$w$e)") );
+	push( @relations, join(" ", $r->id(), "(r$w$e)") );
     }
 
     print join( ", ", @relations ), "\n";
@@ -1084,7 +1084,7 @@ sub display_tick {
 
 # Yggdrasil expand interface.
 sub expand_label {
-    return map { $_->label() } $y->relations();
+    return map { $_->id() } $y->relations();
 }
 
 sub expand_user {
@@ -1096,7 +1096,7 @@ sub expand_role {
 }
 
 sub expand_entity {
-    return map { $_->name() } $y->entities();
+    return map { $_->id() } $y->entities();
 }
 
 sub expand_instance {
@@ -1137,7 +1137,7 @@ sub expand_entity_property {
     my $eobj = $y->get_entity( $entity );
     return unless $eobj;
 
-    return map { $_->name() } $eobj->properties();    
+    return map { $_->id() } $eobj->properties();    
 }
 
 sub expand_instance_property {

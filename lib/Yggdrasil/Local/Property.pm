@@ -12,11 +12,14 @@ sub define {
     my $self   = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $entity   = $params{entity};
+    # Deal with possibly being passed objects.  However, the property
+    # is the id of the thing we wish to define, it better *not* be an
+    # object.
+    my $entity   = ref $params{entity}?$params{entity}->_userland_id():$params{entity};
     my $property = $params{property};
     
     my $yggdrasil = $self->yggdrasil();
-    my $storage   = $yggdrasil->{storage};
+    my $storage   = $yggdrasil->storage();
 
     my $status = $self->get_status();
     unless (length $property) {
@@ -35,7 +38,6 @@ sub define {
 	    $status->set( 406, "Unable to create properties with names containing ':'." );
 	    return;
 	}
-	$entity = $entity->name();
     } elsif( $property =~ /:/ ) {
 	my @parts = split m/::/, $property;
 	my $last = pop @parts;
@@ -52,20 +54,19 @@ sub define {
     
     my $name = join(":", $entity, $property);
 
-    $self->{name} = $property;
+    $self->{name}   = $property;
     $self->{entity} = $entity;
 
     # --- Set the default data type.
-    $params{type} = uc $params{type} if $params{type};
+    $params{type}   = uc $params{type} if $params{type};
     $params{type} ||= 'TEXT';
-    $params{nullp} = 1 if $params{nullp} || ! defined $params{nullp};
+    $params{nullp}  = 1 if $params{nullp} || ! defined $params{nullp};
 
     unless ($storage->is_valid_type( $params{type} )) {
 	my $ptype = $params{type};
 	$status->set( 400, "Unknown property type '$ptype' requested for property '$property'." );
 	return;
     }
-    
     
     my $idref = $storage->fetch( MetaEntity => { return => 'id',
 						 where  => [ entity => $entity ] } );
@@ -75,8 +76,6 @@ sub define {
 	return;
     }
 
-    # FIXME, we can get here without a value TYPE, that'll brake stuff.
-    
     # --- Create Property table
     $storage->define( $name,
 		      fields   => { id    => { type => "INTEGER" },
@@ -92,7 +91,7 @@ sub define {
 							       where => [
 									 id => \q<id>,
 									 'm' => 1,
-],
+									],
 							      }
 					 ],
 			       fetch => [ 
@@ -136,7 +135,9 @@ sub define {
     } else {
 	$status->set( 201, "Property '$property' created for '$entity'." );
     }
-  
+
+    $self->{entity} = Yggdrasil::Local::Entity->get( entity => $self->entity(), yggdrasil => $self->yggdrasil() );
+    
     return $self;
 }
 
@@ -152,27 +153,6 @@ sub objectify {
     $obj->{start}  = $params{start};
     $obj->{stop}   = $params{stop};
     return $obj;
-}
-
-sub name {
-    my $self = shift;
-
-    return $self->{name};
-}
-
-sub entity {
-    my $self = shift;
-
-    return $self->{entity};
-}
-
-
-sub full_name {
-    my $self = shift;
-
-    # Testing is the only thing that uses this method, and it has
-    # managed to make $self->{entity} a string...
-    return join(':', $self->{entity}, $self->{name} );
 }
 
 sub get {
@@ -224,22 +204,12 @@ sub expire {
 
     # You might not have permission to do this, can fails now either way.
 #    for my $instance ($self->{entity}->instances()) {
-#	$storage->expire( $self->{entity}->name() . ':' . $self->name(), id => $self->{_id} );
+#	$storage->expire( $self->{entity}->_userland_id() . ':' . $self->_userland_id(), id => $self->{_id} );
 #    }
     
     $storage->expire( 'MetaProperty', id => $self->{_id} );
     return 1 if $self->get_status()->OK();
     return;
-}
-
-sub null {
-    my $self = shift;
-    return $self->_get_meta( 'null', @_ );
-}
-
-sub type {
-    my $self = shift;
-    return $self->_get_meta( 'type', @_ );
 }
 
 # _get_meta returns meta data for a property, information about nullp
@@ -323,8 +293,7 @@ sub _admin_define {
 						     property => $property ] } );
     
     $type = $type->[0]->{type} || "TEXT";
-    $self->_define( $entity, $property, type => $type, raw => 1 );
-    
+    $self->_define( $entity, $property, type => $type, raw => 1 );    
 }
 
 1;

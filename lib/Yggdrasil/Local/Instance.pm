@@ -17,7 +17,7 @@ sub create {
 
     # Check if the instance already exists
     my $status = $self->get_status();
-    my $ename  = $entity->name();
+    my $ename  = $entity->_userland_id();
 
     my $instance = __PACKAGE__->fetch( yggdrasil => $self, %params );
     if( $instance ) {
@@ -43,12 +43,6 @@ sub create {
     return $self;
 }
 
-sub entity {
-    my $self = shift;
-    
-    return $self->{entity};
-}
-
 sub fetch {
     my $class  = shift;
     my $self   = $class->SUPER::new(@_);
@@ -58,8 +52,7 @@ sub fetch {
     my $entity = $self->{entity}    = $params{entity};
     my $time   = $params{time} || [];
 
-    my $ename = $entity->name();
-
+    my $ename = $entity->_userland_id();
     my $status = $self->get_status();
 
     # Check if instance exists
@@ -116,7 +109,7 @@ sub expire {
 
     # Expire all properties
     for my $prop ($entity->properties()) {
-	$storage->expire( join(':', $entity->name(), $prop->name()), id => $self->{_id} );	
+	$storage->expire( join(':', $entity->_userland_id(), $prop->_userland_id()), id => $self->{_id} );	
     }
     
     # Expire the instance itself.
@@ -135,7 +128,7 @@ sub _get_id {
 
     my $idfetch = $self->storage()->fetch(
 	MetaEntity => { 
-	    where => [ entity => $entity->name(), 
+	    where => [ entity => $entity->_userland_id(), 
 		       id     => \qq{Instances.entity} ]	},
 	Instances   => {
 	    return => "id",
@@ -155,7 +148,7 @@ sub _get_in_tick {
     # FIX: Do we really need to perform this query?
     #      Can't we just check $self->{_id}?
     my $idref  = $self->storage()->fetch('MetaEntity', { 
-							where => [ entity => $entity->name(), 
+							where => [ entity => $entity->_userland_id(), 
 								   id     => \qq{Instances.entity}, ],
 						       },
 					 'Instances', {
@@ -174,7 +167,7 @@ sub _get_in_tick {
     }
     
     my $fetchref = $self->storage()->fetch(
-	MetaEntity   => { where => [ entity => $entity->name(), 
+	MetaEntity   => { where => [ entity => $entity->_userland_id(), 
 				     id     => \qq<MetaProperty.entity> ] },
 	MetaProperty => { return => "property" },
 	{ start => $time[0], stop => $time[1] } );
@@ -183,7 +176,7 @@ sub _get_in_tick {
     push( @wheres, 'Instances' => { join => "left", where => [ id => $id ] } );
     
     foreach my $prop ( map { $_->{property} } @$fetchref ) {
-	my $table = join(":", $entity->name(), $prop);
+	my $table = join(":", $entity->_userland_id(), $prop);
 	push( @wheres, $table => { join => "left" } );
     }
 
@@ -312,7 +305,7 @@ sub _property_allows {
     # Don't touch status, leave it as is from the above call.
     return unless $propobj;
     
-    my $schema = join(':', $eobj->name(), $propobj->name());
+    my $schema = join(':', $eobj->_userland_id(), $propobj->_userland_id());
     return $storage->can( $call => $schema,
 			  { id => $propobj->{_id} });
 }
@@ -338,7 +331,7 @@ sub property {
     if (ref $key) {
 	if (ref $key eq 'Yggdrasil::Local::Property') {
 	    $p = $key;
-	    $key = $p->name();
+	    $key = $p->_userland_id();
 	} else {
 	    my $ref = ref $key;
 	    $status->set( 406, "$ref isn't acceptable as a property reference." );
@@ -349,13 +342,13 @@ sub property {
     my $storage = $self->storage();
 
     my $entity = $self->{entity};
-    my $name = join(":", $entity->name(), $key );
+    my $name = join(":", $entity->_userland_id(), $key );
 
     $p = Yggdrasil::Local::Property->get( yggdrasil => $self, entity => $entity, property => $key )
       unless $p;
     
     unless ($p) {
-	$status->set( 404, "Unable to find property '$key' for entity '" . $entity->name() . "'" );
+	$status->set( 404, "Unable to find property '$key' for entity '" . $entity->_userland_id() . "'" );
 	return undef;
     }
 
@@ -371,7 +364,7 @@ sub property {
 	# FIXME, $self->null is void, need to get $prop->null
 
 	unless ( $p ) {
-	    $status->set( 404, "Property '$key' not defined for '" . $entity->name() . "'" );
+	    $status->set( 404, "Property '$key' not defined for '" . $entity->_userland_id() . "'" );
 	    return;
 	}
 
@@ -436,8 +429,6 @@ sub relations {
     return map { $_->{label} } @$other;
 }
 
-
-
 sub is_a {
     my $self = shift;
     my $isa = shift;
@@ -446,7 +437,7 @@ sub is_a {
     my $entity = $self->{entity};
     my $storage = $self->{yggdrasil}->{storage};
 
-    return 1 if $isa eq $entity->name();
+    return 1 if $isa eq $entity->_userland_id();
 
     my @ancestors = $entity->ancestors($start, $stop);
 
@@ -456,12 +447,6 @@ sub is_a {
     } else {
 	return @ancestors;
     }
-}
-
-sub id {
-  my $self = shift;
-  
-  return $self->{visual_id};
 }
 
 sub pathlength {

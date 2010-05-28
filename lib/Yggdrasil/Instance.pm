@@ -44,6 +44,22 @@ sub get_all {
     }
 }
 
+sub id {
+    my $self = shift;
+    return $self->{visual_id};
+}
+
+sub _userland_id {
+    my $self = shift;
+    return $self->id();
+}
+
+sub entity {
+    my $self = shift;
+    
+    return $self->{entity};
+}
+
 1;
 
 

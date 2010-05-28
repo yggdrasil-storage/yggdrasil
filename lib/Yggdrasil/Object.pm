@@ -72,4 +72,15 @@ sub objectify {
     }    
 }
 
+# Core internal ID retrieval. 
+sub _internal_id {
+    my $self = shift;
+
+    if ($self->{_id}) {
+	return $self->{_id};
+    } else {
+	Yggdrasil::fatal( 'Internal identifier missing' );
+    }
+}
+
 1;

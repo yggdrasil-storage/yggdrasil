@@ -33,8 +33,8 @@ sub define {
 
     # --- Add to MetaRelation
     my $id = Yggdrasil::MetaRelation->add( yggdrasil => $self, 
-					   lval      => $lval->{_id},
-					   rval      => $rval->{_id},
+					   lval      => $lval->_internal_id(),
+					   rval      => $rval->_internal_id(),
 					   label     => $label) unless $param{raw};
     $self->{_id} = $id;
     return $self;
@@ -111,13 +111,13 @@ sub _get_real_val {
 sub can_write {
     my $self = shift;
     
-    return $self->storage()->can( update => 'MetaRelation', { id => $self->{_id} } );
+    return $self->storage()->can( update => 'MetaRelation', { id => $self->_internal_id() } );
 }
 
 sub can_expire {
     my $self = shift;
     
-    return $self->storage()->can( expire => 'MetaRelation', { id => $self->{_id} } );
+    return $self->storage()->can( expire => 'MetaRelation', { id => $self->_internal_id() } );
 }
 
 sub can_link {
@@ -126,9 +126,9 @@ sub can_link {
     my $rval = shift;
     
     return unless $self->_validate_link_objects( $lval, $rval );
-    return $self->storage()->can( create => 'Relation', { relationid => $self->{_id}, 
-							  lval => $lval->{_id},
-							  rval => $rval->{_id} } );
+    return $self->storage()->can( create => 'Relation', { relationid => $self->_internal_id(), 
+							  lval => $lval->_internal_id(),
+							  rval => $rval->_internal_id() } );
 }
 
 sub can_unlink {
@@ -137,9 +137,9 @@ sub can_unlink {
     my $rval = shift;
 
     return unless $self->_validate_link_objects( $lval, $rval );
-    return $self->storage()->can( expire => 'Relation', { relationid => $self->{_id}, 
-							  lval => $lval->{_id},
-							  rval => $rval->{_id} } );
+    return $self->storage()->can( expire => 'Relation', { relationid => $self->_internal_id(), 
+							  lval => $lval->_internal_id(),
+							  rval => $rval->_internal_id() } );
     
 }
 
@@ -154,7 +154,7 @@ sub participants {
     my $parts = $storage->fetch(
 				Relations => {
 					      return => ['relationid', 'lval', 'rval'],
-					      where  => [ relationid => $self->{_id} ] },
+					      where  => [ relationid => $self->_internal_id() ] },
 			       );
 
     my @participants;
@@ -192,9 +192,9 @@ sub link :method {
   $self->storage()->store( 'Relations',
 			   key => ['relationid', 'lval', 'rval' ],
 			   fields => {
-			       'relationid' => $self->{_id},
-			       'lval' => $lval->{_id},
-			       'rval' => $rval->{_id} });
+			       'relationid' => $self->_internal_id(),
+			       'lval' => $lval->_internal_id(),
+			       'rval' => $rval->_internal_id() });
 }
 
 sub unlink :method {
@@ -202,7 +202,7 @@ sub unlink :method {
   my $lval = shift;
   my $rval = shift;
 
-  $self->storage()->expire( 'Relations', lval => $lval->{_id}, rval => $rval->{_id} );
+  $self->storage()->expire( 'Relations', lval => $lval->_internal_id(), rval => $rval->_internal_id() );
 }
 
 

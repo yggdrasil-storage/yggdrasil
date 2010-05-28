@@ -56,5 +56,35 @@ sub expire {
     }
 }
 
+sub id {
+    my $self = shift;
+    return $self->{name};
+}
+
+
+sub full_name {
+    my $self = shift;
+    return join(':', $self->entity()->_userland_id(), $self->_userland_id() );
+}
+
+sub _userland_id {
+    my $self = shift;
+    return $self->id();
+}
+
+sub entity {
+    my $self = shift;
+    return $self->{entity};
+}
+
+sub null {
+    my $self = shift;
+    return $self->_get_meta( 'null', @_ );
+}
+
+sub type {
+    my ($self, $property) = (shift, shift);
+    return $self->_get_meta( 'type', @_ );
+}
 
 1;
