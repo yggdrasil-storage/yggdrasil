@@ -159,8 +159,9 @@ sub expire {
     }
 
     # Expire all properties
-    for my $instance ($self->instances()) {
-	$instance->expire();
+    for my $propery ($self->properties()) {
+	$property->expire() if
+	  $property->entity()->_internal_id() == $self->_internal_id();
     }
 
     $storage->expire( 'MetaEntity', id => $self->_internal_id() );
