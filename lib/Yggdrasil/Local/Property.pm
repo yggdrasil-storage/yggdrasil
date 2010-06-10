@@ -120,24 +120,23 @@ sub define {
 					 ],
 			      },
 		    );
-  
     
     # --- Add to MetaProperty
     # Why isn't this in Y::MetaProperty?
-    $storage->store("MetaProperty", key => [qw/entity property/],
-		    fields => { entity   => $idref->[0]->{id},
-				property => $property,
-				type     => $params{type},
-				nullp    => $params{nullp},
-			      } ) unless $params{raw};
     if ($status->status() == 202) {
-	$status->set( 202, "Property '$property' already existed for '$entity'." );
+	$self->{entity} = Yggdrasil::Local::Entity->get( entity => $self->entity(), yggdrasil => $self->yggdrasil() );
+	$status->set( 202, "Property '$property' already existed for entity '$entity'" );
     } else {
 	$status->set( 201, "Property '$property' created for '$entity'." );
+	$storage->store("MetaProperty", key => [qw/entity property/],
+			fields => { entity   => $idref->[0]->{id},
+				    property => $property,
+				    type     => $params{type},
+				    nullp    => $params{nullp},
+				  } ) unless $params{raw};
+	$self->{entity} = Yggdrasil::Local::Entity->get( entity => $self->entity(), yggdrasil => $self->yggdrasil() );	
     }
 
-    $self->{entity} = Yggdrasil::Local::Entity->get( entity => $self->entity(), yggdrasil => $self->yggdrasil() );
-    
     return $self;
 }
 
