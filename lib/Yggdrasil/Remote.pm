@@ -68,8 +68,14 @@ sub property_types {
     return $self->{storage}->{protocol}->property_types();   
 }
 
+sub get_current_tick {
+    my $self = shift;
+    return $self->{storage}->{protocol}->get_current_tick();
+}
+
 sub get_ticks_by_time {
-    
+    my $self = shift;
+    return $self->{storage}->{protocol}->get_ticks_by_time( @_ );    
 }
 
 sub get_ticks {

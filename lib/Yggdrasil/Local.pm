@@ -112,6 +112,11 @@ sub get_ticks_by_time {
     return $self->{storage}->get_ticks_from_time( @_ );
 }
 
+sub get_current_tick {
+    my $self = shift;
+    return $self->{storage}->get_current_tick();
+}
+
 sub get_ticks {
     my $self  = shift;
     

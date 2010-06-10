@@ -963,15 +963,15 @@ sub tick_info {
 sub tick_current {
     my ($tick_command, $current_command) = @_;
 
-    my @ticks = $y->get_ticks_by_time( time );
-    print $ticks[0]->{id}, "\n";
+    my $tickid = $y->current_tick();
+    print "$tickid\n";
 }
 
 sub ticks_in_time {
     my ($tick_command, $info_command, $time) = @_;
-    my ($to, $from) = split / to /, $time;
+    my ($from, $to) = split / to /, $time;
 
-    my @ticks = $y->get_ticks_by_time( $to, $from );
+    my @ticks = $y->get_ticks_by_time( $from, $to );
     
     print "No ticks for the given time.\n" and return unless @ticks;
 

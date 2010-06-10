@@ -41,10 +41,12 @@ sub new {
 		get_property_meta  => sub { _get_property_meta( $y, @_ ) },
 		get_property_types => sub { _get_property_types( $y, @_ ) },
 		
-		get_value        => sub { _get_set_value( $y, @_ ) },
-		set_value        => sub { _get_set_value( $y, @_ ) },
+		get_value         => sub { _get_set_value( $y, @_ ) },
+		set_value         => sub { _get_set_value( $y, @_ ) },
 
-		get_ticks        => sub { _get_ticks( $y, @_ ) },
+		get_ticks         => sub { _get_ticks( $y, @_ ) },
+		get_ticks_by_time => sub { _get_ticks_by_time( $y, @_ ) },
+		get_current_tick  => sub { _get_current_tick( $y ) },
 		
 		get_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
 		set_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
@@ -405,6 +407,28 @@ sub _get_ticks {
     $ygg->get_status()->set( 200 );
     my @ticks = $ygg->get_ticks( @_ );
     return \@ticks;
+}
+
+sub _get_ticks_by_time {
+    my $ygg = shift;
+    my %params = @_;
+    
+    $ygg->get_status()->set( 200 );
+    my @ticks;
+
+    if (exists $params{stop}) {
+	@ticks = $ygg->get_ticks_by_time( $params{start}, $params{stop} );
+    } else {
+	@ticks = $ygg->get_ticks_by_time( $params{start} );
+    }
+
+    return \@ticks;
+}
+
+sub _get_current_tick {
+    my $ygg = shift;
+    $ygg->get_status()->set( 200 );
+    return $ygg->current_tick();
 }
 
 sub _get_property_meta {

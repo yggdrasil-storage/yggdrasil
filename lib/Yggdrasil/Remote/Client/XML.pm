@@ -322,13 +322,30 @@ sub get_all_properties {
 # Metaish stuff
 # FIXME: Need to be able to send requests for multiple ticks.
 sub get_ticks {
-    my $self   = shift;
+    my $self = shift;
     return $self->_get( 'ticks', @_ );
+}
+
+sub get_ticks_by_time {
+    my $self = shift;
+
+    if (@_ == 2) {
+	return $self->_get( 'ticks_by_time', start => shift, stop => shift );	
+    } elsif (@_ == 1) {
+	return $self->_get( 'ticks_by_time', start => shift );	
+    } else {
+	return $self->_get( 'ticks_by_time' );	
+    }
 }
 
 sub property_types {
     my $self = shift;
     return $self->_get( 'property_types' );
+}
+
+sub get_current_tick {
+    my $self = shift;
+    return $self->_get( 'current_tick' );
 }
 
 # Introspective calls, handle with care.
@@ -398,6 +415,10 @@ sub _get_reply {
 	$reply_node = 'value';
     } elsif ($reply_node eq 'relation_bind') {
 	$reply_node = 'relation';
+    } elsif ($reply_node eq 'current_tick') {
+	$reply_node = 'value';
+    } elsif ($reply_node eq 'ticks_by_time') {
+	$reply_node = 'hash';
     }
 
     my @data = $reply->get( 'reply', $reply_node );

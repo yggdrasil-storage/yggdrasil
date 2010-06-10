@@ -534,27 +534,24 @@ sub get_ticks_from_time {
 	$to = $self->_convert_time( $to );
 
 	$fetchref = $self->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
-						      where  => [ 'stamp' => qq<$from>, stamp => qq<$to> ],
+						      where  => [ 'stamp' => \qq<$from>, stamp => \qq<$to> ],
 						      operator => [ '>=', '<='],
 						      bind   => 'and',
 						    } );
 
     } else {
-	my $max_stamp = $self->fetch( Storage_ticker => { return   => "stamp",
-							  filter   => "MAX",
-							  where    => [ stamp => qq<$from> ],
-							  operator => "<=",
-							} );
+	my $max_id = $self->fetch( Storage_ticker => { return   => "id",
+						       filter   => "MAX",
+						       where    => [ stamp => \qq<$from> ],
+						       operator => "<=",
+						     } );
 
-	$max_stamp = $max_stamp->[0]->{max_stamp};
-	return unless $max_stamp;
+	$max_id = $max_id->[0]->{max_id};
+	return unless $max_id;
 
 	$fetchref = $self->fetch( 'Storage_ticker', { return => [ 'id', 'stamp', 'committer' ],
-						      where  => [ 'stamp' => $max_stamp ],
-						      operator => '=',
+						      where  => [ 'id' => $max_id ],
 						    } );
-
-	
     }
 
     my @hits;
@@ -562,6 +559,14 @@ sub get_ticks_from_time {
 	push @hits, $tick;
     }
     return @hits;
+}
+
+sub get_current_tick {
+    my $self = shift;
+    my $ref = $self->fetch( Storage_ticker => { return   => "id",
+						filter   => "MAX",
+					      } );
+    return $ref->[0]->{max_id};
 }
 
 sub raw_store {
@@ -575,7 +580,7 @@ sub raw_store {
 
 # fetch ( schema1, { return => [ fieldnames ], where => [ s1field1 => s1value1, ... ], operator => operator, bind => bind-op }
 #         schema2, { return => [ fieldnames ], where => [ s2field => s2value, ... ], operator => operator, bind => bind-op }
-#         { start => $start, stop => $stop } (optional)
+#         { start => $start, stop => $stop, format => tick|iso|epoch } (optional)
 # We remap the schema names (the non-reference parameters) here.
 sub fetch {
     my $self = shift;
@@ -590,11 +595,26 @@ sub fetch {
 	$time = {};
     }
 
-    # Convert the given timeformat to the engines preferred format
-    # Turned off for ticks.
-#    foreach my $key ( keys %$time ) {
-#	$time->{$key} = $self->_convert_time( $time->{$key} );
-#    }
+    if ($time->{start} || $time->{stop}) {
+	$time->{format} ||= 'tick';
+	$time->{format} = lc $time->{format};
+	
+	if ($time->{format} eq 'epoch') {
+	    if ($time->{start}) {
+		$time->{start} = ($self->get_ticks_from_time( $time->{start} ))[0];
+	    } else {
+		$time->{start} = 1;
+	    }
+
+	    $time->{stop} = ($self->get_ticks_from_time( $time->{stop} ))[-1] if $time->{stop};
+	} elsif ($time->{format} eq 'tick') {
+	    $time->{start} ||= 1;
+	} elsif ($time->{format} eq 'iso') {
+	    # We're not quite ready for this yet.
+	    $self->get_status()->set( 501, 'ISO time formats not (yet) supported' );
+	    return;
+	}
+    }
 
     # Add "as" parameter that can be used later to prefix returned values from the query
     # (to ensure unique return values, eg. Foo_stop, Bar_stop, ... )

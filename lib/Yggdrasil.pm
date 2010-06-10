@@ -404,6 +404,11 @@ sub property_types {
     return $self->{mode}->property_types(@_);
 }
 
+sub current_tick {
+    my $self = shift;
+    return $self->{mode}->get_current_tick(@_);
+}
+
 # How to enter time formats... Best suggestions so far are:
 #  * epoch (duh)
 #  * YYYY-MM-DD HH:MM:SS
@@ -420,11 +425,14 @@ sub property_types {
 sub get_ticks_by_time {
     my $self = shift;
     my $from = $self->_get_epoch_from_input( shift );
-    my $to   = $self->_get_epoch_from_input( shift );
-
     return unless defined $from;
 
-    $self->{mode}->get_ticks_by_time( $from, $to );
+    if (@_) {
+	my $to = $self->_get_epoch_from_input( shift );
+	return $self->{mode}->get_ticks_by_time( $from, $to );
+    } else {
+	return $self->{mode}->get_ticks_by_time( $from );
+    }
 }
 
 # We're only doing resolution down to a second, so we can use epoch
@@ -436,15 +444,13 @@ sub _get_epoch_from_input {
     return unless defined $time;
 
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-    if ($time =~ /^\d{2}$/) {
-	$sec = $time;
-    } elsif ($time =~ /^(\d+):(\d+)$/) {
+    if ($time =~ /^(\d+):(\d+)$/) {
 	($min, $sec) = ($1, $2);
     } elsif ($time =~ /^(\d+):(\d+):(\d+)$/) {
 	($hour, $min, $sec) = ($1, $2, $3);	
     } elsif ($time =~ /^(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)$/) {
 	($year, $mon, $mday, $hour, $min, $sec) = ($1, $2 - 1, $3, $4, $5, $6);
-    } elsif ($time =~ /^(\d{3,})$/ || $time == 0) {
+    } elsif ($time =~ /^\d+$/ || $time == 0) {
 	# We haz epoch?  Yarp.
 	return $time;
     } else {
