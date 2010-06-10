@@ -159,7 +159,7 @@ sub expire {
     }
 
     # Expire all properties
-    for my $propery ($self->properties()) {
+    for my $property ($self->properties()) {
 	$property->expire() if
 	  $property->entity()->_internal_id() == $self->_internal_id();
     }
