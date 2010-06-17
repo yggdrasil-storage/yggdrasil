@@ -131,51 +131,75 @@ my %cmd;
 	},
 
 	grant => {
-	    _help => "Grant role privileges for an entity",
+	    _help => "Grant role privileges",
 
 	    read   => {
-		_help => "Grant role read privileges for an entity",
+		_help => "Grant role read privileges",
 		_role => {
-		    _entity => \&role_grant,
+			  entity    => { _entity => \&role_grant },
+			  instance  => { _entity => { _instance => \&role_grant } },
+			  relation  => { _relationlabel => \&role_grant },
+			  property  => { _entity => { _entity_property => \&role_grant } },
+			  iproperty => { _entity => { _instance => { _instance_property => \&role_grant } } },
 		}
 	    },
 
 	    write  => {
-		_help => "Grant role write privileges for an entity",
+		_help => "Grant role write privileges",
 		_role => {
-		    _entity => \&role_grant,
+			  entity    => { _entity => \&role_grant },
+			  instance  => { _entity => { _instance => \&role_grant } },
+			  relation  => { _relationlabel => \&role_grant },
+			  property  => { _entity => { _entity_property => \&role_grant } },
+			  iproperty => { _entity => { _instance => { _instance_property => \&role_grant } } },
 		},
 	    },
 
 	    modify => {
-		_help => "Grant role modify privileges for an entity",
+		_help => "Grant role modify privileges",
 		_role => {
-		    _entity => \&role_grant,
+			  entity    => { _entity => \&role_grant },
+			  instance  => { _entity => { _instance => \&role_grant } },
+			  relation  => { _relationlabel => \&role_grant },
+			  property  => { _entity => { _entity_property => \&role_grant } },
+			  iproperty => { _entity => { _instance => { _instance_property => \&role_grant } } },
 		},
 	    },
 	},
 
 	revoke => {
-	    _help => "Revoke role privileges for an entity",
+	    _help => "Revoke role privileges",
 
 	    read   => {
-		_help => "Revoke role read privileges for an entity",
+		_help => "Revoke role read privileges",
 		_role => {
-		    _entity => \&role_revoke,
-		}
+			  entity    => { _entity => \&role_revoke },
+			  instance  => { _entity => { _instance => \&role_revoke } },
+			  relation  => { _relationlabel => \&role_revoke },
+			  property  => { _entity => { _entity_property => \&role_revoke } },
+			  iproperty => { _entity => { _instance => { _instance_property => \&role_revoke } } },
+		},
 	    },
 
 	    write  => {
-		_help => "Revoke role write privileges for an entity",
+		_help => "Revoke role write privileges",
 		_role => {
-		    _entity => \&role_revoke,
+			  entity    => { _entity => \&role_revoke },
+			  instance  => { _entity => { _instance => \&role_revoke } },
+			  relation  => { _relationlabel => \&role_revoke },
+			  property  => { _entity => { _entity_property => \&role_revoke } },
+			  iproperty => { _entity => { _instance => { _instance_property => \&role_revoke } } },
 		},
 	    },
 
 	    modify => {
-		_help => "Revoke role modify privileges for an entity",
+		_help => "Revoke role modify privileges",
 		_role => {
-		    _entity => \&role_revoke,
+			  entity    => { _entity => \&role_revoke },
+			  instance  => { _entity => { _instance => \&role_revoke } },
+			  relation  => { _relationlabel => \&role_revoke },
+			  property  => { _entity => { _entity_property => \&role_revoke } },
+			  iproperty => { _entity => { _instance => { _instance_property => \&role_revoke } } },
 		},
 	    },
 	}
@@ -1020,25 +1044,22 @@ sub role_create {
 }
 
 sub role_grant {
-    my($role_command, $grant_command, $privilege, $role, $entity) = @_;
+    my $role_command  = shift;
 
-    grant_revoke( $grant_command, $privilege, $role, $entity );
+    grant_revoke( @_ );
 }
 
 sub role_revoke {
-    my($role_command, $revoke_command, $privilege, $role, $entity) = @_;
+    my $role_command   = shift;
     
-    grant_revoke( $revoke_command, $privilege, $role, $entity );
+    grant_revoke( @_ );
 }
 
 sub grant_revoke {
-    my( $type, $privilege, $role, $entity ) = @_;
-
-    my $robj = $y->get_role( $role );
-    print "'$role', no such role.\n" and return unless $robj;
-
-    my $eobj = $y->get_entity( $entity );
-    print "'$entity', no such entity.\n" and return unless $eobj;
+    my $operation = shift;
+    my $privilege = shift;
+    my $role      = shift;
+    my $type      = shift;
 
     my %tag = (
 	read   => 'r',
@@ -1047,12 +1068,49 @@ sub grant_revoke {
     );
     print "'$privilege', no such privilege.\n" and return unless $tag{$privilege};
 
-    if( $type eq "grant" ) {
-	$robj->grant( MetaEntity => $tag{$privilege}, id => $eobj->{id} );
-	print "Granted role '$role' $privilege privileges to $entity\n"; 
-    } elsif( $type eq "revoke" ) {
-	$robj->revoke( MetaEntity => $tag{$privilege}, id => $eobj->{id} );
-	print "Revoked role '$role' $privilege privileges to $entity\n"; 
+    my $robj = $y->get_role( $role );
+    print "'$role', no such role.\n" and return unless $robj;
+
+    my $o;
+    if( $type eq "entity" ) {
+	my $entity = shift;
+
+	$o = $y->get_entity( $entity );
+	print "'$entity', no such entity.\n" and return unless $o;
+    } elsif( $type eq "instance" ) {
+	my $entity   = shift;
+	my $instance = shift;
+
+	$o = $y->get_instance( $entity, $instance );
+	print "'$instance', no such instance.\n" and return unless $o;
+    } elsif( $type eq "relation" ) {
+	my $label = shift;
+
+	$o = $y->get_relation( $label );
+	print "'$label', no such relation.\n" and return unless $o;
+    } elsif( $type eq "property" ) {
+	my $entity   = shift;
+	my $property = shift;
+
+	$o = $y->get_property( $entity, $property );
+	print "'$property', no such property.\n" and return unless $o;
+    } elsif( $type eq "iproperty" ) {
+	my $entity   = shift;
+	my $instance = shift;
+	my $property = shift;
+
+	my $iobj = $y->get_instance( $entity, $instance );
+	print "'$instance', no such instance.\n" and return unless $iobj;
+
+	# FIX: objectify $o (instance property?)
+    }
+
+    if( $operation eq "grant" ) {
+	$robj->grant( $tag{$privilege} => $o );
+	print "Granted role '$role' $privilege privileges to ", $o->id(), "\n"; 
+    } elsif( $operation eq "revoke" ) {
+	$robj->revoke( $tag{$privilege} => $o );
+	print "Revoked role '$role' $privilege privileges to ", $o->id(), "\n"; 
     } else {
 	print "'$type', no such type.\n";
 	return;

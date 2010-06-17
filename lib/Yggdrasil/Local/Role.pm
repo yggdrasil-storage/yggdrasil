@@ -136,21 +136,47 @@ sub id {
 }
 
 sub grant {
-    my $self   = shift;
-    my $schema = shift;
+    my $self = shift;
 
-    # Take either the name, or an object as a parameter.
-    $schema = $schema->name() if ref $schema;
-    $self->{_role_obj}->grant( $schema, @_ )
+    return $self->_grant_revoke( grant => @_ );
 }
 
 sub revoke {
     my $self   = shift;
-    my $schema = shift;
 
-    # Take either the name, or an object as a parameter.
-    $schema = $schema->name() if ref $schema;
-    $self->{_role_obj}->revoke( $schema, @_ )
+    return $self->_grant_revoke( revoke => @_ );
+}
+
+sub _grant_revoke {
+    my $self = shift;
+    my $op   = shift;
+    my $priv = shift;
+
+    foreach my $o ( @_ ) {
+	# FIX: $o is not a ref, should we tell some about that?
+	next unless ref $o;
+
+	my( $schema, $id );
+	if( $o->isa('Yggdrasil::Entity') ) {
+	    $schema = "MetaEntity";
+	} elsif( $o->isa('Yggdrasil::Instance') ) {
+	    $schema = "Instances";
+	} elsif( $o->isa('Yggdrasil::Relation') ) {
+	    $schema = "MetaRelation";
+	} elsif( $o->isa('Yggdrasil::Property') ) {
+	    $schema = "MetaProperty";
+	} else {
+	    # FIX: Tell someone that we didn't recognize their object?
+	    next;
+	}
+
+	if( $op eq "grant" ) {
+	    $self->{_role_obj}->grant( $schema => $priv, id => $o->_internal_id() );
+	} elsif( $op eq "revoke" ) {
+	    $self->{_role_obj}->revoke( $schema => $priv, id => $o->_internal_id() );
+	}
+    }
+    
 }
 
 sub add {
