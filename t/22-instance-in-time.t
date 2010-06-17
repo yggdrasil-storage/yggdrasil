@@ -42,7 +42,7 @@ for my $val (@values) {
 # --- Test get-in-time -- get at time
 my $n = 0;
 for my $val (@values) {
-    my @hal_in_time = $tester->get_instance( $host, "HAL", 1, $time[$n] );
+    my @hal_in_time = $tester->get_instance( $host, "HAL", 1, time => { start => $time[$n], format => 'epoch' } );
     my $ip = $hal_in_time[0]->get( "ip" );
     check_property_return( $ip, $val );
 } continue { $n++ }
@@ -50,7 +50,7 @@ for my $val (@values) {
 
 # --- Test get-in-time -- get time slice
 for $n (0..1) {
-    my @hal_in_time = $tester->get_instance( $host, "HAL", 2, $time[$n], $time[$n+1] + 1 );
+    my @hal_in_time = $tester->get_instance( $host, "HAL", 2, time => { start => $time[$n], stop => $time[$n+1] + 1, format => 'epoch' } );
 
     my $x = 0;
     for my $h (@hal_in_time) {

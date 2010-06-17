@@ -32,10 +32,13 @@ sub property_exists {
 sub fetch {
     my $self = shift;
     my $instance = shift;
+    my %params = @_;
 
     return Yggdrasil::Remote::Instance->fetch( yggdrasil => $self->yggdrasil(),
-					       entity    => $self->_userland_id(),
-					       instance  => $instance );
+					       entity    => $self->_userland_id(),					       
+					       instance  => $instance,
+					       time      => $params{time},
+					     );
 }
 
 sub expire {

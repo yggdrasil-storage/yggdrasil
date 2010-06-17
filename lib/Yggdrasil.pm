@@ -276,21 +276,21 @@ sub expire_user {
     my $self = shift;
     my $user = shift;
 
-    return Yggdrasil::User->expire( yggdrasil => $self, user => $user, @_ );
+    return Yggdrasil::User->expire( yggdrasil => $self, user => $user );
 }
 
 sub expire_role {
     my $self = shift;
     my $role = shift;
 
-    return Yggdrasil::Role->expire( yggdrasil => $self, role => $role, @_ );
+    return Yggdrasil::Role->expire( yggdrasil => $self, role => $role );
 }
 
 sub expire_entity {
     my $self   = shift;
     my $entity = shift;
 
-    return Yggdrasil::Entity->expire( yggdrasil => $self, entity => $entity, @_ );
+    return Yggdrasil::Entity->expire( yggdrasil => $self, entity => $entity );
 }
 
 sub expire_instance {
@@ -312,7 +312,7 @@ sub expire_relation {
     my $self  = shift;
     my $label = shift;
 
-    return Yggdrasil::Relation->expire( yggdrasil => $self, label => $label, @_ );
+    return Yggdrasil::Relation->expire( yggdrasil => $self, label => $label );
 }
 
 sub expire_property {
@@ -339,7 +339,7 @@ sub expire_property {
 sub entities {
     my $self = shift;
     
-    return Yggdrasil::Entity->get_all( yggdrasil => $self );
+    return Yggdrasil::Entity->get_all( yggdrasil => $self, @_ );
 }
 
 # instances, returns all the instances of a specific entitity.
@@ -347,7 +347,7 @@ sub instances {
     my $self   = shift;
     my $entity = shift;
     
-    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity );
+    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity, @_ );
     return undef unless $e;    
     return $e->instances();
 }
@@ -357,7 +357,7 @@ sub properties {
     my $self   = shift;
     my $entity = shift;
     
-    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity );
+    my $e = Yggdrasil::Entity->get( yggdrasil => $self, entity => $entity, @_ );
     return undef unless $e;
     return $e->properties();
 }
@@ -374,7 +374,7 @@ sub relations {
 sub users {
     my $self = shift;
 
-    return Yggdrasil::User->get_all( yggdrasil => $self, @_ );
+    return Yggdrasil::User->get_all( yggdrasil => $self );
 }
 
 
@@ -382,7 +382,7 @@ sub users {
 sub roles {
     my $self = shift;
     
-    return Yggdrasil::Role->get_all( yggdrasil => $self, @_ );
+    return Yggdrasil::Role->get_all( yggdrasil => $self );
 }
 
 # usernames / rolenames, returns all the usernames / rolenames known
@@ -401,12 +401,12 @@ sub rolenames {
 sub property_types {
     my $self = shift;
 
-    return $self->{mode}->property_types(@_);
+    return $self->{mode}->property_types();
 }
 
 sub current_tick {
     my $self = shift;
-    return $self->{mode}->get_current_tick(@_);
+    return $self->{mode}->get_current_tick();
 }
 
 # How to enter time formats... Best suggestions so far are:

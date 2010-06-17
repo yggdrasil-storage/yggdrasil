@@ -50,7 +50,7 @@ sub fetch {
 
     my $vid    = $self->{visual_id} = $params{instance};
     my $entity = $self->{entity}    = $params{entity};
-    my $time   = $params{time} || [];
+    my $time   = $params{time} || {};
 
     my $ename = $entity->_userland_id();
     my $status = $self->get_status();
@@ -62,18 +62,8 @@ sub fetch {
 	return;
     }
 
-    if( @$time > 1 && ! wantarray && $time->[0] != $time->[1] ) {
-	$status->set( 406, "When calling fetch with a time slice specified a list will be returned" );
-	return;
-    }
-
-    # If the user only specifies one time argument, then stop should
-    # be set equal to start, meaning fetch is called for a specific
-    # moment in time.
-    push( @$time, $time->[0] ) if @$time == 1;
-
     my @instances;
-    for my $dataref ( $self->_get_in_tick($vid, @$time) ) {
+    for my $dataref ( $self->_get_in_tick($vid, $time) ) {
 	# UGH ...
 	my $o = __PACKAGE__->new( yggdrasil => $self );
 	$o->{visual_id} = $vid;
@@ -85,11 +75,7 @@ sub fetch {
     }
 
     $status->set( 200 );
-    # WARNING, setting $time->[0] to 0 will break the second test
-    # hard, adding a 'defined' fixes that problem, but we might wish
-    # to define semantics here.
-    if( @$time && defined $time->[0] && ! ( $time->[1] && $time->[0] == $time->[1] )) {
-#    if( @$time && defined $time->[0] && ! ( $time->[1] && $time->[0] == $time->[1] )) {
+    if( wantarray ) {
 	return @instances;
     } else {
 	return $instances[-1];
@@ -141,7 +127,7 @@ sub _get_id {
 sub _get_in_tick {    
     my $self = shift;
     my $visual_id = shift;
-    my @time = @_;
+    my $time = shift;
 
     my $entity = $self->{entity};
 
@@ -158,51 +144,55 @@ sub _get_in_tick {
     my $id = $idref->[0]->{id};
     
     # Short circuit the joins if we're looking for the current object
-    unless (@time) {
+    unless (exists $time->{start} || exists $time->{stop}) {
 	if ($id) {
 	    return { id => $id, 'start' => $idref->[0]->{start}, 'stop' => $idref->[0]->{stop} };
 	} else {
 	    return;
 	}
     }
-    
+
     my $fetchref = $self->storage()->fetch(
-	MetaEntity   => { where => [ entity => $entity->_userland_id(), 
-				     id     => \qq<MetaProperty.entity> ] },
-	MetaProperty => { return => "property" },
-	{ start => $time[0], stop => $time[1] } );
+					   MetaEntity   => { where => [ entity => $entity->_userland_id(), 
+									id     => \qq<MetaProperty.entity> ]},
+					   MetaProperty => { return => "property" },
+					   $time );
     
     my @wheres;
-    push( @wheres, 'Instances' => { join => "left", where => [ id => $id ] } );
-    
-    foreach my $prop ( map { $_->{property} } @$fetchref ) {
-	my $table = join(":", $entity->_userland_id(), $prop);
-	push( @wheres, $table => { join => "left" } );
-    }
+    push( @wheres, 'Instances' => { join => "left",
+				    return => '*',
+				    where => [ id => $id ] } );
 
-    my $ref = $self->storage()->fetch( @wheres, { start => $time[0], stop => $time[1] } );
+    my %seen_props;
+    foreach my $prop ( map { $_->{property} } @$fetchref ) {
+	next if $seen_props{ $prop }++;
+ 	my $table = join(":", $entity->_userland_id(), $prop);
+ 	push( @wheres, $table => { join => "left", return => '*' } );
+     }
+    
+    my $ref = $self->storage()->fetch( @wheres, $time );
 
     # If we're within a time slice, filter out the relevant hits, sort
     # them and return.  Remember to set the start of the first hit to
-    # $time[0] (the first timestamp in the request) and the end time
-    # of the last hit to $time[1] (the last acceptable timestamp in
-    # the request.
-    if( defined $time[0] || defined $time[1] ) {
-	my $times = $self->_filter_start_times( $time[0], $time[1], $ref );
+    # $time->{start} (the first timestamp in the request) and the end
+    # time of the last hit to $time->{stop} (the last acceptable
+    # timestamp in the request.    
+     if( defined $time->{start} || defined $time->{stop} ) {
+ 	my $times = $self->_filter_start_times( $time->{start}, $time->{stop}, $ref );
 
-	my @sorted = map { $times->{$_} } sort { $a <=> $b } keys %$times;
-	for( my $i = 0; $i < @sorted; $i++ ) {
-	    my $e = $sorted[$i];
-	    my $next = $sorted[$i+1] || {};
+ 	my @sorted = map { $times->{$_} } sort { $a <=> $b } keys %$times;
+ 	for( my $i = 0; $i < @sorted; $i++ ) {
+ 	    my $e = $sorted[$i];
+ 	    my $next = $sorted[$i+1] || {};
 	    
 #	    if( $i == 0 ) {
-#		$e->{start} = $time[0];
+#		$e->{start} = $time->{start};
 #	    }
 
-	    $e->{stop} = $next->{start} || $time[1];
-	}
-	return @sorted;
-    }
+ 	    $e->{stop} = $next->{start} || $time->{stop};
+ 	}
+ 	return @sorted;
+     }
     
     return @$ref;
 }
@@ -432,14 +422,14 @@ sub relations {
 sub is_a {
     my $self = shift;
     my $isa = shift;
-    my($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
+    my %params = @_;
 
     my $entity = $self->{entity};
     my $storage = $self->{yggdrasil}->{storage};
 
     return 1 if $isa eq $entity->_userland_id();
 
-    my @ancestors = $entity->ancestors($start, $stop);
+    my @ancestors = $entity->ancestors( $params{time} );
 
     if( defined $isa ) {
 	my $r = grep { $isa eq $_ } @ancestors;

@@ -67,7 +67,6 @@ sub define {
 }
 
 # get an entity
-# FIXME, temporality?
 sub get {
     my $class = shift;
 
@@ -97,7 +96,9 @@ sub get {
     }
 
     my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ @query ],
-							return => [ 'id', 'entity', 'parent', 'start', 'stop' ] } );
+							return => [ 'id', 'entity', 'parent', 'start', 'stop' ] },
+					$params{time},
+				      );
     
     unless (defined $aref->[0]->{id}) {
 	$status->set( 404, "Entity '$identifier' not found." );
@@ -105,20 +106,29 @@ sub get {
     } 
     
     $status->set( 200 );
-    return objectify( name      => $aref->[0]->{entity},
-		      parent    => $aref->[0]->{parent},
-		      id        => $aref->[0]->{id},
-		      start     => $aref->[0]->{start},
-		      stop      => $aref->[0]->{stop},
-		      yggdrasil => $self->{yggdrasil},
-		    );
+    my @objs = map { objectify( name      => $_->{entity},
+				parent    => $_->{parent},
+				id        => $_->{id},
+				start     => $_->{start},
+				stop      => $_->{stop},
+				yggdrasil => $self->{yggdrasil},
+			      ) } @$aref;
+    if (wantarray) {
+	return @objs;
+    } else {
+	return $objs[-1];
+    }
+    
 }
 
 sub get_all {
     my $class  = shift;
     my $self   = $class->SUPER::new( @_ );
-
-    my $aref = $self->storage()->fetch( MetaEntity => { return => [ 'id', 'entity', 'parent', 'start', 'stop' ] });
+    my %params = @_;
+    
+    my $aref = $self->storage()->fetch( MetaEntity => { return => [ 'id', 'entity', 'parent', 'start', 'stop' ] },
+					$params{time},
+				      );
 
     return map { objectify( name      => $_->{entity},
 			    parent    => $_->{parent},
@@ -185,37 +195,26 @@ sub create {
 
 # fetch instance
 sub fetch {
-    my $self  = shift;
-    my $name  = shift;
-
-    # FUGLY, FIXME TO WORK!
-    my @time;
-    for my $t (@_) {
-	# If the tick undef or 0, pass it along, we're dealing with
-	# semantics here.
-	push(@time, $t) and next if ! defined $t || $t == 0;
-	my @tick = $self->yggdrasil()->get_ticks_by_time( $t );
-	if (@time > 1) {
-	    push(@time, $tick[-1]->{id} );
-	} else {
-	    push(@time, $tick[0]->{id} );
-	}
-    }
-
+    my $self   = shift;
+    my $name   = shift;
+    my %params = @_;
+    
     return Yggdrasil::Local::Instance->fetch( yggdrasil => $self,
 					      entity    => $self,
 					      instance  => $name, 
-					      time      => [@time] );
+					      time      => $params{time}, );
 }
 
 # all instances
 sub instances {
-    my $self = shift;
+    my $self   = shift;
+    my %params = @_;
     
     my $instances = $self->storage()->fetch( 
-	'MetaEntity' => { where  => [ entity => $self->_userland_id() ] },
-	'Instances'   => { return => [ 'visual_id', 'id', 'start', 'stop' ],
-			  where  => [ entity => \qq{MetaEntity.id} ] } );
+	MetaEntity => { where  => [ entity => $self->_userland_id() ] },
+	Instances  => { return => [ 'visual_id', 'id', 'start', 'stop' ],
+			where  => [ entity => \qq{MetaEntity.id} ] },
+	$params{time} );
     
     # FIXME, find a way to create instance objects in a nice way
     my @i;
@@ -303,10 +302,10 @@ sub get_property {
 # 'start' and 'stop'.
 sub property_exists {
     my ($self, $property) = (shift, shift);
-    my ($start, $stop) = get_times_from( @_ );
+    my %params = @_;
     
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = $self->ancestors($start, $stop);
+    my @ancestors = $self->ancestors( $params{time} );
     
     # Check to see if the property exists.
     foreach my $e ( @ancestors ) {
@@ -322,7 +321,7 @@ sub property_exists {
 		    ]
 	    },
 
-	    { start => $start, stop => $stop });
+	    $params{time} );
 
 	# The property name might be "0".
 	return { name  => join(":", $e, $property ),
@@ -336,10 +335,10 @@ sub property_exists {
 
 sub properties {
     my $self = shift;
-    my ($start, $stop) = get_times_from( @_ );
-
+    my %params = @_;
+    
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = $self->ancestors($start, $stop);
+    my @ancestors = $self->ancestors( $params{time} );
     my @rets;
 
     foreach my $e ( @ancestors ) {
@@ -352,7 +351,7 @@ sub properties {
 		where  => [ entity => \q<MetaEntity.id> ]
 	    },
 
-	    { start  => $start, stop => $stop });
+	    $params{time} );
 
 
 	for my $p (@$aref) {
@@ -379,8 +378,8 @@ sub properties {
 # Word of warnings, ancestors returns *names* not objects.  However,
 # this is *probably* acceptable.
 sub ancestors {
-    my $self  = shift;
-    my ($start, $stop) = @_;
+    my $self = shift;
+    my $time = shift;
 
     my @ancestors;
     my %seen = ( $self->_internal_id() => 1 );
@@ -388,7 +387,7 @@ sub ancestors {
     my $storage = $self->storage();
     my $r = $storage->fetch( MetaEntity => { return => [qw/entity parent/],
 					     where  => [ id => $self->_internal_id() ] },
-			     { start => $start, stop => $stop });
+			     $time );
     
     while( @$r ) {
 	my $parent = $r->[0]->{parent};
@@ -405,7 +404,7 @@ sub ancestors {
 
 	$r = $storage->fetch( MetaEntity => { return => [qw/entity parent/],
 					      where => [ id => $parent ] },
-			      { start => $start, stop => $stop } );
+			      $time );
     }
 
     return @ancestors;

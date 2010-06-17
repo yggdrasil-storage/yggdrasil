@@ -276,17 +276,18 @@ sub _get_instance {
     my $entity = $ygg->get_entity( $params{entityid} );
 
     return undef unless $entity;
-    return $entity->fetch( $params{instanceid} );
+    my @nodes = $entity->fetch( $params{instanceid}, time => $params{time} );
+    return \@nodes;
 }
 
 sub _get_set_value {
     my $ygg = shift;
     my %params = @_;
     
-    my $entity = $ygg->get_entity( $params{entityid} );
+    my $entity = $ygg->get_entity( $params{entityid}, time => $params{time} );
 
     return undef unless $entity;
-    my $instance = $entity->fetch( $params{instanceid} );
+    my $instance = $entity->fetch( $params{instanceid}, time => $params{time} );
     
     return undef unless $instance;
     if (exists $params{value}) {

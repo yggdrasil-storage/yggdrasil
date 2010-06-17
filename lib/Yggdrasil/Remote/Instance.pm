@@ -11,21 +11,37 @@ sub fetch {
     my %params = @_;
 
     my $e = ref $params{entity}?$params{entity}->_userland_id():$params{entity};
-
-    my $dataref = $self->storage()->{protocol}->get_instance( $e, $params{instance} );
-    my $instance = Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );
-    return unless $instance;
-
-    if ($instance->entity()) {
-	if (ref $params{entity}) {
-	    $instance->{entity} = $params{entity};
-	} else {
-	    $instance->{entity} = Yggdrasil::Remote::Entity->get( yggdrasil => $self->yggdrasil(), 
-								  entity    => $instance->entity() );
-	}
-	return $instance;
+    my $eobj;
+    
+    if (ref $params{entity}) {
+	$e    = $params{entity}->_userland_id();
+    } else {
+	$e    = $params{entity};
     }
-    return;
+
+    
+    my @instances = Yggdrasil::Object::objectify( $self->yggdrasil(),
+						  __PACKAGE__,
+						  $self->storage()->{protocol}->get_instance( $e, $params{instance}, $params{time} ),
+						);
+
+    for my $i (@instances) {
+	$i->{entity} = Yggdrasil::Remote::Entity->get(
+						      yggdrasil => $self->yggdrasil(), 
+						      entity    => $e,
+						      time      => { start  => $i->start(),
+								     stop   => $i->stop(),
+								     format => 'tick',
+								   },
+						     );
+	$i->{visual_id} = $i->{id};
+    }
+    
+    if (wantarray) {
+	return @instances;
+    } else {
+	return $instances[-1];
+    }
 }
 
 sub get {
@@ -45,14 +61,20 @@ sub expire {
 
 sub property {
     my $self = shift;
-    my ($key, $val) = @_;    
+    my ($key, $val) = @_; 
 
     $key = $key->_userland_id() if ref $key;
     
     if (@_ == 2) {
 	return $self->storage()->{protocol}->set_value( $self->entity()->_userland_id(), $key, $self->_userland_id(), $val );
     } else {
-	return $self->storage()->{protocol}->get_value( $self->entity()->_userland_id(), $key, $self->_userland_id() );
+	return $self->storage()->{protocol}->get_value( $self->entity()->_userland_id(), $key, $self->_userland_id(),
+							{
+							 start  => $self->start(),
+							 stop   => $self->stop(),
+							 format => 'tick',
+							}
+						      );
     }
 }
 

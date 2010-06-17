@@ -179,8 +179,8 @@ sub relation_participants {
 # Instance interface.  Interestingly enough, instances aren't defined,
 # only created.
 sub get_instance {
-    my ($self, $eid, $id) = @_;
-    return $self->_get( 'instance', entityid => $eid, instanceid => $id );
+    my ($self, $eid, $id, $time) = @_;
+    return $self->_get( 'instance', entityid => $eid, instanceid => $id, time => $time );
 }
 
 sub create_instance {
@@ -195,8 +195,8 @@ sub expire_instance {
 
 # Value interface, can't be defined, only set.
 sub get_value {
-    my ($self, $eid, $pid, $id) = @_;
-    return $self->_get( 'value', entityid => $eid, propertyid => $pid, instanceid => $id );    
+    my ($self, $eid, $pid, $id, $time) = @_;
+    return $self->_get( 'value', entityid => $eid, propertyid => $pid, instanceid => $id, time => $time );
 }
 
 sub set_value {

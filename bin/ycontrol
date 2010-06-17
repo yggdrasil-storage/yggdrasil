@@ -681,18 +681,11 @@ sub property_create {
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
 
-    my $pobj = $eobj->get_property( $property );
-    print "'$property' already exists.\n" and return if $pobj;
-
     $nullp = $nullp eq "true" ? 1 : 0;
 
     $y->define_property( $eobj, $property, type => $type, nullp => $nullp );
     
-    if( $y->get_status()->OK() ) {
-	print "'$property' created as $type\n";
-    } else {
-	print $y->get_status()->message, "\n";
-    }
+    print $y->get_status()->message, "\n";
 }
 
 sub property_info {
@@ -817,20 +810,26 @@ sub instance_history {
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
 
-    my @iobjs = $eobj->fetch( $instance, 0, undef );
+    my @iobjs = $eobj->fetch( $instance, time => { start => 0, stop => undef, format => 'tick' } );
     print "'$instance', no such instance in $entity.\n" and return unless @iobjs;
     my $entries = scalar @iobjs || 0;
     
     print "$entity / $instance (full history, $entries ", $entries > 1?'entries':'entry', "):\n";
     
-    my @props = $eobj->properties( 0, undef );
-    my (@lines);
+    my @props = $eobj->properties( time => { start => 0, stop => undef, format => 'tick' } );
+    my (@lines);    
 
+    # Hack due to noise from tempoarlity, see ticket 16.
+    my %unique_props;
+    for my $p (@props) {
+	$unique_props{$p->id()} = $p;
+    }
+    
     my %maxwidth;
     $maxwidth{start} = $maxwidth{stop} = 6; # default, will be overwritten if length is longer.
     for my $iobj (@iobjs) {
 	my %currentline;
-	for my $prop ('start', 'stop', @props) {
+	for my $prop ('start', 'stop', values %unique_props) {
 	    my $propname = ref $prop?$prop->id():$prop;
 	    my $value;
 
@@ -853,7 +852,7 @@ sub instance_history {
 
     my @maxwidth;
     my @header;
-    for my $prop ('start', 'stop', @props) {
+    for my $prop ('start', 'stop', values %unique_props) {
 	my $propname = ref $prop?$prop->id():$prop;
 	my $w = $maxwidth{$propname} || 1;
 	push @header, sprintf "%-${w}s", $propname;
@@ -862,7 +861,7 @@ sub instance_history {
     
     for my $l (@lines) {
 	my @l;
-	for my $prop ('start', 'stop', @props) {
+	for my $prop ('start', 'stop', values %unique_props) {
 	    my $propname = ref $prop?$prop->id():$prop;
 	    my $w = $maxwidth{$propname} || 1;
 	    push @l, sprintf "%-${w}s", $l->{$propname} || '';
