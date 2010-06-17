@@ -50,7 +50,7 @@ sub _process_xml {
     my $xml  = shift;
     my $client = shift;
 
-    my $ref = XMLin( $xml );
+    my $ref = XMLin( $xml, SuppressEmpty => undef );
 
     my @retobjs;
     my $status = $self->{client}->{yggdrasil}->get_status();
