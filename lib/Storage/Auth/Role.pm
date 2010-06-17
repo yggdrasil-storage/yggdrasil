@@ -196,8 +196,8 @@ sub _access :method {
 				       where  => [ usertable => $schema ],
 				       return => 'authtable'
 				      } );
-				     
-    return unless $authschema && $authschema->[0]->{authtable};;
+
+    return unless $authschema && $authschema->[0]->{authtable};
     $authschema = $authschema->[0]->{authtable};
  
     # 2. set mode bit in authtable
