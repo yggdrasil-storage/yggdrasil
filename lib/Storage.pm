@@ -598,15 +598,20 @@ sub fetch {
     if ($time->{start} || $time->{stop}) {
 	$time->{format} ||= 'tick';
 	$time->{format} = lc $time->{format};
-	
+
+	# FIXME, get_ticks_from_time can return undefs, this should be caught.
 	if ($time->{format} eq 'epoch') {
 	    if ($time->{start}) {
-		$time->{start} = ($self->get_ticks_from_time( $time->{start} ))[0];
+		my $tick = ($self->get_ticks_from_time( $time->{start} ))[0];
+		$time->{start} = $tick->{id};
 	    } else {
 		$time->{start} = 1;
 	    }
 
-	    $time->{stop} = ($self->get_ticks_from_time( $time->{stop} ))[-1] if $time->{stop};
+	    if ($time->{stop}) {
+		my $tick = ($self->get_ticks_from_time( $time->{stop} ))[-1];
+		$time->{stop} = $tick->{id};
+	    }
 	} elsif ($time->{format} eq 'tick') {
 	    $time->{start} ||= 1;
 	} elsif ($time->{format} eq 'iso') {
