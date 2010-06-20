@@ -607,6 +607,7 @@ sub _define_auth {
 					      'm'    => { type => 'BOOLEAN' },
 					     },
 				   nomap => $nomap,
+				   temporal => 1,
 				   hints => {
 					     id     => { foreign => $schema },
 					     roleid => { foreign => $self->get( 'authrole' ), index => 1 },
