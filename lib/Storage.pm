@@ -147,26 +147,36 @@ sub bootstrap {
 
     # Create main infrastructure
     $self->{structure}->bootstrap();
-
+    return unless $status->OK();
+    
     # Create default users and roles
     my %roles;
     for my $role ( qw/admin user/ ) {
 	$roles{$role} = Storage::Auth::Role->define( $self, $role );
+	return unless $status->OK();
     }
 
     # create bootstrap and nobody, the order is relevant as bootstrap
     # is required to be ID1 and nobody is ID2.    
     my $nobody_role    = Storage::Auth::Role->define( $self, "nobody" );
+    return unless $status->OK();
     my $bootstrap_user = Storage::Auth::User->define( $self, "bootstrap", undef );
+    return unless $status->OK();
     my $nobody_user    = Storage::Auth::User->define( $self, "nobody", undef );
+    return unless $status->OK();
 
     $nobody_role->description( 'System role' );
+    return unless $status->OK();
     $bootstrap_user->fullname( 'Bootstrapper extraordinare' );
+    return unless $status->OK();
     $nobody_user->fullname( 'Mr. Nobody' );
+    return unless $status->OK();
 
     $nobody_role->add( $nobody_user );
+    return unless $status->OK();
     $nobody_role->grant( $self->get_structure( 'authuser' ) => 'r',
 			 id => $nobody_user->id() );
+    return unless $status->OK();
 
     my %usermap;
 
@@ -182,15 +192,19 @@ sub bootstrap {
 	$pwd ||= $auth->generate_password();
 
 	my $u = Storage::Auth::User->define( $self, $user, $pwd );
+	return unless $status->OK();
 
 	for my $rolename ( keys %roles ) {
 	    my $role = $roles{$rolename};
 	    $role->add( $u );
+	    return unless $status->OK();
 	    $role->grant( $self->get_structure( 'authuser' ) => 'm', 
 			  id => $u->id() );
+	    return unless $status->OK();
 
 	    $nobody_role->grant( $self->get_structure( 'authuser' ) => 'r', 
 				 id => $u->id() );
+	    return unless $status->OK();
 	}
 
 	if ($user eq "root") {
@@ -203,10 +217,13 @@ sub bootstrap {
     # Give admin users access to read about the system users.
     $roles{admin}->grant( $self->get_structure( 'authuser' ) => 'r',
 			  id => $nobody_user->id() );
+    return unless $status->OK();
     $roles{admin}->grant( $self->get_structure( 'authrole' ) => 'r',
 			  id => $nobody_role->id() );
+    return unless $status->OK();
     $roles{admin}->grant( $self->get_structure( 'authuser' ) => 'r',
 			  id => $bootstrap_user->id() );
+    return unless $status->OK();
 
     return %usermap;
 }

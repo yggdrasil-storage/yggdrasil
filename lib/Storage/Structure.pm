@@ -45,17 +45,27 @@ sub new {
     return $self;
 }
 
+# FIXME, this needs to be wrapped into one big transaction.
 sub bootstrap {
     my $self = shift;
 
+    my $status = $self->{_storage}->get_status();
+
     $self->_bootstrap_ticker();
+    return unless $status->OK;
     $self->_bootstrap_defines();
+    return unless $status->OK;
     $self->_bootstrap_config();
+    return unless $status->OK;
     $self->_bootstrap_filter();
+    return unless $status->OK;
     $self->_bootstrap_mapper();
+    return unless $status->OK;
     $self->_bootstrap_temporal();
+    return unless $status->OK;
     $self->_bootstrap_auth();
-    $self->_bootstrap_fields();
+    return unless $status->OK;
+    $self->_bootstrap_fields();    
 }
 
 sub init {
