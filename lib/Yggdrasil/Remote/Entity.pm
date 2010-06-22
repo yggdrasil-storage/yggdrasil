@@ -16,9 +16,15 @@ sub define {
 
 sub get {
     my $class = shift;
+
+    if (ref $class) {
+	# You ment to call fetch, didn't you?  Yes, you did.
+	return $class->fetch( @_ );
+    }
+    
     my $self = $class->SUPER::new(@_);
     my %params = @_;
-
+    
     my $dataref = $self->storage()->{protocol}->get_entity( $params{entity} );
     return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );    
 }

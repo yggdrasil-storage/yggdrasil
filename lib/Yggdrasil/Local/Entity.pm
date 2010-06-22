@@ -73,9 +73,7 @@ sub get {
     my ($self, $status);
     # If you called this as $entity->get() you wanted fetch().
     if (ref $class) {
-	$status = $class->get_status();
-	$status->set( 406, "Calling get() as an object method, you probably wanted fetch() to get an instance" );
-	return undef;
+	return $class->fetch( @_ );
     } else {
 	$self   = $class->SUPER::new(@_);
 	$status = $self->get_status();	
