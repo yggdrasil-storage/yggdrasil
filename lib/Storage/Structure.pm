@@ -9,6 +9,7 @@ sub new {
     
     my $self = {
 		mapper        => 'mapname',
+		idgenerator   => 'idgenerator',
 		temporal      => 'temporals',
 		filter        => 'filter',
 		config        => 'config',
@@ -21,6 +22,7 @@ sub new {
 		hasauthschema => 'hasauthschema',
 
 		_prefix     => 'Storage_',
+		_dataprefix => 'Storagedata_',
 		_storage    => $params{storage},
 		_userfields => {
 				authuser => {
@@ -59,9 +61,9 @@ sub bootstrap {
     return unless $status->OK;
     $self->_bootstrap_filter();
     return unless $status->OK;
-    $self->_bootstrap_mapper();
-    return unless $status->OK;
     $self->_bootstrap_temporal();
+    return unless $status->OK;
+    $self->_bootstrap_mapper();
     return unless $status->OK;
     $self->_bootstrap_auth();
     return unless $status->OK;
@@ -102,7 +104,7 @@ sub construct_userauth_from_schema {
     my $self = shift;
     my $schema = shift;
 
-    return join("_", "Storage", "userauth", $schema);
+    return join("_", "Storageauth", $schema);
 }
 
 sub _getter_setter {
@@ -144,8 +146,7 @@ sub _bootstrap_auth {
     $self->_bootstrap_user_auth();
 }
 
-# Initalize the mapper cache and, if needed, the schema to store schema
-# name mappings.
+# Initalize the mapper cache
 sub _initialize_mapper {
     my $self = shift;
     my $schema = $self->get( 'mapper' );
@@ -165,12 +166,17 @@ sub _initialize_mapper {
 sub _bootstrap_mapper {
     my $self = shift;
 
+    $self->{_storage}->define( $self->get( 'idgenerator' ),
+			       fields => {
+					 id => { type => 'SERIAL' },
+					} );
+
     $self->{_storage}->define( $self->get( 'mapper' ),
-			       nomap  => 1,
 			       fields => {
 					  humanname  => { type => 'TEXT' },
 					  mappedname => { type => 'TEXT' },
 					 },
+			       temporal => 1
 			     );
 }
 
@@ -521,22 +527,12 @@ sub _initialize_config {
     my $self = shift;
 
     my $schema = $self->get( 'config' );
-    my $mapper_name = $self->{_storage}->get_mapper();
     if ($self->{_storage}->_structure_exists( $schema )) {
 	my $listref = $self->{_storage}->fetch( $schema, { return => '*' });
 	for my $temporalpair (@$listref) {
 	    my ($key, $value) = ( $temporalpair->{id}, $temporalpair->{value} );
-	    
-	    $self->set( 'mapper', $value ) if lc $key eq 'mapstruct' && $value && $value =~ /^Storage_/;
-	    $self->set( 'temporal', $value ) if lc $key eq 'temporalstruct' && $value && $value =~ /^Storage_/;
-
-	    if (lc $key eq 'mapper') {
-		warn( "Ignoring request to use $mapper_name as the mapper, the Storage requires $value\n" )
-		  if $mapper_name && $mapper_name ne $value;
-		my $mapper = $self->{_storage}->set_mapper( $value );
-		return undef unless $mapper;
-	    }
-	    
+	    my $storage_prefix = $self->internal( 'prefix' );
+	    $self->set( 'temporal', $value ) if lc $key eq 'temporalstruct' && $value && $value =~ /^$storage_prefix/;
 	}
     }
 }
@@ -546,19 +542,6 @@ sub _bootstrap_config {
 
     my $schema = $self->get( 'config' );
 
-    # At this point, the mapper is just the *name*, not the object.
-    my $mapper_name = $self->{_storage}->get_mapper();
-    my $mapper_object;
-    if ($mapper_name) {
-	$mapper_object = $self->{_storage}->set_mapper( $mapper_name );
-	Yggdrasil::fatal( "Unable to initialize the mapper '$mapper_name'" ) 
-	  unless $mapper_object;
-    } else {
-	$mapper_object = $self->{_storage}->get_default_mapper();
-	Yggdrasil::fatal( "Unable to initialize the default mapper" ) 
-	  unless $mapper_object;
-    }
-	
     $self->{_storage}->define( $self->get( 'config' ),
 			       nomap  => 1,
 			       fields => {
@@ -567,9 +550,6 @@ sub _bootstrap_config {
 					 },
 			       hints  => { id => { key => 1 } },	       
 			     );
-
-    $self->{_storage}->store( $schema, key => "id",
-			      fields => { id => 'mapstruct', value => $self->get( 'mapper' ) });
 
     $self->{_storage}->store( $schema, key => "id",
 			      fields => { id => 'temporalstruct', value => $self->get( 'temporal' ) });
@@ -582,11 +562,6 @@ sub _bootstrap_config {
 
     $self->{_storage}->store( $schema, key => "id",
 			      fields => { id => "enginetype", value => $self->{_storage}->engine_type() });
-
-    my $mappername = ref $mapper_object;
-    $mappername =~ s/.*::(.*)$/$1/;
-    $self->{_storage}->store( $schema, key => "id",
-			      fields => { id => 'mapper', value => $mappername });
 }
 
 sub _define_auth {

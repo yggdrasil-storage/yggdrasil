@@ -5,7 +5,6 @@ use warnings;
 
 use Storable qw();
 
-use Storage::Mapper;
 use Storage::Status;
 use Storage::Type;
 use Storage::Structure;
@@ -71,7 +70,6 @@ sub new {
 	}
 
 	$storage->{status} = $status;
-	$storage->{mapper} = $data{mapper};
 
 	if ($data{cache}) {
 	    if (ref $data{cache} eq 'HASH') {
@@ -241,7 +239,6 @@ sub get_status {
 #                               { null  => BOOL(0), type => type(TEXT), 
 #                                 index => BOOL(0), constraint => constraint(undef) }
 #         temporal => BOOL(0),
-#         nomap => BOOL(0),
 #         hints => { field1 => { key => BOOL(0), foreign => 'Schema', index => BOOL(0) }}
 # );
 sub define {
@@ -262,10 +259,13 @@ sub define {
 	$fieldhash->{type} = $self->_check_valid_type( $type );	
     }
 
-    $schema = $self->_map_schema_name( $schema ) unless $data{nomap};
+    my $storage_prefix = $self->{structure}->internal( 'prefix' );
+    $schema = do { $self->_get_schema_name( $schema ) || 
+		   $self->_map_schema_name( $schema ) }
+      unless $schema =~ /^$storage_prefix/;
 
     if ($self->_structure_exists( $schema )) {
-	$status->set( 202, "Structure '$schema' already existed" );
+	$status->set( 202, "Structure '$schema' already exists" );
 	return;
     }
 
@@ -316,7 +316,6 @@ sub define {
 
     # Store the define statement for reference to help dump / restore.
     # Use _store to avoid ticking.  FIXME, check return value?
-    my $storage_prefix = $self->{structure}->internal( 'prefix' );
     unless ($originalname =~ /^$storage_prefix/) {
 	my @define = ( $originalname => %data );
 	$self->_store( $self->get_structure( 'defines' ),
@@ -329,7 +328,7 @@ sub define {
     }
     
     if ($retval) {
-	unless ($data{nomap}) {
+	unless ( $originalname =~ /^$storage_prefix/ ) {
 	    $self->cache( 'mapperh2m', $originalname, $schema );
 	    $self->cache( 'mapperm2h', $schema, $originalname );
 	    $self->store( $self->get_structure( 'mapper' ), key => "humanname",
@@ -360,6 +359,7 @@ sub _find_schema_by_name_or_alias {
     for( my $i=0; $i<@$definitions; $i+=2 ) {
 	my $schema      = $definitions->[$i];
 	my $constraints = $definitions->[$i+1];
+	print "[$name]: $schema => $constraints->{alias}\n";
 
 	my $found = 0;
 	if( $schema eq $name ) { $found = 1 }
@@ -686,11 +686,12 @@ sub _add_auth {
 	# 1. Find auth-bindings for this schema
 	my $cachename = $schema . ':' . $authtype;
 	my $typebindings; # = $self->cache( 'authbindings', $cachename );
+	my $mapped = $self->_get_schema_name( $schema ) || $schema;
 	unless ($typebindings) {
 	    my $ret = $self->_fetch( $self->get_structure( 'authschema' ) =>
 				     {
 				      return => 'bindings',
-				      where  => [ usertable => $schema, type => $authtype ]
+				      where  => [ usertable => $mapped, type => $authtype ]
 				     } );
 	    next unless $ret;
 	    
@@ -730,7 +731,7 @@ sub _add_auth {
 		my( $target, $field ) = split m/\./, $$ref;
 		
 		if( defined $field ) {
-		    if( $target eq $schema ) {
+		    if( $target eq $mapped ) {
 			# The $target references this schema - if this
 			# schema is defined to use an alias, then we'll
 			# change the reference to use this schemas alias
@@ -829,21 +830,19 @@ sub _map_fetch_schema_references {
 	my( $schema, $struct ) = ( shift @defs, shift @defs );
 
 	# Map schema names mentioned inside the fetch
-	for my $lfield ( keys %$struct ) {
-	    my $val = $struct->{$lfield};
-	    next unless ref $val eq "SCALAR";
+	my $where = $struct->{where};
+	for my $field ( @$where ) {
+	    next unless ref $field eq "SCALAR";
+	    next unless $$field =~ m/\./;
 
-	    $val = $$val;
-	    next unless $val =~ /:/;
-
-	    my @parts = split m/\./, $val;
+	    my @parts = split m/\./, $$field;
 	    my $rfield = pop @parts;
 	    
 	    my $mapped = $self->_get_schema_name( join(".", @parts) );
 	    next unless $mapped;
 
 	    $mapped .= "." . $rfield;
-	    $struct->{$lfield} = \$mapped;
+	    $field = \$mapped;
 	}
 
 	# Map the schema name itself
@@ -996,13 +995,9 @@ sub _map_schema_name {
 	return undef;
     }
 
-    my $current_mapper = $self->get_mapper();
-    unless ($current_mapper) {
-	$status->set( 500, "Mapper requested for use before one is initialized" );
-	return undef;	
-    }
-    
-    return $current_mapper->map( $schema );
+    my $id = $self->store( $self->get_structure('idgenerator'), key => 'id', fields => { id => undef } );
+
+    return $self->{structure}->internal( 'dataprefix' ) . $id;
 }
 
 # Get the schema name for a schema, if it is mapped, it'll be located
@@ -1068,6 +1063,8 @@ sub _get_auth_schema_name {
     my @parts = split( ":", $schema );
     pop @parts; # remove the ":Auth" part
     my $usertable = join(":", @parts);
+
+    $usertable = $self->_get_schema_name( $usertable ) || $usertable;
 
     my $ret = $self->_fetch( $self->get_structure( 'authschema' ) => 
 			     { 
@@ -1270,21 +1267,6 @@ sub _storage_path {
     my $path = $INC{$file};
     $path =~ s/\.pm$//;
     return $path;
-}
-
-sub set_mapper {
-    my $self = shift;
-    my $mappername = shift;
-
-    $self->{mapper} = Storage::Mapper->new( mapper => $mappername, status => $self->get_status() );
-    return $self->{mapper};
-}
-
-sub get_mapper {
-    my $self = shift;
-    my $mappername = shift;
-
-    return $self->{mapper};
 }
 
 sub get_structure {
