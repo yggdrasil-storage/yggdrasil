@@ -125,7 +125,7 @@ sub define {
     # Why isn't this in Y::MetaProperty?
     if ($status->status() == 202) {
 	$self->{entity} = Yggdrasil::Local::Entity->get( entity => $self->entity(), yggdrasil => $self->yggdrasil() );
-	$status->set( 202, "Property '$property' already existed for entity '$entity'" );
+	$status->set( 202, "Property '$property' already exists for entity '$entity'" );
     } else {
 	$status->set( 201, "Property '$property' created for '$entity'." );
 	$storage->store("MetaProperty", key => [qw/entity property/],
