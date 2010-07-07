@@ -125,9 +125,11 @@ sub define {
     # Why isn't this in Y::MetaProperty?
     if ($status->status() == 202) {
 	$self->{entity} = Yggdrasil::Local::Entity->get( entity => $self->entity(), yggdrasil => $self->yggdrasil() );
-	$status->set( 202, "Property '$property' already exists for entity '$entity'" );
+	$status->set( 202, "Property '$property' already exists with the requested structure for entity '$entity'" )
+	  
+    } elsif ($status->status() >= 400 ) {
+	$status->set( 202, "Property '$property' already exists for '$entity', unable to create with requested parameters" );
     } else {
-	$status->set( 201, "Property '$property' created for '$entity'." );
 	$storage->store("MetaProperty", key => [qw/entity property/],
 			fields => { entity   => $idref->[0]->{id},
 				    property => $property,
@@ -135,6 +137,7 @@ sub define {
 				    nullp    => $params{nullp},
 				  } ) unless $params{raw};
 	$self->{entity} = Yggdrasil::Local::Entity->get( entity => $self->entity(), yggdrasil => $self->yggdrasil() );	
+	$status->set( 201, "Property '$property' created for '$entity'." );
     }
 
     return $self;

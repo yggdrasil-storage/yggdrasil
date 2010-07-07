@@ -264,11 +264,6 @@ sub define {
 		   $self->_map_schema_name( $schema ) }
       unless $schema =~ /^$storage_prefix/;
 
-    if ($self->_structure_exists( $schema )) {
-	$status->set( 202, "Structure '$schema' already exists" );
-	return;
-    }
-
     if( $data{temporal} ) {
 	# Add temporal field
 	$data{fields}->{start} = { type => 'INTEGER', null => 0 };
@@ -282,6 +277,19 @@ sub define {
 	}
     }
 
+    if ($self->_structure_exists( $schema )) {
+	my $schemadef = $self->get_schema_definition( $schema );
+	my $origname = shift @{$schemadef->{define}};
+	my %newdata = @{$schemadef->{define}};
+	if ($self->_deep_eq( \%newdata, \%data )) {
+	    $status->set( 202, "Structure '$schema' already exists" );
+	    return;
+	} else {
+	    $status->set( 406, "Structure '$schema' already defined, unable to redefine with new configuration" );
+	    return;
+	}
+    }
+    
     for my $field (keys %{$data{fields}}) {
 	for my $typedata (keys %{$data{fields}->{$field}}) {
 	    if ($typedata eq 'filter') {
@@ -359,7 +367,7 @@ sub _find_schema_by_name_or_alias {
     for( my $i=0; $i<@$definitions; $i+=2 ) {
 	my $schema      = $definitions->[$i];
 	my $constraints = $definitions->[$i+1];
-	print "[$name]: $schema => $constraints->{alias}\n";
+#	print "[$name]: $schema => $constraints->{alias}\n";
 
 	my $found = 0;
 	if( $schema eq $name ) { $found = 1 }
@@ -1279,6 +1287,40 @@ sub get_structure {
 sub prefix {
     my $self = shift;
     return $self->{structure}->internal( 'prefix' );
+}
+
+sub _deep_eq {
+    my ($self, $a, $b) = @_;
+    
+    if (not defined $a)        { return not defined $b }
+    elsif (not defined $b)     { return 0 }
+    elsif (not ref $a)         { $a eq $b }
+    elsif ($a eq $b)           { return 1 }
+    elsif (ref $a ne ref $b)   { return 0 }
+    elsif (ref $a eq 'SCALAR') { $$a eq $$b }
+    elsif (ref $a eq 'ARRAY')  {
+        if (@$a == @$b) {
+            for (0..$#$a) {
+                my $rval;
+                return $rval unless ($rval = $self->_deep_eq($a->[$_], $b->[$_]));
+            }
+            return 1;
+        } else {
+	    return 0;
+	}
+    } elsif (ref $a eq 'HASH') {
+        if (keys %$a == keys %$b) {
+            for (keys %$a) {
+                my $rval;
+                return $rval unless ($rval = $self->_deep_eq($a->{$_}, $b->{$_}));
+            }
+            return 1;
+        } else { return 0 }
+    } elsif (ref $a eq ref $b) {
+	warn 'Cannot test '.(ref $a)."\n"; undef
+    } else {
+	return 0
+    }
 }
 
 # Admin interface, not for normal use.
