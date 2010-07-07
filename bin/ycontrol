@@ -650,7 +650,7 @@ sub entity_create {
     
     my $e = $y->get_entity( $entity );
     
-    print "'$entity' already exists ($e).\n" and return if $e;
+    print "'$entity' already exists.\n" and return if $e;
 
     my $eobj = $y->define_entity( $entity );
     if( $y->get_status()->OK() ) {
