@@ -798,6 +798,8 @@ sub can {
     my $schema = shift;
     my $map    = shift;
 
+    $schema = $self->_get_schema_name( $schema ) || $schema;
+    
 #    print "Entering can( $type, $schema, { ", join(", ", map { "$_ => $map->{$_}" } keys %$map ), " }\n";
 
     return 1 if $self->_is_bootstrapping();
