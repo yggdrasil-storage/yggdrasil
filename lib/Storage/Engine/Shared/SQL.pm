@@ -170,7 +170,7 @@ sub _sql {
     $self->{transaction}->engine( $sqlinline );
     print "$sqlinline\n" if $self->{_debug}->{protocol};
     unless ($sth->execute(@attr)) {
-	$status->set( 500, "Execute of the statement handler failed!", "[$sql] -> [$args_str]" );
+	$status->set( 500, "Execute of the statement handler failed: " . $sth->errstr() );
 	return;
     }
     
@@ -231,6 +231,11 @@ sub _fetch {
 
 	my $real_schema = $schema;
 	$schema = $alias;
+	
+	if ($where && ref $where ne 'ARRAY') {
+	    $self->get_status()->set( 406, "Where clause isn't an array reference" );
+	    return;
+ 	}
 	
 	my ($rf_tmp, $w_tmp, $p_tmp) = $self->_process_where($schema, $where, $operator);
 	my $where_sql;
