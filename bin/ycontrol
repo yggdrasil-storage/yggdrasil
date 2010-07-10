@@ -336,6 +336,7 @@ my %cmd;
     protocols  => \&protocols,
     serverdata => \&server_data,
     storage    => \&storage_info,
+    cache      => \&cache_info,
     quit       => sub { exit },
     exit       => sub { exit },
 );
@@ -1003,6 +1004,21 @@ sub ticks_in_time {
 	printf "%10d - %20s - %s\n", $tick->{id}, $tick->{stamp}, $tick->{committer};
     }
     
+}
+
+# Cache interface
+# This makes some assumptions about Storage, but meh.
+sub cache_info {
+    my ($cache_command, $type) = @_;
+    my $cache = $y->storage()->{cache};    
+    
+    for my $type (sort keys %$cache) {
+	print "$type\n";
+	for my $key (sort keys %{$cache->{$type}}) {
+	    printf " %45s - %s\n", $key, $cache->{$type}->{$key};
+	}
+	print "\n";
+    }    
 }
 
 # Role interface
