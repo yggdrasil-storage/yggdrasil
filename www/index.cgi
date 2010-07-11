@@ -15,23 +15,27 @@ my $www = Yggdrasil::Interface::WWW->new();
 
 my $user = $www->param('user');
 my $pass = $www->param('pass');
-my $sess = $www->cookie('sessionID');
+my $sess = $www->cookie('sessionID') || $www->param( 'session' );
 
 my $y = Yggdrasil->new();
 my $version = Yggdrasil->version();
 
+my $yhost = '127.0.0.1';
 $y->connect( user     => "yggdrasil", 
-	     password => "beY6KAAVNbhPa6SP",
+	     password => "KhcneJLuQ8GWqqKj",
 
-	     host   => "db.math.uio.no",
+	     host   => $yhost,
 	     db     => "yggdrasil",
 	     engine => "mysql",
-    );
-my $u = $y->login( user => $user, password => $pass, session => $sess );
+	   );
+
+my $u = $y->login( username => $user, password => $pass, session => $sess );
 unless( $u ) {
-    $www->present_login( title => "Login", info => "(version $version / yggdrasil\@db.math.uio.no)" );
+    $www->present_login( title => "Login", info => "(version $version / yggdrasil\@$yhost)" );
     exit;
 }
+
+$u = $y->get_user( $u );
 $www->set_session( $u->session() );
 
 my $mode   = $www->param('_mode');
@@ -42,7 +46,7 @@ $mode = undef unless defined $ident;
 
 unless( $mode ) {
     my @e = $y->entities();
-    my $c = $www->add( map { $_->name() } @e );
+    my $c = $www->add( map { $_->id() } @e );
     $c->type( 'Entities' );
     $c->class( 'Entities' );
 
@@ -70,14 +74,19 @@ unless( $mode ) {
     $container->class( 'Entity' );
     $container->parent( $ident );
 
-    $www->display( title => "Instance of $ident" );
+    my $properties = $www->add( 'Test' );
+    $properties->type( 'Properties' );
+    $properties->class( 'Properties' );
+#    $properties->parent( $ident );
+    
+    $www->display( title => "Entity '$ident'" );
 
 } elsif( $mode eq "relation" ) {
     my $r = $y->get_relation($ident);
     my @e = $r->entities();
     my @p = $r->participants();
 
-    my $container = $www->add( map { $_->name() } @e );
+    my $container = $www->add( map { $_->id() } @e );
     $container->type( 'Entities' );
     $container->class( 'Entities' );
     $container->parent( $ident );
@@ -93,11 +102,11 @@ unless( $mode ) {
 
     $left->type( 'Entity' );
     $left->class( 'Entity' );
-    $left->parent( $e[0]->name() );
+    $left->parent( $e[0]->id() );
 
     $right->type( 'Entity' );
     $right->class( 'Entity' );
-    $right->parent( $e[1]->name() );
+    $right->parent( $e[1]->id() );
 
     $www->display( title => "Related instances for relation $ident" );
 
@@ -107,9 +116,20 @@ unless( $mode ) {
 
     my @p;
     foreach my $prop ( $e->properties() ) {
-	my $name = $prop->name();
+	my $name = $prop->id();
+	my $access;
+
+	if ($i->can_write( $name )) {
+	    $access = 'write';
+	} elsif ($i->can_expire( $name )) {
+	    $access = 'expire';
+	} else {
+	    $access = 'read';
+	}
+	
 	my $v = { property  => $name,
 		  value     => $i->get($name),
+		  access    => $access,
 		  _entity   => $entity,
 		  _instance => $ident,
 		  _id       => $name,
