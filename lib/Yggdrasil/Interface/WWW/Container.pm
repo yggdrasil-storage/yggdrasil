@@ -73,6 +73,9 @@ sub display {
 
     my @elems; 
 
+    my $need_form;
+    my ($entity, $instance, $id);
+    
     foreach my $e ( sort @{ $self->{elements} } ) {
 	if( $self->type() eq "Entities" ) {
 	    push( @elems, $cgi->li( $cgi->a( {href => "?_mode=entity;_identifier=$e" }, $e ) ) );
@@ -83,10 +86,9 @@ sub display {
 	    
 	    $title = join(":: ", $cgi->a( {href=>"./"}, "Yggdrasil" ), $self->parent() || $self->type());
 	} elsif( $self->type() eq "Instance" ) {
-
-	    my $entity = delete $e->{_entity};
-	    my $instance = delete $e->{_instance};
-	    my $id = delete $e->{_id};
+	    $entity = delete $e->{_entity};
+	    $instance = delete $e->{_instance};
+	    $id = delete $e->{_id};
 
 	    $title = join(":: ", $cgi->a( {href=>"./"},"Yggdrasil" ), $cgi->a( {href=>"?_mode=entity;_identifier=$entity"}, $entity ), $instance);
 	    my @row_classes = ( "odd", "even" );
@@ -94,7 +96,9 @@ sub display {
 	    my $value = $e->{value};
 
 	    if( defined $e->{access} && $e->{access} eq "write" ) {
-		$value = $cgi->input( { type => "text", name => $id, value => $value } );		
+		my $type = $e->{type} eq 'text'?'textfield':'text';
+		$value = $cgi->input( { type => $type, name => $id, value => $value } );
+		$need_form++;
 	    } elsif ($value && length $value > $self->{maxlength}) {
 		# Create expand / collapse functions, the javascript
 		# needs to be sourced from a file given, it is not
@@ -119,13 +123,16 @@ sub display {
 						     class => 'flipper',
 						     id    => $longdivid }, $long );
 	    }
+
+	    if (defined $e->{access} && $e->{access} eq 'expire') {
+		$value = $value . " (expire)\n";
+	    }
 	    
 	    push( @elems, $cgi->TR( { class => $row_classes[ @elems % 2 ] }, $cgi->td( $id ), $cgi->td( $value ) ) );
 	} elsif( $self->type() eq "Related" ) {
-
-	    my $entity = delete $e->{_entity};
-	    my $instance = delete $e->{_instance};
-	    my $id = delete $e->{_id};
+	    $entity = delete $e->{_entity};
+	    $instance = delete $e->{_instance};
+	    $id = delete $e->{_id};
 
 	    my @row_classes = ( "odd", "even" );
 
@@ -142,7 +149,19 @@ sub display {
     }
 
     if( $self->type() eq "Instance" || $self->type() eq "Related") {
-	return $cgi->div( \%attr, $cgi->h1($title), $cgi->table( { class => $self->class() }, @elems ) );
+	if ($need_form) {
+	    return $cgi->div( \%attr,
+			      $cgi->h1($title),
+			      $cgi->start_form( -action => 'index.cgi' ),
+			      $cgi->hidden( -name => '_mode', -default => lc $self->type() ),
+			      $cgi->hidden( -name => '_identifier', -default => $instance ),
+			      $cgi->hidden( -name => '_entity', -default => $entity ),
+			      $cgi->table( { class => $self->class() }, @elems ),
+			      $cgi->submit( -name => 'submit', -value => 'Commit changes' ),
+			      $cgi->end_form());
+	} else {
+	    return $cgi->div( \%attr, $cgi->h1($title), $cgi->table( { class => $self->class() }, @elems ) );
+	}
     } else {
 	return $cgi->div( \%attr, $cgi->h1($title), $cgi->ul(@elems) );
     }

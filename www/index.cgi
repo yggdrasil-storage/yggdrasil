@@ -15,7 +15,7 @@ my $www = Yggdrasil::Interface::WWW->new();
 
 my $user = $www->param('user');
 my $pass = $www->param('pass');
-my $sess = $www->cookie('sessionID') || $www->param( 'session' );
+my $sess = $www->cookie('sessionID');
 
 my $y = Yggdrasil->new();
 my $version = Yggdrasil->version();
@@ -114,11 +114,18 @@ unless( $mode ) {
     my $e = $y->get_entity( $entity );
     my $i = $e->fetch( $ident );
 
+    my $submission = $www->param( 'submit' );
     my @p;
     foreach my $prop ( $e->properties() ) {
 	my $name = $prop->id();
+	my $type = $prop->type();
 	my $access;
 
+	if ($submission) {
+	    my $new_value = $www->param( $name );
+	    $i->set( $name, $new_value );
+	}
+	
 	if ($i->can_write( $name )) {
 	    $access = 'write';
 	} elsif ($i->can_expire( $name )) {
@@ -130,6 +137,7 @@ unless( $mode ) {
 	my $v = { property  => $name,
 		  value     => $i->get($name),
 		  access    => $access,
+		  type      => lc $type,
 		  _entity   => $entity,
 		  _instance => $ident,
 		  _id       => $name,
@@ -143,6 +151,7 @@ unless( $mode ) {
     $container->type( 'Instance' );
     $container->class( 'Instance' );
     my $title = "${entity}::$ident";
+    $title = 'Submission of ' . $title if ($www->param( 'submit' ));
     $container->parent( $title );
 
     # This will no longer be when user<->roles becomes a relation!
