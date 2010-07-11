@@ -105,7 +105,7 @@ sub get_by_session {
     my $storage = shift;
     my $session = shift;
     
-    my $hits = $storage->fetch(
+    my $hits = $storage->_fetch(
 	$storage->get_structure( 'authuser:session' ) => {
 	    return => 'id',
 	    where  => [ value => $session ]
