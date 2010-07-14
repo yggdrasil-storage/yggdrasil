@@ -1,0 +1,870 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+BEGIN { our $VERSION = '0.03' };
+
+use Getopt::Long;
+use Data::Dumper;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Term::ReadLine;
+use Text::ParseWords;
+
+use Crypt::GeneratePassword;
+
+use Storage;
+use Storage::Auth::User;
+use Storage::Auth::Role;
+
+my ($dbuser, $dbpassword, $host, $port, $db, $engine) =  
+  ( $ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST},
+    $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE} );
+my ($user, $password) = ((getpwuid($>))[0], undef);
+
+GetOptions(
+	   'dbuser=s'     => \$dbuser,
+	   'dbpassword=s' => \$dbpassword,
+	   'host=s'       => \$host,
+	   'post=s'       => \$port,
+	   'database=s'   => \$db,
+	   'engine=s'     => \$engine,
+
+	   'user=s'       => \$user,
+	   'password=s'   => \$password,
+	  );
+
+my $s = new Storage(
+		    engine    => $engine,
+		    user      => $dbuser,
+		    password  => $dbpassword,
+		    host      => $host,
+		    port      => $port,
+		    db        => $db,
+		   );
+die "Unable to initialize storage towards '$engine'\n" unless $s;
+
+my $status = $s->get_status();
+die $status->message(), "\n" unless $status->OK();
+
+my $iam = $s->authenticate( username => $user, password => $password || &read_password() );
+die $status->message(), "\n" unless $status->OK();
+
+my $term = new Term::ReadLine 'scontrol';
+my $attribs = $term->Attribs;
+my $OUT = $term->OUT || \*STDOUT;
+
+my %cmd;
+%cmd = (
+    help => \%cmd,
+
+    user => {
+	_help => "User tools",
+
+	info  => {
+	    _help => "Show information about a user",
+	    _user => \&user_info,
+	},
+
+	password => {
+	    _help => "Change user password",
+	    _user => \&user_password,
+	},
+
+	name => {
+	    _help => "Change user full name",
+	    _user => \&user_fullname,
+	},
+
+	create => {
+	    _help => "Create new user",
+	    _user => \&user_create,
+	},
+
+	expire   => {
+	    _help => "Expire a user",
+	    _user => \&user_expire,
+	},
+
+	role => {
+	    _help => "User role membership tools", 
+	    add   => {
+		_help => "Add user to role",
+		_user => {
+		    _role => \&user_role_add,
+		},
+	    },
+	    remove => {
+		_help => "Remove user from role",
+		_user => {
+		    _role => \&user_role_remove,
+		},
+		
+	    },
+	},
+    },
+    
+    role => {
+	_help => "Role tools",
+
+	info  => {
+	    _help => "Show information about a role",
+	    _role => \&role_info,
+	},
+	
+	description => {
+	    _help => "Change role description",
+	    _role => \&role_description,
+	},
+
+	create => {
+	    _help => "Create new role",
+	    _role => \&role_create,
+	},
+
+	grant => {
+	    _help => "Grant role privileges",
+
+	    read   => {
+		_help => "Grant role read privileges",
+		_role => {
+			  schema    => { _schema => \&role_grant },
+		}
+	    },
+
+	    write  => {
+		_help => "Grant role write privileges",
+		_role => {
+			  schema    => { _schema => \&role_grant },
+		},
+	    },
+
+	    modify => {
+		_help => "Grant role modify privileges",
+		_role => {
+			  schema    => { _schema => \&role_grant },
+		},
+	    },
+	},
+
+	revoke => {
+	    _help => "Revoke role privileges",
+
+	    read   => {
+		_help => "Revoke role read privileges",
+		_role => {
+			  schema    => { _schema => \&role_grant },
+		},
+	    },
+
+	    write  => {
+		_help => "Revoke role write privileges",
+		_role => {
+			  schema    => { _schema => \&role_grant },
+		},
+	    },
+
+	    modify => {
+		_help => "Revoke role modify privileges",
+		_role => {
+			  schema    => { _schema => \&role_grant },
+		},
+	    },
+	}
+    },
+
+    transaction => {
+	 _help  => 'Transactional information',
+         log    => \&transaction_log,
+    },
+	
+    tick => {
+	_help => "Tick related commands",
+	info  => {
+	    _TICK_ => \&tick_info,
+	    },
+	intime => {
+	    _DATE_ => \&ticks_in_time,
+            },
+	current => \&tick_current,
+    },
+
+    debug => {
+	_help => 'Turn on / off debugging options',
+	_DEBUGOPTIONS_ => {
+	    _DEBUGTOGGLE_ => \&debug,
+        },
+    },
+
+    schema => {
+        define => {
+	    _schema => \&schema_define,
+	},
+        info => {
+	    _schema => \&schema_info,
+	},
+    },
+
+    dumper => {
+	_help  => 'Edit Data::Dumper settings',
+	indent => {
+		   _help => 'Indent settings for Data::Dumper',
+		   _dumperindenttoggle => \&dumper_indent,
+		  }
+    },
+	
+    whoami     => \&whoami,
+    storage    => \&storage_info,
+    cache      => \&cache_info,
+    quit       => sub { exit },
+    exit       => sub { exit },
+);
+
+my %debug_switches;
+
+for my $switch (qw|protocol|) {
+    $debug_switches{$switch} = 0;
+} 
+
+my %cmd_handler = (
+    _user => \&expand_user,
+    _role => \&expand_role,
+    
+    _schema => \&expand_schema,
+
+    _SCHEMANAME_   => sub { return ("<schemaname>") },
+    _TICK_         => sub { return ("<ticknumber>") },
+    _DATE_         => sub { return ("<isodate>") },
+    _BOOLEAN_      => sub { return qw/true false/ },
+    _DEBUGTOGGLE_  => sub { return $debug_switches{$_[1]}?'off':'on'; },
+    _DEBUGOPTIONS_ => sub { return keys %debug_switches },
+
+    _dumperindenttoggle => sub { return qw/0 1 2 3/ },
+    );
+
+my $prompt = " > ";
+my @cmd_path = ();
+$attribs->{completion_function} = sub { completion(@_, \%cmd, \@cmd_path) };
+$attribs->{completer_quote_characters} = q<"'>;
+$attribs->{filename_quote_characters} = q( <->);
+
+while ( defined (my $input = $term->readline($prompt)) ) {
+    chomp $input;
+
+    if( $input !~ /\S/ ) {
+	@cmd_path = ();
+	next;
+    }
+    
+    # Add to line what has previously been written
+    $input = join(" ", @cmd_path, $input);
+
+    my @this_path;
+    my $context = \%cmd;
+    for my $key ( shellwords($input) ) {
+	unless (ref $context eq 'HASH') {
+	    print "Spurious input '$key' ignored\n";
+	    next;
+	} 
+	if (exists $context->{$key}) {
+	    # static command part
+	    # "user", "info" etc.
+	    $context = $context->{$key};
+	    push( @this_path, $key );
+	} else {
+	    # dynamic command part
+	    my( $expander ) = grep { $_ !~ /_help/ } grep { /^_/ } keys %$context;
+	    if ( $expander ) {
+		$context = $context->{$expander};
+		push( @this_path, $key );
+	    }
+	}
+    }
+
+    @cmd_path = @this_path;
+
+    if( @cmd_path && $cmd_path[0] eq "help" ) {
+	# display help
+	shift @cmd_path while @cmd_path && $cmd_path[0] eq "help";
+	help( $context, \@cmd_path );
+	@cmd_path = ();
+    } elsif (ref $context eq 'CODE') {
+	# Reached end of command line
+	$context->( @cmd_path );
+	@cmd_path = ();
+    }
+    
+} continue {
+    # Set prompt
+    $prompt = join(" ", @cmd_path) . " > ";
+}
+
+sub help {
+    my $top  = shift;
+    my $path = shift;
+
+    if( ref $top ne "HASH" ) {
+	print "No help for '", join(" ", @$path), "'\n";
+	return;
+    }
+
+    my $prefix = join(" ", @$path);
+    for my $key ( sort keys %$top ) {
+	if( $key =~ /^_help$/ ) {
+	    printf( "%-25s - %s\n", $prefix, $top->{$key} );
+	}
+
+	next if $key =~ /^_/;
+
+	my $help = ref $top->{$key} eq "HASH" && exists $top->{$key}->{_help};
+	$help = $help ? $top->{$key}->{_help} : '';
+
+	printf( "%-25s - %s\n", join(" ", $prefix, $key), $help );
+    }
+}
+
+sub debug {
+    my ($debug, $command, $switch) = @_;
+    
+    unless (exists $debug_switches{$command}) {
+	print "Unknown debug command, '$command'\n";
+	return;
+    }
+    
+    if ($switch =~ m/(true|on)/i) {
+	$s->debug( $command => 1 );
+	print "Toggled debug command '$command' on\n";
+	$debug_switches{$command} = 1;
+    } else {
+	$s->debug( $command => 0 );	
+	print "Toggled debug command '$command' off\n";
+	$debug_switches{$command} = 0;
+    }
+}
+
+sub whoami {    
+    print $s->user()->name(), "\n";
+}
+
+sub storage_info {
+    print $s->info(), "\n";    
+}
+
+# Commands
+# User interface.
+sub user_info {
+    my ($user_command, $info_command, $username) = @_;
+
+    my $user = Storage::Auth::User->get( $s, $username );
+    print "'$username', no such user.\n" and return unless $user;
+
+    printf "%-15s - %s\n", 'Username', $username;
+    printf "%-15s - %s\n", 'Full name', $user->fullname() || '';
+    printf "%-15s - %s\n", 'Session', $user->session() || '';
+    printf "%-15s - %s\n", 'Password', $user->password() || '';
+    printf "%-15s - %s\n", 'Roles', join ", ", map { $_->name() } $user->member_of();
+    
+    &display_tick( $user->start() );
+}
+
+sub user_password {
+    my ($user_command, $info_command, $username) = @_;
+
+    my $user = Storage::Auth::User->get( $s, $username );
+    print "'$username', no such user.\n" and return unless $user;
+
+    my $pass;
+    my $display_pass;
+    if ($username eq $s->user()) {
+	$pass = _read_password();
+	unless ($pass) {
+	    print "Passwords not entered correctly, aborting.\n";
+	    return;
+	}
+    } else {
+	$pass = Crypt::GeneratePassword::word( 6, 10 );
+	$display_pass = 1;
+    }
+    $user->password( $pass );
+    if( $status->OK() ) {
+	printf "New password for '$username' is %s.\n", $display_pass?"'$pass'":'active';
+    } else {
+	print $status->message(), "\n";
+    }
+}
+
+sub user_fullname {
+    my ($user_command, $info_command, $username) = @_;
+
+    my $user = Storage::Auth::User->get( $s, $username );
+    print "'$username', no such user.\n" and return unless $user;
+
+    my $name = $term->readline(" New full name for '$username' > ");
+    print "'$name' is invalid.\n" and return unless defined $name;
+    $user->fullname( $name );
+    if( $status->OK() ) {
+	print "New full name for '$username' is '$name'.\n";
+    } else {
+	print $status->message(), "\n";
+    }
+}
+
+sub user_role_add {
+    my ($user_command, $role_word, $role_add, $username, $rolename) = @_;
+    my $user = Storage::Auth::User->get( $s, $username );
+    print "'$username', no such user.\n" and return unless $user;
+    
+    my $role = Storage::Auth::Role->get( $s, $rolename );
+    print "'$rolename', no such role.\n" and return unless $role;
+    $role->add( $user );
+    print "Added the user '$username' to the role '$rolename'.\n";   
+}
+
+sub user_role_remove {
+    my ($user_command, $role_word, $role_add, $username, $rolename) = @_;
+    my $user = Storage::Auth::User->get( $s, $username );
+    print "'$username', no such user.\n" and return unless $user;
+    
+    my $role = Storage::Auth::Role->get( $s, $rolename );
+    print "'$rolename', no such role.\n" and return unless $role;
+
+    $role->remove( $user );
+    print "Removed the user '$username' from the role '$rolename'.\n";   
+}
+
+sub user_create {
+    my ($user_command, $create_command, $uname) = @_;
+
+    print "'$uname', already taken.\n" and return if Storage::Auth::User->get( $s, $uname );
+
+    my $uobj = $s->define_user( $uname );
+    print $status->message(), "\n" and return unless $status->OK();
+
+    my $name = $term->readline(" Full name > ");
+    print "'$name' is invalid.\n" and return unless defined $name;
+    $uobj->fullname( $name );
+    my $pass = Crypt::GeneratePassword::word( 6, 10 );
+    $uobj->password( $pass );
+    print "'$uname' created with password '$pass'.\n";
+}
+
+sub user_expire {
+    my($user_command, $expire_command, $uname) = @_;
+
+    $s->expire_user( $uname );
+    print $status->message(), "\n";
+}
+
+sub schema_define {
+    my ($schema_command, $define_command, $schema_name) = @_;
+
+    $schema_name = $s->_get_schema_name( $schema_name ) || $schema_name;
+    my $definition  = $s->get_schema_definition( $schema_name );
+
+    unless ($definition) {
+	print "Unable to find schema\n";
+	return;
+    }
+
+    local $Data::Dumper::Varname = undef;
+    local $Data::Dumper::Terse = 1;
+    print Dumper ($definition->{define}), "\n";
+}
+
+sub schema_info {
+    my ($schema_command, $info_command, $schema_name) = @_;
+
+    $schema_name = $s->_get_schema_name( $schema_name ) || $schema_name;
+    my $definition  = $s->get_schema_definition( $schema_name );
+
+    unless ($definition) {
+	print "Unable to find schema\n";
+	return;
+    }
+
+    my $origname = shift @{$definition->{define}};
+    my %defines  = @{$definition->{define}};
+    printf "%-35s - %-10s - %s\n", 'Fieldname', 'Type', 'Can be undef?';
+    for my $field (sort keys %{$defines{fields}}) {
+	printf "%-35s - %-10s - %s\n",
+	  $field,
+	    lc $defines{fields}->{$field}->{type},
+	      $defines{fields}->{$field}->{null}?'Yes':'';
+      
+    }
+    
+    my $tick = $definition->{tick};
+    display_tick( $tick );
+}
+
+# Tick interface
+sub tick_info {
+    my ($tick_command, $info_command, $tick) = @_;
+
+    my @ticks;
+    my @sequences = split m/,/, $tick;
+    
+    for my $p (@sequences) {
+	if ($p =~ /^(\d+)-(\d+)/) {
+	    push @ticks, $s->get_ticks( start => $1, stop => $2 );
+	} elsif ($p =~ /^(\d+)$/) {
+	    push @ticks, $s->get_ticks( start => $1, stop => $1 );
+	} else {
+	    print "Unable to parse input, '$p', skipping.\n";
+	}
+    }
+
+    print "'$tick', no such tick.\n" and return unless $ticks[0];
+
+    # FIXME: This is a tad broken, figure out why.
+    for my $t (@{$ticks[0]}) {
+	print "Tick ", $t->{id}, ":\n";
+	printf "%20s - %s\n", 'Timestamp', $t->{stamp};
+	printf "%20s - %s\n", 'Committer', $t->{committer};
+
+	my $eventstring = 'Event';
+	for my $e (@{$t->{events}}) {
+	    printf "%20s - %s", $eventstring, $e->{string};
+	    if ($e->{stop}) {
+		print " (expired tick " . $e->{stop} . ")\n";
+	    } else {
+		print " (still valid)\n";
+	    }
+	    $eventstring = '';
+	}	
+    }
+    print "\n";
+}
+
+sub tick_current {
+    my ($tick_command, $current_command) = @_;
+
+    my $tickid = $s->get_current_tick();
+    print "$tickid\n";
+}
+
+sub ticks_in_time {
+    my ($tick_command, $info_command, $time) = @_;
+    my ($from, $to) = split / to /, $time;
+
+    my @ticks = $s->get_ticks_from_time( $from, $to );
+    
+    print "No ticks for the given time.\n" and return unless @ticks;
+
+    printf "%10s - %20s - %s\n", 'Tick', 'Timestamp', 'Committer';
+    for my $tick (@ticks) {
+	printf "%10d - %20s - %s\n", $tick->{id}, $tick->{stamp}, $tick->{committer};
+    }
+    
+}
+
+# Cache interface
+# This makes some assumptions about Storage, but meh.
+sub cache_info {
+    my ($cache_command, $type) = @_;
+    my $cache = $s->{cache};    
+    
+    for my $type (sort keys %$cache) {
+	print "$type\n";
+	for my $key (sort keys %{$cache->{$type}}) {
+	    printf " %45s - %s\n", $key, $cache->{$type}->{$key};
+	}
+	print "\n";
+    }    
+}
+
+# Role interface
+sub role_info {
+    my ($role_command, $info_command, $rolename) = @_;
+    my $robj = Storage::Auth::Role->get( $s, $rolename );
+    print "'$rolename', no such role.\n" and return unless $robj;
+    
+    print "${rolename}:\n";
+    printf "%20s - %s\n", 'Description', $robj->description() || '';
+    printf "%20s - %s\n", 'Members', join ", ", map { $_->name() } $robj->members();
+}
+
+sub role_description {
+    my($role_command, $desc_command, $role) = @_;
+    
+    my $robj = Storage::Auth::Role->get( $s, $role );
+    print "'$role', no such role.\n" and return unless $robj;
+
+    my $desc = $term->readline(" New description for role '$role' > ");
+    print "'$desc' is invalid.\n" and return unless defined $desc;
+
+    $robj->description( $desc );
+    print "New description for '$role' is '$desc'.\n";
+}
+
+sub role_create {
+    my ($role_command, $create_command, $rname) = @_;
+
+    print "'$rname', already taken.\n" and return if Storage::Auth::Role->get( $s,  $rname );
+
+    my $desc = $term->readline(" Description > ");
+    print "'$desc' is invalid.\n" and return unless defined $desc;
+
+    my $robj = $s->define_role( $rname );
+    $robj->description( $desc );
+    print "Role '$rname' created.\n";
+}
+
+sub role_grant {
+    my $role_command  = shift;
+
+    grant_revoke( @_ );
+}
+
+sub role_revoke {
+    my $role_command   = shift;
+    
+    grant_revoke( @_ );
+}
+
+sub grant_revoke {
+    my $operation = shift;
+    my $privilege = shift;
+    my $role      = shift;
+    my $type      = shift;
+
+    my %tag = (
+	read   => 'r',
+	write  => 'w',
+	modify => 'm',
+    );
+    print "'$privilege', no such privilege.\n" and return unless $tag{$privilege};
+
+    my $robj = Storage::Auth::Role->get( $s, $role );
+    print "'$role', no such role.\n" and return unless $robj;
+
+    my $o;
+    if( $type eq "entity" ) {
+	my $entity = shift;
+
+	$o = $s->get_entity( $entity );
+	print "'$entity', no such entity.\n" and return unless $o;
+    } elsif( $type eq "instance" ) {
+	my $entity   = shift;
+	my $instance = shift;
+
+	$o = $s->get_instance( $entity, $instance );
+	print "'$instance', no such instance.\n" and return unless $o;
+    } elsif( $type eq "relation" ) {
+	my $label = shift;
+
+	$o = $s->get_relation( $label );
+	print "'$label', no such relation.\n" and return unless $o;
+    } elsif( $type eq "property" ) {
+	my $entity   = shift;
+	my $property = shift;
+
+	$o = $s->get_property( $entity, $property );
+	print "'$property', no such property.\n" and return unless $o;
+    } elsif( $type eq "iproperty" ) {
+	my $entity   = shift;
+	my $instance = shift;
+	my $property = shift;
+
+	my $iobj = $s->get_instance( $entity, $instance );
+	print "'$instance', no such instance.\n" and return unless $iobj;
+
+	# FIX: objectify $o (instance property?)
+    }
+
+    if( $operation eq "grant" ) {
+	$robj->grant( $tag{$privilege} => $o );
+	print "Granted role '$role' $privilege privileges to ", $o->id(), "\n"; 
+    } elsif( $operation eq "revoke" ) {
+	$robj->revoke( $tag{$privilege} => $o );
+	print "Revoked role '$role' $privilege privileges to ", $o->id(), "\n"; 
+    } else {
+	print "'$type', no such type.\n";
+	return;
+    }
+
+}
+
+sub transaction_log {
+    my @entries = $s->transaction_stack_get();
+    print "Transaction stack empty.\n" and return unless @entries;
+    
+    print "Transaction stack:\n";
+    for my $entry (@entries) {
+	printf " %05d | %-7s | %s\n", $entry->id(), $entry->path(), join( ', ', $entry->get_commit_log());
+	for my $engine ($entry->get_engine_log()) {
+	    print "       | $engine\n";
+	}
+    }
+    $s->transaction_stack_clear();
+}
+
+# Helper stuff.
+sub display_tick {
+    my $tickid = shift;
+    my $tick = $s->get_ticks( start => $tickid );
+    printf "%-15s - %s (%d)\n", 'Created', $tick->[0]->{stamp}, $tickid;
+    printf "%-15s - %s\n", 'Committer', $tick->[0]->{committer};
+}
+
+sub expand_user {
+    my %users;
+    my $ref = $s->fetch( 'Storage_authuser', {
+					    return => [ qw/name/ ],
+					   });
+    for my $hit (@$ref) {
+	$users{$hit->{name}}++;
+    }
+    return keys %users;
+}
+
+sub expand_role {
+    my %roles;
+    my $ref = $s->fetch( 'Storage_authrole', {
+					    return => [ qw/name/ ],
+					   });
+    for my $hit (@$ref) {
+	$roles{$hit->{name}}++;
+    }
+    return keys %roles;
+}
+
+sub expand_schema {
+    my %structs;
+    for my $hit ($s->_list_structures()) {
+	$structs{$hit}++;
+    }
+
+    my $ref = $s->fetch( 'Storage_mapper', {
+					    return => [ qw/humanname/ ],
+					   });
+    for my $hit (@$ref) {
+	$structs{$hit->{humanname}}++;
+    }
+    return keys %structs;
+}
+
+sub completion {
+    my $word  = shift;
+    my $line  = shift;
+    my $start = shift;
+    my $top   = shift;
+    my $path  = shift;
+
+    $attribs->{filename_completion_desired} = 1;
+
+    # Add to line what has previously been written
+    $line = join(" ", @$path, $line);
+
+    # All "words" before the one we are writing 'now'
+    my @commands = lineparser( $line );
+
+    # add the word we are about to write now (if it's empty)
+    push( @commands, $word ) if $word !~ /\S/;
+
+    for( my $i=0; $i<@commands; $i++ ) {
+	my $c = $commands[$i];
+
+	# reached end of command line
+	return if ref $top eq 'CODE';
+
+	if (exists $top->{$c}) {
+	    # static command part
+	    # "user", "info" etc.
+	    $top = $top->{$c};
+	} elsif ( $i < $#commands ) {
+	    # dynamic command part
+	    # only go to next level if a whole word has been written
+	    # and we are currently writing the next one
+	    my( $expander ) = grep { $_ !~ /^_help$/ } grep { /^_/ } keys %$top;
+	    $top = $top->{$expander} if $expander;
+	}
+    } 
+
+    return 
+	map {
+	    if ($cmd_handler{$_}) {
+		# Grab command handlers
+		$cmd_handler{$_}->( reverse @commands );
+	    } elsif ($_ =~ /^_/) {
+		# Strip _-commands, like _desc as well.
+	    } else {
+		# Otherwise, return the key raw.
+		$_;
+	    }
+	} keys %$top if ref $top eq 'HASH';
+    
+    return;
+}
+
+# wrapper around shellwords that can handle unclosed quotes
+sub lineparser {
+    my $line = shift;
+    
+    return unless length $line;
+
+    my @r = shellwords( $line );
+    unless( @r ) {
+	my $closed = $line . '"';
+	@r = shellwords( $closed );
+    }
+
+    unless( @r ) {
+	my $closed = $line . "'";
+	@r = shellwords( $closed );
+    }
+
+    return grep { defined && length } @r;
+}
+
+sub _read_password {
+    my ($tries, $counter) = (0, 0);
+    my @pass = ('x', 'y');
+    
+    while ($tries < 3 && $pass[0] ne $pass[1]) {
+	print "Passwords didn't match, try again.\n" if $tries && $counter == 0;
+	printf "%s: ", $counter==0?"Password":'Repeat password';
+	system("stty -echo");
+	chop($pass[$counter] = <>);
+	print "\n";
+	system("stty echo");
+	return $pass[0] if $pass[0] eq $pass[1];
+	if ($counter == 1) {
+	    $counter = 0;
+	    $tries++;
+	} else {
+	    $counter++;
+	}
+    }
+    return undef;
+}
+
+sub dumper_indent {
+    my ($d, $i, $level) = @_;
+    $level ||= 0;
+
+    $Data::Dumper::Indent = $level;
+    print "Set \$Data::Dumper::Indent to ", $Data::Dumper::Indent, "\n";
+}
+
+sub read_password {    
+    my $password;
+    print "Password: ";
+    system("stty -echo");
+    chop($password = <STDIN>);
+    print "\n";
+    system("stty echo");
+    return $password;
+}
+
+__DATA__
+ycontrol is a command line interface to directly manipulate Yggdrasil
+structures.
+  
+For help with ycontrol operation, type 'help' at the command prompt, most
+operators are documented directly.  If you have any further questions, 
+please see the Yggdrasil documentation.
+
