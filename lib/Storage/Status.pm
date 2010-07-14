@@ -72,7 +72,7 @@ sub english {
 
 sub message {
     my $self = shift;
-    return $self->_current()->[1] || $map{ $self->_current()->[0]};
+    return $self->_current()->[1] || $map{ $self->_current()->[0] };
 }
 
 sub context {
