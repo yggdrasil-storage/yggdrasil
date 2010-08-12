@@ -1,0 +1,383 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+BEGIN { our $VERSION = '0.03' };
+
+use Getopt::Long;
+
+use FindBin qw($Bin);
+use lib qq($Bin/../lib);
+
+use Term::ReadLine;
+use Text::ParseWords;
+
+use Crypt::GeneratePassword;
+
+use Yggdrasil;
+use Yggdrasil::Common::CommandLine;
+use Yggdrasil::Common::Config;
+
+use Fuse qw(fuse_get_context);
+use POSIX qw(ENOENT EISDIR EINVAL);
+
+my $cmdline = Yggdrasil::Common::CommandLine->new();
+my $label   = $cmdline->get('label') || 'default';
+
+my $c = Yggdrasil::Common::Config->new();
+my $config = $c->get($label);
+
+unless ($config) {
+    $config = $c->get('ENV');
+    die "No such label as $label and falling back to ENV failed\n"
+	unless $config->get( 'engineuser' );
+}
+
+my ($dbuser, $password, $host, $port, $db, $engine) =
+  ($config->get( 'engineuser' ), $config->get( 'enginepassword' ), $config->get( 'enginehost' ),
+   $config->get( 'engineport' ), $config->get( 'enginedb' ), $config->get( 'enginetype' ));
+
+my $y = new Yggdrasil();
+my $status = $y->get_status();
+
+$y->connect( 
+	    user      => $dbuser,
+	    password  => $password,
+	    host      => $host,
+	    port      => $port,
+	    db        => $db,
+	    engine    => $engine,
+	    
+	    daemonhost => $config->get( 'daemonhost' ),
+	    daemonport => $config->get( 'daemonport' ),
+	   );
+
+die $status->message(), "\n" unless $status->OK();
+
+my $uname = $cmdline->get( 'username' ) || $config->get( 'authuser' ) || (getpwuid($>))[0];
+my $upass = $cmdline->get( 'password' ) || $config->get( 'authpass' ) || $cmdline->read_password();
+my $iam = $y->login( username => $uname, password => $upass );    
+
+die $status->message(), "\n" unless $status->OK();
+
+my $root = FuseDir->new(
+			 Entities  => Yggdrasil::Fuse::Entity->new($y),
+			 Relations => Yggdrasil::Fuse::Relation->new($y),
+			 README    => FuseFile->new($^V),
+			 testdir   => FuseDir->new( a => FuseFile->new("aaaa"),
+						    b => FuseFile->new("bbbb")
+						  ),
+			);
+
+my $initial_tick = $y->get_tick( 1 );
+
+sub get_path {
+    my $path  = shift;
+    $path =~ s,^/,,; 
+    my @parts = split m</>, $path; 
+    return @parts;
+}
+
+sub get_path2 {
+    my $path = shift;
+    $path =~ s,^/,,; 
+    my @parts = split m</>, $path; 
+    return \@parts;
+}
+
+sub foo {
+    my $action = shift;
+
+    print "[$action] (", join("), (", @_), ")\n";
+    return 0;
+}
+
+sub fuse_getattr {
+    my $path = get_path2( shift );
+    return $root->getattr($path);
+}
+
+sub xfuse_getattr {
+    print "[getattr] (", join("), (", @_), ")\n";
+    my @path = get_path( shift );
+    
+    my $dev = 0;
+    my $ino = 0;
+    my $rdev = 0;
+    my $blocks = 1;
+    my $uid = $<;
+    my $gid = $(;
+    my $nlink = 1;
+    my $blksize = 1024;
+    my $type = 0100; # 0040=dir, 0100=file
+    my $mode = 0755;
+    my $size  = 42;
+    my $atime = 0;
+    my $ctime = 0;
+    my $mtime = 0;
+
+    my $file;
+    unless( @path ) {
+	$file = '.';
+	# What's the size of an Ygg base?
+	$size  = 1025;
+	# The creation time is the stamp of tick 1
+	$ctime = $initial_tick->{stamp};
+	# The time for last modified time is the last tick time,
+	# and currently for the lack of a better option, we'll use
+	# the same value for the last access time.
+	my $current_tick = $y->get_tick( $y->current_tick() );
+	$mtime = $atime = 0; #$current_tick->{stamp};
+	$type = 0040;
+    } elsif ($path[0] eq 'Entities') {
+	if( @path == 1 ) {
+	    $type = 0040;
+	} else {
+	    my $e = $y->get_entity( $path[1] );
+	    return -ENOENT() unless $e;
+	    my @instances = $e->instances();
+	    # We need an instance->size();
+	    $size = scalar @instances;
+	    # Use the relevant tick info
+	    my $e_tick = $y->get_tick( $e->start() );
+	    $ctime = $mtime = $atime = $e_tick->{stamp};
+	    $type = 0040;
+	}
+    } 
+    
+    my $modes = ($type<<9) + $mode;
+
+    # 2 possible types of return values:
+    #return -ENOENT(); # or any other error you care to
+    #print(join(",",($dev,$ino,$modes,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks)),"\n");
+    return ($dev,$ino,$modes,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks);
+}
+
+sub fuse_getdir {
+    my $path = get_path2(shift);
+    return $root->getdir( $path );
+}
+
+sub xfuse_getdir {
+    my @path = get_path( shift );
+
+    unless( @path ) {
+	# return Yggdrasil::FileSystem::root_nodes();
+	return qw/. .. Entities Relations README/, 0;
+    } elsif( $path[0] eq 'Entities' ) {
+	if( @path == 1 ) {
+	    my @e = map { $_->id() } $y->entities();
+	    return @e, 0;
+	} else {
+	    my $e = $y->get_entity( $path[1] );
+	    return -ENOENT() unless $e;
+	    my @i = map { $_->id() } $e->instances();
+	    return @i, 0;
+	}
+    } else {
+	return -ENOENT();
+    }
+}
+
+sub fuse_open {
+	my @path = get_path( shift );
+	my @modes = @_;
+
+#	return -ENOENT() unless exists($files{$file});
+#	return -EISDIR() if $files{$file}{type} & 0040;
+
+	return 0;
+}
+
+sub fuse_read {
+	print "[read]  (", join("), (", @_), ")\n";
+	my @path = get_path( shift );
+	my ($buf,$off) = @_;
+
+	if( @path && $path[0] eq "README" ) {
+	    my $content =  "Time flies like an arrow. Fruit flies like a banana.\n";
+	    return -EINVAL() if $off > length($content);
+	    return 0 if $off == length($content);
+
+	    my $r = substr($content, $off, $buf);
+	    print "RET=($r)\n";
+	    return $r;
+	}
+
+	return -ENOENT();
+}
+sub fuse_statfs {
+    my $blocks = $y->storage()->size() / 1024;
+    my $files  = 42;
+
+    # $namelen, $files, $files_free, $blocks, $blocks_avail, $blocksize
+    return 255, $files*2, $files, $blocks*2, $blocks, 1024;
+}
+
+
+# If you run the script directly, it will run fusermount, which will in turn
+# re-run this script.  Hence the funky semantics.
+my ($mountpoint) = "";
+$mountpoint = shift(@ARGV) if @ARGV;
+Fuse::main(
+	   mountpoint => $mountpoint,
+
+	   getattr    => \&fuse_getattr,
+	   getdir     => \&fuse_getdir,
+	   open       => \&fuse_open,
+	   read       => \&fuse_read,
+	   statfs     => \&fuse_statfs,
+
+	   readlink   => sub { foo('readlink', @_); },
+	   mknod => sub { foo('mknod', @_); },
+	   mkdir => sub { foo('mkdir', @_); },
+	   unlink => sub { foo('unlink', @_); },
+	   rmdir => sub { foo('rmdir', @_); },
+	   symlink => sub { foo('symlink', @_); },
+	   rename => sub { foo('rename', @_); },
+	   link => sub { foo('link', @_); },
+	   chmod => sub { foo('chmod', @_); },
+	   chown => sub { foo('chown', @_); },
+	   truncate => sub { foo('truncate', @_); },
+	   utime => sub { foo('utime', @_); },
+	   write => sub { foo('write', @_); },
+	   #flush => sub { foo('flush', @_); },
+	   #release => sub { foo('release', @_); },
+	   fsync => sub { foo('fsync', @_); },
+	   setxattr => sub { foo('setxattr', @_); },
+	   getxattr => sub { foo('getxattr', @_); },
+	   listxattr => sub { foo('listxattr', @_); },
+	   removexattr => sub { foo('removexattr', @_); },
+);
+
+package FuseDir;
+use POSIX qw(ENOENT EISDIR EINVAL);
+
+sub new { 
+    my $class = shift;
+    my %data  = @_;
+    my $self  = {};
+
+    $self = bless $self, $class;
+    $self->_init();
+
+    $self->{_files} = \%data;
+    return $self;
+}
+
+sub _init {
+    my $self = shift;
+
+    $self->{type}      = 0040;
+    $self->{mode}      = 0700;
+    $self->{size}      = 4096;
+    $self->{gid}       = $(;
+    $self->{uid}       = $<;
+    $self->{blocksize} = 1024;
+    $self->{dev}       = 0;
+    $self->{rdev}      = 0;
+    $self->{inode}     = 0;
+    $self->{blocks}    = 1;
+    $self->{nlink}     = 1;
+    $self->{atime}     = $^T;
+    $self->{ctime}     = $^T;
+    $self->{mtime}     = $^T;
+}
+
+sub calculate_modes {
+    my $self = shift;
+
+    return ($self->{type} << 9) + $self->{mode};
+}
+
+sub getattr {
+    my $self = shift;
+    my $path = shift;
+
+    if( @$path ) {
+	my $node = $self->{_files}->{ shift @$path };
+	return -ENOENT() unless $node;
+	return $node->getattr( $path );
+    }
+
+    my $modes = $self->calculate_modes();
+    return ( $self->{dev}, $self->{inode}, $modes, $self->{nlink}, 
+	     $self->{uid}, $self->{gid}, $self->{rdev}, $self->{size},
+	     $self->{atime}, $self->{mtime}, $self->{ctime}, 
+	     $self->{blocksize}, $self->{blocks} );
+}
+
+sub getdir {
+    my $self = shift;
+    my $path = shift;
+
+    return qw/. ../, keys %{$self->{_files}}, 0 unless @$path;
+    
+    my $node = $self->{_files}->{ shift @$path };
+    return -ENOENT() unless $node;
+
+    return $node->getdir( $path );
+}
+
+1;
+
+package FuseFile;
+use base qw(FuseDir);
+
+sub new {
+    my $class = shift;
+    my $self  = {};
+
+    $self = bless $self, $class;
+
+    $self->_init();
+
+    $self->{type} = 0100;
+    $self->{content} = shift;
+    $self->{size}  = length( $self->{content} );
+
+    return $self;
+}
+
+1;
+
+package Yggdrasil::Fuse;
+use base qw(FuseDir);
+
+sub new {
+    my $class = shift;
+    my $self  = {};
+
+    $self->{ygg} = shift;
+    $self =  bless $self, $class;
+    $self->_init();
+    return $self;
+}
+
+1;
+
+package Yggdrasil::Fuse::Entity;
+use base qw(Yggdrasil::Fuse);
+
+sub getdir {
+    my $self = shift;
+    my $path = shift;
+
+    unless( @$path ) {
+	my @e = map { $_->id() } $self->{ygg}->entities();
+	return @e, 0;
+    }
+
+    if( @$path == 1 ) {
+	# Entity
+    } elsif( @$path == 2 ) {
+	# Entity/Instance
+    } elsif( @$path == 3 ) {
+	# Entity/Instance/Property
+    }
+}
+1;
+
+package Yggdrasil::Fuse::Relation;
+use base qw(Yggdrasil::Fuse);
