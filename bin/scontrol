@@ -215,9 +215,12 @@ my %cmd;
 		   _dumperindenttoggle => \&dumper_indent,
 		  }
     },
-	
+
+    size       => \&size,	
+    schemasize => { _SCHEMANAME_ => \&schemasize },
     whoami     => \&whoami,
-    storage    => \&storage_info,
+    storage    => \&info,
+    info       => \&info,
     cache      => \&cache_info,
     quit       => sub { exit },
     exit       => sub { exit },
@@ -313,7 +316,7 @@ sub help {
 
     my $prefix = join(" ", @$path);
     for my $key ( sort keys %$top ) {
-	if( $key =~ /^_help$/ ) {
+if( $key =~ /^_help$/ ) {
 	    printf( "%-25s - %s\n", $prefix, $top->{$key} );
 	}
 
@@ -349,8 +352,25 @@ sub whoami {
     print $s->user()->name(), "\n";
 }
 
-sub storage_info {
-    print $s->info(), "\n";    
+sub info {
+    print $s->info(), "\n";
+}
+
+sub size {
+    my $size_command = shift;
+    my $size = &unitfy( $s->size() );
+    print "Total space used by storage: $size\n";
+}
+
+sub schemasize {
+    my $size_command = shift;
+    my $schema       = shift;
+    my $size = &unitfy( $s->size( $schema ) );
+    if (defined $size) {
+	print "$schema: $size\n";
+    } else {
+	print "$schema not found\n";
+    }
 }
 
 # Commands
@@ -858,6 +878,23 @@ sub read_password {
     print "\n";
     system("stty echo");
     return $password;
+}
+
+sub unitfy {
+    my $value = shift;
+    return unless $value;
+    
+    if (length $value < 4) {
+        return sprintf("%0.2f Bytes", $value);
+    } elsif (length $value < 7) {
+        return sprintf("%0.2f KiB", $value / 1024);
+    } elsif (length $value < 10) {
+        return sprintf("%0.2f MiB", $value / ( 1024 ** 2 ) );
+    } elsif (length $value < 13 ) {
+        return sprintf("%0.2f GiB", $value / ( 1024 ** 3 ) );
+    } else {
+	return sprintf("%0.2f TiB", $value / ( 1024 ** 4 ) );
+    }
 }
 
 __DATA__
