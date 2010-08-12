@@ -63,6 +63,23 @@ sub info {
       $self->{host}, $self->{port}, $self->{dbuser}, $self->{db};
 }
 
+sub size {
+    my $self = shift;
+    my $structure = shift;
+
+    if ($structure) {
+	if ($self->_structure_exists( $structure )) {
+	    my $ref = $self->_sql("SHOW table status where Name = ?", $structure);
+	    return $ref->[0]->{Data_length} + $ref->[0]->{Index_length};
+	} else {
+	    return undef;
+	}
+    } else {
+	my $ref = $self->_sql("SELECT Sum( data_length + index_length ) as size FROM information_schema.tables where table_schema = ?", $self->{db} );
+	return $ref->[0]->{size};
+    }
+}
+
 sub storage_is_empty {
     my $self = shift;
     my $prefix = $self->prefix();

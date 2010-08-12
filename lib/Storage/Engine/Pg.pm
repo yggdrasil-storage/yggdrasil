@@ -43,6 +43,23 @@ sub engine_type {
     return $self->_engine();
 }
 
+sub size {
+    my $self = shift;
+    my $structure = shift;
+
+    if ($structure) {
+	if ($self->_structure_exists( $structure )) {
+	    my $ref = $self->_sql("Select pg_total_relation_size(?)", $structure);
+	    return $ref->[0]->{pg_total_relation_size}
+	} else {
+	    return undef;
+	}
+    } else {
+	my $ref = $self->_sql("Select pg_database_size(?)", $self->{db});
+	return $ref->[0]->{pg_database_size};
+    }
+}
+
 sub info {
     my $self = shift;
 
