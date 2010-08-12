@@ -1005,7 +1005,7 @@ sub _map_schema_name {
 	return undef;
     }
 
-    my $id = $self->store( $self->get_structure('idgenerator'), key => 'id', fields => { id => undef } );
+    my $id = $self->store( $self->get_structure('idgenerator'), key => 'id' ); # fields => { id => undef } );
 
     return $self->{structure}->internal( 'dataprefix' ) . $id;
 }

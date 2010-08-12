@@ -587,9 +587,9 @@ sub _define_auth {
 					      # FIX: id must be the same type as $schema's id
 					      id     => { type => 'INTEGER', null => 0 },
 					      roleid => { type => 'INTEGER', null => 0 },
-					      w      => { type => 'BOOLEAN' },
-					      r      => { type => 'BOOLEAN' },
-					      'm'    => { type => 'BOOLEAN' },
+					      w      => { type => 'BOOLEAN', null => 1 },
+					      r      => { type => 'BOOLEAN', null => 1 },
+					      'm'    => { type => 'BOOLEAN', null => 1 },
 					     },
 				   nomap => $nomap,
 				   temporal => 1,
