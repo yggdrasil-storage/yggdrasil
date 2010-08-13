@@ -61,152 +61,74 @@ my $iam = $y->login( username => $uname, password => $upass );
 
 die $status->message(), "\n" unless $status->OK();
 
-my $root = FuseDir->new(
-			 Entities  => Yggdrasil::Fuse::Entity->new($y),
-			 Relations => Yggdrasil::Fuse::Relation->new($y),
-			 README    => FuseFile->new($^V),
-			 testdir   => FuseDir->new( a => FuseFile->new("aaaa"),
-						    b => FuseFile->new("bbbb")
-						  ),
-			);
 
-my $initial_tick = $y->get_tick( 1 );
+my $root = FuseDir->new(
+    "/",
+    Yggdrasil::Fuse::Entities->new(Entities => $y),
+    Yggdrasil::Fuse::Relations->new(Relations => $y),
+    FuseFile->new( README => $^V),
+
+    # --- TEST
+    FuseDir->new( testdir => 
+		  FuseFile->new(a => "aaaa\n"),
+		  FuseFile->new(b => "bbbbbb\n") ),
+    FuseDir->new(gaba =>
+		 FuseDir->new(Mele =>
+			      Yggdrasil::Fuse::Entities->new(spook => $y),
+			      FuseFile->new(README => "Magic\n")
+			      ),
+		 FuseFile->new('.topsecret' => "secret\n"),
+		 FuseDir->new('.hidden'),
+		 Yggdrasil::Fuse::Entities->new(more => $y) ),
+    );
 
 sub get_path {
-    my $path  = shift;
-    $path =~ s,^/,,; 
-    my @parts = split m</>, $path; 
-    return @parts;
-}
-
-sub get_path2 {
     my $path = shift;
     $path =~ s,^/,,; 
     my @parts = split m</>, $path; 
     return \@parts;
 }
 
+
 sub foo {
     my $action = shift;
 
-    print "[$action] (", join("), (", @_), ")\n";
+    print "[NOT IMPLEMENTED $action] (", join("), (", @_), ")\n";
     return 0;
 }
 
-sub fuse_getattr {
-    my $path = get_path2( shift );
-    return $root->getattr($path);
+sub query {
+    my $cmd  = shift;
+    my $path = get_path(shift);
+
+    print "[$cmd] ", join("/", @$path), "\n";
+    return $root->query( $cmd, $path, @_ );
 }
 
-sub xfuse_getattr {
-    print "[getattr] (", join("), (", @_), ")\n";
-    my @path = get_path( shift );
+sub fuse_getattr { return query( getattr => @_ ) }
+sub fuse_getdir  { return query( getdir  => @_ ) }
+sub fuse_read    { return query( read    => @_ ) }
+sub fuse_mkdir   { 
+    my $path = get_path(shift);
+    my $args = pop @$path;
     
-    my $dev = 0;
-    my $ino = 0;
-    my $rdev = 0;
-    my $blocks = 1;
-    my $uid = $<;
-    my $gid = $(;
-    my $nlink = 1;
-    my $blksize = 1024;
-    my $type = 0100; # 0040=dir, 0100=file
-    my $mode = 0755;
-    my $size  = 42;
-    my $atime = 0;
-    my $ctime = 0;
-    my $mtime = 0;
-
-    my $file;
-    unless( @path ) {
-	$file = '.';
-	# What's the size of an Ygg base?
-	$size  = 1025;
-	# The creation time is the stamp of tick 1
-	$ctime = $initial_tick->{stamp};
-	# The time for last modified time is the last tick time,
-	# and currently for the lack of a better option, we'll use
-	# the same value for the last access time.
-	my $current_tick = $y->get_tick( $y->current_tick() );
-	$mtime = $atime = 0; #$current_tick->{stamp};
-	$type = 0040;
-    } elsif ($path[0] eq 'Entities') {
-	if( @path == 1 ) {
-	    $type = 0040;
-	} else {
-	    my $e = $y->get_entity( $path[1] );
-	    return -ENOENT() unless $e;
-	    my @instances = $e->instances();
-	    # We need an instance->size();
-	    $size = scalar @instances;
-	    # Use the relevant tick info
-	    my $e_tick = $y->get_tick( $e->start() );
-	    $ctime = $mtime = $atime = $e_tick->{stamp};
-	    $type = 0040;
-	}
-    } 
-    
-    my $modes = ($type<<9) + $mode;
-
-    # 2 possible types of return values:
-    #return -ENOENT(); # or any other error you care to
-    #print(join(",",($dev,$ino,$modes,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks)),"\n");
-    return ($dev,$ino,$modes,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks);
-}
-
-sub fuse_getdir {
-    my $path = get_path2(shift);
-    return $root->getdir( $path );
-}
-
-sub xfuse_getdir {
-    my @path = get_path( shift );
-
-    unless( @path ) {
-	# return Yggdrasil::FileSystem::root_nodes();
-	return qw/. .. Entities Relations README/, 0;
-    } elsif( $path[0] eq 'Entities' ) {
-	if( @path == 1 ) {
-	    my @e = map { $_->id() } $y->entities();
-	    return @e, 0;
-	} else {
-	    my $e = $y->get_entity( $path[1] );
-	    return -ENOENT() unless $e;
-	    my @i = map { $_->id() } $e->instances();
-	    return @i, 0;
-	}
-    } else {
-	return -ENOENT();
-    }
+    $path = join("/", @$path);
+    return query( mkdir => $path, $args ); 
 }
 
 sub fuse_open {
-	my @path = get_path( shift );
-	my @modes = @_;
+    my $path = shift;
+    print "[open] $path\n";
 
-#	return -ENOENT() unless exists($files{$file});
-#	return -EISDIR() if $files{$file}{type} & 0040;
+    $path = get_path( $path );
+    my @modes = @_;
+    
+#    return -ENOENT() unless exists($files{$file});
+#    return -EISDIR() if $files{$file}{type} & 0040;
 
-	return 0;
+    return 0;
 }
 
-sub fuse_read {
-	print "[read]  (", join("), (", @_), ")\n";
-	my @path = get_path( shift );
-	my ($buf,$off) = @_;
-
-	if( @path && $path[0] eq "README" ) {
-	    my $content =  "Time flies like an arrow. Fruit flies like a banana.\n";
-	    return -EINVAL() if $off > length($content);
-	    return 0 if $off == length($content);
-
-	    my $r = substr($content, $off, $buf);
-	    print "RET=($r)\n";
-	    return $r;
-	}
-
-	return -ENOENT();
-}
 sub fuse_statfs {
     my $blocks = $y->storage()->size() / 1024;
     my $files  = 42;
@@ -221,163 +143,325 @@ sub fuse_statfs {
 my ($mountpoint) = "";
 $mountpoint = shift(@ARGV) if @ARGV;
 Fuse::main(
-	   mountpoint => $mountpoint,
-
-	   getattr    => \&fuse_getattr,
-	   getdir     => \&fuse_getdir,
-	   open       => \&fuse_open,
-	   read       => \&fuse_read,
-	   statfs     => \&fuse_statfs,
-
-	   readlink   => sub { foo('readlink', @_); },
-	   mknod => sub { foo('mknod', @_); },
-	   mkdir => sub { foo('mkdir', @_); },
-	   unlink => sub { foo('unlink', @_); },
-	   rmdir => sub { foo('rmdir', @_); },
-	   symlink => sub { foo('symlink', @_); },
-	   rename => sub { foo('rename', @_); },
-	   link => sub { foo('link', @_); },
-	   chmod => sub { foo('chmod', @_); },
-	   chown => sub { foo('chown', @_); },
-	   truncate => sub { foo('truncate', @_); },
-	   utime => sub { foo('utime', @_); },
-	   write => sub { foo('write', @_); },
-	   #flush => sub { foo('flush', @_); },
-	   #release => sub { foo('release', @_); },
-	   fsync => sub { foo('fsync', @_); },
-	   setxattr => sub { foo('setxattr', @_); },
-	   getxattr => sub { foo('getxattr', @_); },
-	   listxattr => sub { foo('listxattr', @_); },
-	   removexattr => sub { foo('removexattr', @_); },
+    mountpoint  => $mountpoint,
+    
+    getattr     => \&fuse_getattr,
+    getdir      => \&fuse_getdir,
+    open        => \&fuse_open,
+    read        => \&fuse_read,
+    mkdir       => \&fuse_mkdir,
+    statfs      => \&fuse_statfs,
+    
+    readlink    => sub {  foo('readlink', @_); },
+    mknod       => sub { foo('mknod', @_); },
+    unlink      => sub { foo('unlink', @_); },
+    rmdir       => sub { foo('rmdir', @_); },
+    symlink     => sub { foo('symlink', @_); },
+    rename      => sub { foo('rename', @_); },
+    link        => sub { foo('link', @_); },
+    chmod       => sub { foo('chmod', @_); },
+    chown       => sub { foo('chown', @_); },
+    truncate    => sub { foo('truncate', @_); },
+    utime       => sub { foo('utime', @_); },
+    write       => sub { foo('write', @_); },
+    #flush       => sub { foo('flush', @_); },
+    #release     => sub { foo('release', @_); },
+    fsync       => sub { foo('fsync', @_); },
+    setxattr    => sub { foo('setxattr', @_); },
+    #getxattr    => sub { foo('getxattr', @_); },
+    listxattr   => sub { foo('listxattr', @_); },
+    removexattr => sub { foo('removexattr', @_); },
 );
 
+###############################################################################
+####################################################################### FuseDir
 package FuseDir;
 use POSIX qw(ENOENT EISDIR EINVAL);
 
 sub new { 
     my $class = shift;
-    my %data  = @_;
-    my $self  = {};
+    my $name  = shift;
+    my @files = @_;
 
-    $self = bless $self, $class;
-    $self->_init();
+    my $self = bless {}, $class;
 
-    $self->{_files} = \%data;
+    $self->{name}     = $name;
+    $self->{children} = \@files;
+
     return $self;
 }
 
-sub _init {
-    my $self = shift;
+sub type      { 0040; }
+sub mode      { 0700; }
+sub size      { 4096; }
+sub gid       { $(;   }
+sub uid       { $<;   }
+sub blocksize { 1024; }
+sub dev       { 0;    }
+sub rdev      { 0;    }
+sub inode     { 0;    }
+sub blocks    { 1;    }
+sub nlink     { 1;    }
+sub atime     { $^T;  }
+sub ctime     { $^T;  }
+sub mtime     { $^T;  }
+sub content   {       }
+sub modes     { my $self = shift; return ($self->type() << 9) + $self->mode(); }
+sub name      { my $self = shift; $self->{name} };
 
-    $self->{type}      = 0040;
-    $self->{mode}      = 0700;
-    $self->{size}      = 4096;
-    $self->{gid}       = $(;
-    $self->{uid}       = $<;
-    $self->{blocksize} = 1024;
-    $self->{dev}       = 0;
-    $self->{rdev}      = 0;
-    $self->{inode}     = 0;
-    $self->{blocks}    = 1;
-    $self->{nlink}     = 1;
-    $self->{atime}     = $^T;
-    $self->{ctime}     = $^T;
-    $self->{mtime}     = $^T;
+sub query {
+    my $self    = shift;
+    my $fusecmd = shift;
+    my $path    = shift;
+
+    if( @$path ) {
+	my $name = shift @$path;
+	my $node = $self->child($name);
+
+	return -ENOENT() unless $node;
+	return $node->query( $fusecmd, $path, @_ );
+    }
+
+    $self->$fusecmd( @_ );
 }
 
-sub calculate_modes {
+sub children {
     my $self = shift;
 
-    return ($self->{type} << 9) + $self->{mode};
+    if( @_ ) {
+	push( @{ $self->{children} }, @_ );
+    }
+
+    return @{ $self->{children} };
+}
+
+sub filenames {
+    my $self = shift;
+
+    return map { $_->name() } $self->children();
+}
+
+sub child {
+    my $self = shift;
+    my $name = shift;
+
+    for my $child ( $self->children() ) {
+	return $child if $name eq $child->name();
+    }
+
+    return;
 }
 
 sub getattr {
     my $self = shift;
-    my $path = shift;
 
-    if( @$path ) {
-	my $node = $self->{_files}->{ shift @$path };
-	return -ENOENT() unless $node;
-	return $node->getattr( $path );
-    }
-
-    my $modes = $self->calculate_modes();
-    return ( $self->{dev}, $self->{inode}, $modes, $self->{nlink}, 
-	     $self->{uid}, $self->{gid}, $self->{rdev}, $self->{size},
-	     $self->{atime}, $self->{mtime}, $self->{ctime}, 
-	     $self->{blocksize}, $self->{blocks} );
+    return ( $self->dev(), $self->inode(), $self->modes(), $self->nlink(), 
+	     $self->uid(), $self->gid(), $self->rdev(), $self->size(),
+	     $self->atime(), $self->mtime(), $self->ctime(), 
+	     $self->blocksize(), $self->blocks() );
 }
 
 sub getdir {
     my $self = shift;
-    my $path = shift;
 
-    return qw/. ../, keys %{$self->{_files}}, 0 unless @$path;
-    
-    my $node = $self->{_files}->{ shift @$path };
-    return -ENOENT() unless $node;
-
-    return $node->getdir( $path );
+    return qw/. ../, $self->filenames(), 0;
 }
 
-1;
+sub read :method {
+    my $self = shift;
+    my( $buf, $off ) = @_;
 
+    return -EINVAL() if $off > $self->size();
+    return 0 if $off == $self->size();
+
+    return substr( $self->content(), $off, $buf );
+}
+
+sub mkdir :method {
+    my $self = shift;
+    my $name = shift;
+
+    $self->children( FuseDir->new($name) );
+    return 0;
+}
+
+###############################################################################
+###################################################################### FuseFile
 package FuseFile;
-use base qw(FuseDir);
+use parent -norequire, qw(FuseDir);
 
 sub new {
-    my $class = shift;
-    my $self  = {};
-
-    $self = bless $self, $class;
-
-    $self->_init();
-
-    $self->{type} = 0100;
+    my $class   = shift;
+    my $self = bless {}, $class;
+    
+    $self->{name}    = shift;
     $self->{content} = shift;
-    $self->{size}  = length( $self->{content} );
 
     return $self;
 }
+sub mode { 0600; }
+sub type { 0100; }
+sub size { my $self = shift; length( $self->{content}); }
+sub content { my $self = shift; $self->{content}; }
 
-1;
-
+###############################################################################
+############################################################### Yggdrasil::Fuse
 package Yggdrasil::Fuse;
-use base qw(FuseDir);
+use parent -norequire, qw(FuseDir);
+
+use Time::Local;
 
 sub new {
     my $class = shift;
     my $self  = {};
 
-    $self->{ygg} = shift;
+    $self->{name} = shift;
+    $self->{ygg}  = shift;
+    $self->{obj}  = shift;
     $self =  bless $self, $class;
-    $self->_init();
     return $self;
 }
 
-1;
-
-package Yggdrasil::Fuse::Entity;
-use base qw(Yggdrasil::Fuse);
-
-sub getdir {
+sub status {
     my $self = shift;
-    my $path = shift;
 
-    unless( @$path ) {
-	my @e = map { $_->id() } $self->{ygg}->entities();
-	return @e, 0;
-    }
-
-    if( @$path == 1 ) {
-	# Entity
-    } elsif( @$path == 2 ) {
-	# Entity/Instance
-    } elsif( @$path == 3 ) {
-	# Entity/Instance/Property
-    }
+    return $self->{ygg}->get_status();
 }
-1;
 
-package Yggdrasil::Fuse::Relation;
-use base qw(Yggdrasil::Fuse);
+sub iso2unix {
+    my $self = shift;
+    my $iso = shift;
+
+    my($date, $time) = split ' ', $iso;
+    my($y,$m,$d) = split '-', $date;
+    my($H,$M,$S) = split ':', $time;
+
+    return timelocal( $S, $M, $H, $d, $m-1, $y );
+}
+
+sub mtime {
+    my $self = shift;
+
+    my $tick = $self->{ygg}->get_tick( $self->{obj}->start() );
+    return $self->iso2unix( $tick->{stamp} );
+}
+
+###############################################################################
+##################################################### Yggdrasil::Fuse::Entities
+package Yggdrasil::Fuse::Entities;
+use parent -norequire, qw(Yggdrasil::Fuse);
+
+sub mtime { $^T }
+
+sub children {
+    my $self = shift;
+
+    return map { Yggdrasil::Fuse::Entity->new($_->id(), $self->{ygg}, $_) } $self->{ygg}->entities();
+}
+
+sub mkdir :method {
+    my $self = shift;
+    my $name = shift;
+
+    $self->{ygg}->define_entity( $name );
+    return 0 if $self->status()->OK();
+
+    # TODO: else error
+    return 0;
+}
+
+###############################################################################
+####################################################### Yggdrasil::Fuse::Entity
+package Yggdrasil::Fuse::Entity;
+use parent -norequire, qw(Yggdrasil::Fuse);
+
+
+sub children {
+    my $self = shift;
+
+    my @i = map { Yggdrasil::Fuse::Instance->new($_->id(), $self->{ygg}, $_) } $self->{obj}->instances();
+    my @p = map { Yggdrasil::Fuse::EntityProperty->new( ":" . $_->id(), $self->{ygg}, $_) } $self->{obj}->properties();
+
+    return @i, @p;
+}
+
+sub mkdir :method {
+    my $self = shift;
+    my $name = shift;
+
+    my $e = $self->{obj}->create($name);
+    return 0 if $self->status()->OK();
+
+    # TODO: else error
+    return 0;
+}
+
+###############################################################################
+##################################################### Yggdrasil::Fuse::Instance
+package Yggdrasil::Fuse::Instance;
+use parent -norequire, qw(Yggdrasil::Fuse);
+
+sub mode { 0500; }
+
+sub children {
+    my $self = shift;
+
+    return map { Yggdrasil::Fuse::InstanceProperty->new($_->id(), $self->{ygg}, $self->{obj}) } $self->{obj}->entity()->properties();
+
+}
+
+
+###############################################################################
+############################################# Yggdrasil::Fuse::InstanceProperty
+package Yggdrasil::Fuse::InstanceProperty;
+use parent -norequire, qw(Yggdrasil::Fuse);
+
+sub mode { 0600; }
+sub type { 0100; }
+sub size { 
+    my $self = shift;
+
+    return length( $self->content() );
+}
+
+sub content {
+    my $self = shift;
+    
+    my $c = $self->{obj}->property($self->name());
+    return defined $c ? $c : '';
+}
+
+###############################################################################
+############################################### Yggdrasil::Fuse::EntityProperty
+package Yggdrasil::Fuse::EntityProperty;
+use parent -norequire, qw(Yggdrasil::Fuse);
+
+sub mode { 0600; }
+sub type { 0100; }
+
+sub size { 
+    my $self = shift;
+
+    return length( $self->content() );
+}
+
+sub content {
+    my $self = shift;
+
+    my $p = $self->{obj};
+    my @data = ("Full name: ", $p->entity()->id(), ":", $self->name(), "\n",
+		"Type: ", $p->type(), "\n",
+		"Null: ", ($p->null()?'TRUE':'FALSE'), "\n");
+		
+    return join('', @data);
+}
+
+###############################################################################
+#################################################### Yggdrasil::Fuse::Relations
+package Yggdrasil::Fuse::Relations;
+use parent -norequire, qw(Yggdrasil::Fuse);
+sub mtime { $^T }
+
+sub children {
+    return;
+}
