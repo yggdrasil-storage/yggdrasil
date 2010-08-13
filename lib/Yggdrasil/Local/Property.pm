@@ -152,8 +152,8 @@ sub objectify {
     $obj->{name}   = $params{name};
     $obj->{entity} = $params{entity};
     $obj->{_id}    = $params{id};
-    $obj->{start}  = $params{start};
-    $obj->{stop}   = $params{stop};
+    $obj->{_start} = $params{start};
+    $obj->{_stop}  = $params{stop};
     return $obj;
 }
 
