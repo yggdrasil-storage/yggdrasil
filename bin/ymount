@@ -66,7 +66,7 @@ my $root = FuseDir->new(
     "/",
     Yggdrasil::Fuse::Entities->new(Entities => $y),
     Yggdrasil::Fuse::Relations->new(Relations => $y),
-    FuseFile->new( README => $^V),
+    FuseFile->new( README => "This is Yggdrasil!\n"),
 
     # --- TEST
     FuseDir->new( testdir => 
@@ -105,28 +105,25 @@ sub query {
     return $root->query( $cmd, $path, @_ );
 }
 
-sub fuse_getattr { return query( getattr => @_ ) }
-sub fuse_getdir  { return query( getdir  => @_ ) }
-sub fuse_read    { return query( read    => @_ ) }
-sub fuse_mkdir   { 
+sub fuse_getattr  { return query( getattr  => @_ ) }
+sub fuse_getdir   { return query( getdir   => @_ ) }
+sub fuse_read     { return query( read     => @_ ) }
+sub fuse_write    { return query( write    => @_ ) }
+sub fuse_open     { return query( open     => @_ ) }
+sub fuse_truncate { return query( truncate => @_ ) }
+sub fuse_mkdir    { 
     my $path = get_path(shift);
     my $args = pop @$path;
     
     $path = join("/", @$path);
     return query( mkdir => $path, $args ); 
 }
+sub fuse_mknod    {
+    my $path = get_path(shift);
+    my $args = pop @$path;
 
-sub fuse_open {
-    my $path = shift;
-    print "[open] $path\n";
-
-    $path = get_path( $path );
-    my @modes = @_;
-    
-#    return -ENOENT() unless exists($files{$file});
-#    return -EISDIR() if $files{$file}{type} & 0040;
-
-    return 0;
+    $path = join("/", @$path);
+    return query( mknod => $path, $args, @_ );
 }
 
 sub fuse_statfs {
@@ -151,9 +148,11 @@ Fuse::main(
     read        => \&fuse_read,
     mkdir       => \&fuse_mkdir,
     statfs      => \&fuse_statfs,
-    
+    truncate    => \&fuse_truncate,
+    write       => \&fuse_write,    
+    mknod       => \&fuse_mknod,
+
     readlink    => sub {  foo('readlink', @_); },
-    mknod       => sub { foo('mknod', @_); },
     unlink      => sub { foo('unlink', @_); },
     rmdir       => sub { foo('rmdir', @_); },
     symlink     => sub { foo('symlink', @_); },
@@ -161,11 +160,9 @@ Fuse::main(
     link        => sub { foo('link', @_); },
     chmod       => sub { foo('chmod', @_); },
     chown       => sub { foo('chown', @_); },
-    truncate    => sub { foo('truncate', @_); },
     utime       => sub { foo('utime', @_); },
-    write       => sub { foo('write', @_); },
-    #flush       => sub { foo('flush', @_); },
-    #release     => sub { foo('release', @_); },
+    flush       => sub { foo('flush', @_); },
+    release     => sub { foo('release', @_); },
     fsync       => sub { foo('fsync', @_); },
     setxattr    => sub { foo('setxattr', @_); },
     #getxattr    => sub { foo('getxattr', @_); },
@@ -277,6 +274,10 @@ sub read :method {
     return substr( $self->content(), $off, $buf );
 }
 
+sub open :method { return -EISDIR(); }
+sub truncate { return -EISDIR(); }
+sub write :method { return -EISDIR(); }
+
 sub mkdir :method {
     my $self = shift;
     my $name = shift;
@@ -285,10 +286,21 @@ sub mkdir :method {
     return 0;
 }
 
+sub mknod :method {
+    my $self = shift;
+    my $name = shift;
+    my $mode = shift;
+    my $something = shift;
+
+    $self->children( FuseFile->new($name, '') );
+    return 0;
+}
+
 ###############################################################################
 ###################################################################### FuseFile
 package FuseFile;
 use parent -norequire, qw(FuseDir);
+use POSIX qw(:fcntl_h);
 
 sub new {
     my $class   = shift;
@@ -303,6 +315,30 @@ sub mode { 0600; }
 sub type { 0100; }
 sub size { my $self = shift; length( $self->{content}); }
 sub content { my $self = shift; $self->{content}; }
+
+sub truncate {
+    my $self = shift;
+    my $off  = shift;
+
+    substr( $self->{content}, $off) = '';
+    return 0;
+}
+
+sub open :method {
+    my $self = shift;
+    my $mode = shift;
+
+    return 0;
+}
+
+sub write :method {
+    my $self = shift;
+    my $content = shift;
+    my $off = shift;
+
+    substr($self->{content}, $off) = $content;
+    return length($content);
+}
 
 ###############################################################################
 ############################################################### Yggdrasil::Fuse
@@ -396,6 +432,23 @@ sub mkdir :method {
     return 0;
 }
 
+sub mknod :method {
+    my $self = shift;
+    my $file = shift;
+    my $mode = shift;
+    my $something = shift;
+
+    return -ENOENT() unless $file =~ /^:/;
+    
+    $file =~ s/^://;
+
+    # FIX: This only creates the property as TEXT and nothing about nullp
+    $self->{obj}->define_property($file);
+    return 0 if $self->status()->OK();
+
+    # TODO: else error
+}
+
 ###############################################################################
 ##################################################### Yggdrasil::Fuse::Instance
 package Yggdrasil::Fuse::Instance;
@@ -431,6 +484,21 @@ sub content {
     return defined $c ? $c : '';
 }
 
+sub write {
+    my $self = shift;
+    my $content = shift;
+
+    my $len = length($content);
+
+    $self->{obj}->property( $self->name() => $content );
+    return $len if $self->status()->OK();
+
+    # TODO: else error
+}
+
+sub open { return 0; }
+sub truncate { return 0; }
+
 ###############################################################################
 ############################################### Yggdrasil::Fuse::EntityProperty
 package Yggdrasil::Fuse::EntityProperty;
@@ -455,6 +523,9 @@ sub content {
 		
     return join('', @data);
 }
+
+sub open { return 0; }
+sub truncate { return 0; }
 
 ###############################################################################
 #################################################### Yggdrasil::Fuse::Relations
