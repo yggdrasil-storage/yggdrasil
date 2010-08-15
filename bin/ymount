@@ -66,7 +66,8 @@ my $root = FuseDir->new(
     "/",
     Yggdrasil::Fuse::Entities->new(Entities => $y),
     Yggdrasil::Fuse::Relations->new(Relations => $y),
-    FuseFile->new( README => "This is Yggdrasil!\n"),
+    FuseFile->new( README => "This is Yggdrasil Version!\n"),
+    FuseFile->new( Information => "Logged in as: " . $y->user(), "Server information: " . $y->info() ),
 
     # --- TEST
     FuseDir->new( testdir => 
@@ -132,6 +133,13 @@ sub fuse_mknod    {
     $path = join("/", @$path);
     return query( mknod => $path, $args, @_ );
 }
+sub fuse_unlink   {
+    my $path = get_path(shift);
+    my $args = pop @$path;
+
+    $path = join("/", @$path);
+    return query( unlink => $path, $args, @_ );
+}
 
 sub fuse_statfs {
     my $blocks = $y->storage()->size() / 1024;
@@ -160,9 +168,9 @@ Fuse::main(
     mknod       => \&fuse_mknod,
 
     rmdir       => \&fuse_rmdir,
+    unlink      => \&fuse_unlink,
 
     readlink    => sub {  foo('readlink', @_); },
-    unlink      => sub { foo('unlink', @_); },
     symlink     => sub { foo('symlink', @_); },
     rename      => sub { foo('rename', @_); },
     link        => sub { foo('link', @_); },
@@ -321,6 +329,20 @@ sub mknod :method {
     return 0;
 }
 
+sub unlink :method { 
+    my $self = shift;
+    my $name = shift;
+
+    # Find the file entry in the list of children.
+    my $i;
+    for my $count (0 .. $#{$self->{children}}) {
+	$i = $count if $self->{children}->[$count]->name() eq $name;	  
+    }
+    
+    splice @{$self->{children}}, $i, 1 if defined $i && $self->{children}->[$i]->isa( 'FuseFile' );
+    return 0;    
+}
+    
 ###############################################################################
 ###################################################################### FuseFile
 package FuseFile;
@@ -330,10 +352,14 @@ use POSIX qw(:fcntl_h);
 sub new {
     my $class   = shift;
     my $self = bless {}, $class;
-    
-    $self->{name}    = shift;
-    $self->{content} = shift;
 
+    $self->{name}    = shift;
+
+    my $content = join "\n", @_;
+    chomp $content;
+    $self->{content} = "$content\n";
+
+    
     return $self;
 }
 sub mode { 0600; }
@@ -502,18 +528,71 @@ sub mknod :method {
     return $self->_return();
 }
 
+sub unlink :method {
+    my $self = shift;
+    my $file = shift;
+
+    my ($propname, $type, $nullp) = split /:/, $file;
+    
+    $self->{obj}->undefine_property( $propname );
+    return $self->_return();
+}
+
+
 ###############################################################################
 ##################################################### Yggdrasil::Fuse::Instance
 package Yggdrasil::Fuse::Instance;
 use parent -norequire, qw(Yggdrasil::Fuse);
+use POSIX qw(:errno_h);
 
 sub mode { 0500; }
 
 sub children {
     my $self = shift;
 
-    return map { Yggdrasil::Fuse::InstanceProperty->new($_->id(), $self->{ygg}, $self->{obj}) } $self->{obj}->entity()->properties();
+    my $history_object = Yggdrasil::Fuse::HistoricInstanceProperties->new( ':history', $self->{ygg}, $self->{obj} );
+    
+    return $history_object, map { Yggdrasil::Fuse::InstanceProperty->new($_->id(), $self->{ygg}, $self->{obj}) } $self->{obj}->entity()->properties();
+}
 
+sub mknod  :method { return -ENOSYS() }
+sub unlink :method { return -ENOSYS() }
+sub mkdir  :method { return -ENOSYS() }
+sub rmdir  :method { return -ENOSYS() }
+
+###############################################################################
+####################################Yggdrasil::Fuse::HistoricInstanceProperties
+package Yggdrasil::Fuse::HistoricInstanceProperties;
+use parent -norequire, qw(Yggdrasil::Fuse);
+use POSIX qw(:errno_h);
+
+sub children {
+    my $self = shift;
+
+    return map { Yggdrasil::Fuse::HistoricInstanceProperty->new($_->id(), $self->{ygg}, $self->{obj}) } $self->{obj}->entity()->properties();
+}
+
+###############################################################################
+######################################Yggdrasil::Fuse::HistoricInstanceProperty
+package Yggdrasil::Fuse::HistoricInstanceProperty;
+use parent -norequire, qw(Yggdrasil::Fuse);
+
+sub children {
+    my $self = shift;
+
+    # Return the ticks where this property changed.
+    my %changes = $self->{obj}->property_history( $self->name() );
+    my @targets;
+
+    for my $tick (keys %changes) {
+	my $instance = $self->{obj}->entity()->fetch( $self->{obj}->id() );
+	$instance->{_start} = $tick;
+	$instance->{_stop}  = $tick;
+	my $ip = Yggdrasil::Fuse::InstanceProperty->new( $tick, $self->{ygg}, $instance );
+	$ip->{realname} = $self->name();
+	push @targets, $ip;
+    }
+    return @targets;
 }
 
 
@@ -532,8 +611,10 @@ sub size {
 
 sub content {
     my $self = shift;
-    
-    my $c = $self->{obj}->property($self->name());
+
+    $self->{ygg}->storage()->debug( 'protocol' => 1 );
+    my $c = $self->{obj}->property( $self->{realname} || $self->name());
+    $self->{ygg}->storage()->debug( 'protocol' => 0 );
     return defined $c ? $c : '';
 }
 
