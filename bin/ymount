@@ -118,6 +118,13 @@ sub fuse_mkdir    {
     $path = join("/", @$path);
     return query( mkdir => $path, $args ); 
 }
+sub fuse_rmdir    { 
+    my $path = get_path(shift);
+    my $args = pop @$path;
+    
+    $path = join("/", @$path);
+    return query( rmdir => $path, $args ); 
+}
 sub fuse_mknod    {
     my $path = get_path(shift);
     my $args = pop @$path;
@@ -152,9 +159,10 @@ Fuse::main(
     write       => \&fuse_write,    
     mknod       => \&fuse_mknod,
 
+    rmdir       => \&fuse_rmdir,
+
     readlink    => sub {  foo('readlink', @_); },
     unlink      => sub { foo('unlink', @_); },
-    rmdir       => sub { foo('rmdir', @_); },
     symlink     => sub { foo('symlink', @_); },
     rename      => sub { foo('rename', @_); },
     link        => sub { foo('link', @_); },
@@ -286,6 +294,23 @@ sub mkdir :method {
     return 0;
 }
 
+sub rmdir :method {
+    my $self = shift;
+    my $name = shift;
+
+    # Find the directory entry in the list of children.
+    my $i;
+    for my $count (0 .. $#{$self->{children}}) {
+	$i = $count if $self->{children}->[$count]->name() eq $name;	  
+    }
+
+    # Yoink the bugger unless it's an Yggdrasil::Fuse object.  You
+    # won't be able to recreate these things, so removing it is a
+    # one-way street.
+    splice @{$self->{children}}, $i, 1 if defined $i && ! $self->{children}->[$i]->isa( 'Yggdrasil::Fuse' );
+    return 0;
+}
+
 sub mknod :method {
     my $self = shift;
     my $name = shift;
@@ -344,6 +369,7 @@ sub write :method {
 ############################################################### Yggdrasil::Fuse
 package Yggdrasil::Fuse;
 use parent -norequire, qw(FuseDir);
+use POSIX qw(:errno_h);
 
 use Time::Local;
 
@@ -382,6 +408,22 @@ sub mtime {
     return $self->iso2unix( $tick->{stamp} );
 }
 
+sub _return {
+    my $self = shift;
+    my $goal = shift || 0;
+
+    my $code = $self->status()->status();    
+    if ($code < 300) {
+	return $goal;
+    } elsif ($code < 400) {
+	return -EPERM();
+    } elsif ($code < 500) {
+	return -EACCES();
+    } 
+
+    return -ENOSYS();
+}
+
 ###############################################################################
 ##################################################### Yggdrasil::Fuse::Entities
 package Yggdrasil::Fuse::Entities;
@@ -400,17 +442,23 @@ sub mkdir :method {
     my $name = shift;
 
     $self->{ygg}->define_entity( $name );
-    return 0 if $self->status()->OK();
-
-    # TODO: else error
-    return 0;
+    return $self->_return();
 }
+
+sub rmdir :method {
+    my $self = shift;
+    my $name = shift;
+
+    $self->{ygg}->expire_entity( $name );
+    return $self->_return();
+}
+
 
 ###############################################################################
 ####################################################### Yggdrasil::Fuse::Entity
 package Yggdrasil::Fuse::Entity;
 use parent -norequire, qw(Yggdrasil::Fuse);
-
+use POSIX qw(:errno_h);
 
 sub children {
     my $self = shift;
@@ -426,10 +474,18 @@ sub mkdir :method {
     my $name = shift;
 
     my $e = $self->{obj}->create($name);
-    return 0 if $self->status()->OK();
+    return $self->_return();
+}
 
-    # TODO: else error
-    return 0;
+sub rmdir :method {
+    my $self = shift;
+    my $name = shift;
+
+    my $i = $self->{obj}->fetch($name);
+    return -ENOENT() unless $self->status()->OK();
+    
+    $i->expire();
+    return $self->_return();
 }
 
 sub mknod :method {
@@ -443,9 +499,7 @@ sub mknod :method {
     $nullp = $nullp eq 'FALSE' ? 0 : 1;
 
     $self->{obj}->define_property( $name, type => $type, nullp => $nullp );
-    return 0 if $self->status()->OK();
-
-    # TODO: else error
+    return $self->_return();
 }
 
 ###############################################################################
@@ -490,9 +544,7 @@ sub write {
     my $len = length($content);
 
     $self->{obj}->property( $self->name() => $content );
-    return $len if $self->status()->OK();
-
-    # TODO: else error
+    return $self->_return( $len );
 }
 
 sub open { return 0; }
