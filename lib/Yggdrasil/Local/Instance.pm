@@ -310,6 +310,56 @@ sub set {
     return $self->property( @_ );
 }
 
+sub property_history {
+    my $self = shift;
+    my $key  = shift;
+    my $p;
+
+    # We might be passed a property object and not its name as the
+    # key.  Also verify that it's of the correct class.
+    my $status = $self->get_status();
+    if (ref $key) {
+	if (ref $key eq 'Yggdrasil::Local::Property') {
+	    $p = $key;
+	    $key = $p->_userland_id();
+	} else {
+	    my $ref = ref $key;
+	    $status->set( 406, "$ref isn't acceptable as a property reference." );
+	    return undef;
+	}
+    }
+
+    my $storage = $self->storage();
+    my $entity = $self->{entity};
+    my $name = join(":", $entity->_userland_id(), $key );
+
+    $p = Yggdrasil::Local::Property->get( yggdrasil => $self, entity => $entity, property => $key )
+      unless $p;
+    
+    unless ($p) {
+	$status->set( 404, "Unable to find property '$key' for entity '" . $entity->_userland_id() . "'" );
+	return undef;
+    }
+
+    my $schemaref = $entity->property_exists( $key );
+    my $schema    = $schemaref->{name};
+ 
+    my $r = $storage->fetch( $schema => { return => ["start", "value"], as => 1, where => [ id => $self->{_id} ] },
+			     { start => 0, stop => undef } );
+
+    if( @$r ) {
+	my %history;
+
+	foreach my $entry (@$r) {
+	    $history{ $entry->{$schema . '_start'} } = $entry->{value};
+	}
+
+	return %history;
+    }
+
+    return;
+}
+
 sub property {
     my $self = shift;
     my ($key, $value) = @_;

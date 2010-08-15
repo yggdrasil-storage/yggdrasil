@@ -278,7 +278,8 @@ my %cmd;
 	history => {
 	    _help   => "Instance history",
 	    _entity => {
-		_instance => \&instance_history,
+#		_instance => \&instance_history,
+			_instance => { _instance_property => \&instance_property_history },
 	    },
 	},
 	create => {
@@ -870,6 +871,21 @@ sub instance_history {
 	print join( ' | ', @l ), "\n";
     }
     
+}
+
+sub instance_property_history {
+    my($instance_command, $history_command, $entity, $instance, $property) = @_;
+    
+    my $eobj = $y->get_entity( $entity );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+
+    my $iobj = $eobj->fetch($instance);
+    print "'$instance', no such instance.\n" and return unless $iobj;
+
+    my %changes = $iobj->property_history($property);
+    for my $tick ( keys %changes ) {
+	print "* $tick [$changes{$tick}]\n";
+    }
 }
 
 # Relations
