@@ -416,7 +416,7 @@ sub children {
     my $self = shift;
 
     my @i = map { Yggdrasil::Fuse::Instance->new($_->id(), $self->{ygg}, $_) } $self->{obj}->instances();
-    my @p = map { Yggdrasil::Fuse::EntityProperty->new( ":" . $_->id(), $self->{ygg}, $_) } $self->{obj}->properties();
+    my @p = map { Yggdrasil::Fuse::EntityProperty->new( join(":", $_->id(), $_->type(), ($_->null()?'TRUE':'FALSE') ), $self->{ygg}, $_) } $self->{obj}->properties();
 
     return @i, @p;
 }
@@ -438,12 +438,11 @@ sub mknod :method {
     my $mode = shift;
     my $something = shift;
 
-    return -ENOENT() unless $file =~ /^:/;
-    
-    $file =~ s/^://;
+    my( $name, $type, $nullp ) = split /:/, $file;
 
-    # FIX: This only creates the property as TEXT and nothing about nullp
-    $self->{obj}->define_property($file);
+    $nullp = $nullp eq 'FALSE' ? 0 : 1;
+
+    $self->{obj}->define_property( $name, type => $type, nullp => $nullp );
     return 0 if $self->status()->OK();
 
     # TODO: else error
