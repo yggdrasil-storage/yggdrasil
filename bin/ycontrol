@@ -276,11 +276,9 @@ my %cmd;
 	    },
 	},
 	history => {
-	    _help   => "Instance history",
-	    _entity => {
-#		_instance => \&instance_history,
-			_instance => { _instance_property => \&instance_property_history },
-	    },
+	    _help    => "Instance history",
+	    full     => { _entity => { _instance => \&instance_history } },
+	    property => { _entity => { _instance => { _instance_property => \&instance_property_history } } },
 	},
 	create => {
 	    _entity => {
@@ -808,7 +806,7 @@ sub instance_create {
 # This doesn't work, we only get one item back from fetch(), we
 # probably need to look at _get_in_time in Instance.pm.
 sub instance_history {
-    my ($instance_command, $info_command, $entity, $instance) = @_;
+    my ($instance_command, $info_command, $full_command, $entity, $instance) = @_;
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
 
@@ -874,7 +872,7 @@ sub instance_history {
 }
 
 sub instance_property_history {
-    my($instance_command, $history_command, $entity, $instance, $property) = @_;
+    my($instance_command, $history_command, $prop_command, $entity, $instance, $property) = @_;
     
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
