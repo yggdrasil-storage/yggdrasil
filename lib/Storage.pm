@@ -1270,6 +1270,21 @@ sub _schema_is_temporal {
     return $self->cache( 'temporal', $schema );
 }
 
+sub _schema_is_auth_schema {
+    my $self   = shift;
+    my $schema = shift;
+
+    my $realname = $self->cache( 'mapperm2h', $schema ) || $schema;
+    
+    # Why do I need to test for both?
+    if ($realname =~ /^Storageauth/ || $realname =~ /^Storage_auth/) {
+	return 1;
+    } else {
+	return 0;
+    }    
+}
+
+
 sub _storage_path {
     my $self = shift;
     
