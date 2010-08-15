@@ -612,9 +612,7 @@ sub size {
 sub content {
     my $self = shift;
 
-    $self->{ygg}->storage()->debug( 'protocol' => 1 );
     my $c = $self->{obj}->property( $self->{realname} || $self->name());
-    $self->{ygg}->storage()->debug( 'protocol' => 0 );
     return defined $c ? $c : '';
 }
 
