@@ -516,7 +516,7 @@ sub content {
     my $self = shift;
 
     my $p = $self->{obj};
-    my @data = ("Full name: ", $p->entity()->id(), ":", $self->name(), "\n",
+    my @data = ("Full name: ", $p->entity()->id(), ":", $p->id(), "\n",
 		"Type: ", $p->type(), "\n",
 		"Null: ", ($p->null()?'TRUE':'FALSE'), "\n");
 		
