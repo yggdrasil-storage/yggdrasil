@@ -83,7 +83,7 @@ sub null {
 }
 
 sub type {
-    my ($self, $property) = (shift, shift);
+    my $self = shift;
     return $self->_get_meta( 'type', @_ );
 }
 
