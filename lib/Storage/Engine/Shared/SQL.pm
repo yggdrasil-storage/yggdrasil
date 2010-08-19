@@ -466,8 +466,9 @@ sub _expire {
     }
     my $keys = join " and ", @sets;
 
-    $status->set( 200 );
     $self->_sql( "UPDATE $schema SET stop = ? WHERE stop $nullopr NULL and $keys", $tick, values %params );
+
+    $status->set( 200 ) if $status->OK();
 }
 
 # Generates a field / data based where clause, ensuring that the
@@ -506,7 +507,11 @@ sub _process_where {
 	# and field. It should thus be put verbatim into the
 	# generated SQL.
 	if (! defined $value) {
-	    $localoperator = $self->_null_comparison_operator() if $operator eq '=';
+	    if( $operator eq "=" || $operator eq "!=" ) {
+		$localoperator = $self->_null_comparison_operator();
+
+		$localoperator .= " not" if $operator eq "!=";
+	    }
 	    push @wheres, join " $localoperator ", $fqfn[0], 'NULL';	    
 	} elsif ( ref $value eq "SCALAR" ) {
 	    push @wheres, join " $localoperator ", $fqfn[0], $$value;
