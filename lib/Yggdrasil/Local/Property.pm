@@ -5,8 +5,6 @@ use warnings;
 
 use base qw/Yggdrasil::Property/;
 
-use Yggdrasil::Utilities qw|get_times_from|;
-
 sub define {
     my $class  = shift;
     my $self   = $class->SUPER::new(@_);
@@ -178,14 +176,14 @@ sub get {
     if (ref $params{entity}) {
 	$entityobj = $params{entity}; 
     } else {
-	$entityobj = $self->yggdrasil()->get_entity( $params{entity} );
+	$entityobj = $self->yggdrasil()->get_entity( $params{entity}, time => $params{time} );
     }
 
     # property_exists does not require the entity to actually exist
     # for the test to be valid, so there's no reason to ask storage to
     # create a proper entity object above, hence we use objectify and
     # then call propert_exists on that object directly.
-    my $prop = $entityobj->property_exists( $propname );
+    my $prop = $entityobj->property_exists( $propname, time => $params{time} );
     if ($prop) {
 	$self->{name}   = $propname;
 	$self->{entity} = $entityobj;
@@ -218,7 +216,7 @@ sub expire {
 # and type is currently supported.
 sub _get_meta {
     my ($self, $meta) = (shift, shift);
-    my ($start, $stop) = get_times_from( @_ );
+    my %params = @_;
     my $property = $self->{name};
 
     my $status = $self->get_status();
@@ -234,14 +232,14 @@ sub _get_meta {
 
     my $entity = $self->{entity};
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = $entity->ancestors($start, $stop);
+    my @ancestors = $entity->ancestors( $params{time} );
 
     foreach my $e ( @ancestors ) {
 	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e ] },
 				  'MetaProperty',{ return => $meta,
 						   where  => [ entity   => \qq{MetaEntity.id},
 							       property => $property ]},
-				  { start => $start, stop => $stop });
+				  $params{time} );
 	
 	next unless @$ret;
 	return $ret->[0]->{$meta};
