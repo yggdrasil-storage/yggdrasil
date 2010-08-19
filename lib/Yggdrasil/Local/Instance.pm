@@ -313,6 +313,7 @@ sub set {
 sub property_history {
     my $self = shift;
     my $key  = shift;
+    my %params = @_;
     my $p;
 
     # We might be passed a property object and not its name as the
@@ -325,7 +326,7 @@ sub property_history {
 	} else {
 	    my $ref = ref $key;
 	    $status->set( 406, "$ref isn't acceptable as a property reference." );
-	    return undef;
+	    return;
 	}
     }
 
@@ -333,15 +334,15 @@ sub property_history {
     my $entity = $self->{entity};
     my $name = join(":", $entity->_userland_id(), $key );
 
-    $p = Yggdrasil::Local::Property->get( yggdrasil => $self, entity => $entity, property => $key )
+    $p = Yggdrasil::Local::Property->get( yggdrasil => $self, entity => $entity, property => $key, time => $params{time} )
       unless $p;
     
     unless ($p) {
 	$status->set( 404, "Unable to find property '$key' for entity '" . $entity->_userland_id() . "'" );
-	return undef;
+	return;
     }
 
-    my $schemaref = $entity->property_exists( $key );
+    my $schemaref = $entity->property_exists( $key, time => $params{time} );
     my $schema    = $schemaref->{name};
  
     my $r = $storage->fetch( $schema => { return => ["start", "value"], as => 1, where => [ id => $self->{_id} ] },
