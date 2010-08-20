@@ -687,7 +687,7 @@ sub children {
     my @targets;
 
     for my $tick (keys %changes) {
-	my $instance = $self->{obj}->entity()->fetch( $self->{obj}->id(), time => $time );
+	my $instance = $self->{obj}->entity()->fetch( $self->{obj}->id(), time => { start => $tick, stop => $tick } );
 	my $ip = Yggdrasil::Fuse::InstanceProperty->new( $tick, $self->{ygg}, $instance );
 	$ip->{realname} = $self->{realname};
 	push @targets, $ip;

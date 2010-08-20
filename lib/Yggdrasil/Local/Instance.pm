@@ -380,12 +380,17 @@ sub property {
 	}
     }
 
+    my $time = {};
+    if( $self->stop() ) {
+	$time = { start => $self->start(), stop => $self->stop() };
+    }
+
     my $storage = $self->storage();
 
     my $entity = $self->{entity};
     my $name = join(":", $entity->_userland_id(), $key );
 
-    $p = Yggdrasil::Local::Property->get( yggdrasil => $self, entity => $entity, property => $key )
+    $p = Yggdrasil::Local::Property->get( yggdrasil => $self, entity => $entity, property => $key, time => $time )
       unless $p;
     
     unless ($p) {
@@ -393,7 +398,7 @@ sub property {
 	return undef;
     }
 
-    my $schemaref = $entity->property_exists( $key );
+    my $schemaref = $entity->property_exists( $key, time => $time );
     my $schema    = $schemaref->{name};
     # Did we get two params, even if one was undef?
     if (@_ == 2) {
