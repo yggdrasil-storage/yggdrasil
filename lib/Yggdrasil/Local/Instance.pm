@@ -19,6 +19,12 @@ sub create {
     my $status = $self->get_status();
     my $ename  = $entity->_userland_id();
 
+    # Can't create historic object
+    if( $entity->stop() ) {
+	$status->set( 406, "Unable to create instances in historic context" );
+	return;
+    }
+
     my $instance = __PACKAGE__->fetch( yggdrasil => $self, %params );
     if( $instance ) {
 	$status->set( 202, "Instance '$vid' already existed for entity '$ename'." );
@@ -50,13 +56,18 @@ sub fetch {
 
     my $vid    = $self->{visual_id} = $params{instance};
     my $entity = $self->{entity}    = $params{entity};
-    my $time   = $params{time} || {};
 
     my $ename = $entity->_userland_id();
     my $status = $self->get_status();
 
+    $self->{_start} = $entity->start();
+    $self->{_stop}  = $entity->stop();
+
+    my $time = $self->_validate_temporal( $params{time} );
+    return unless $time;
+
     # Check if instance exists
-    my $id = $self->_get_id();
+    my $id = $self->_get_id($time);
     unless( $id ) {
 	$status->set( 404, "Instance '$vid' not found in entity '$ename'." );
 	return;
@@ -93,6 +104,12 @@ sub expire {
     my $entity  = $self->entity();
     my $status  = $self->get_status();
 
+    # Can't expire historic object
+    if( $self->stop() ) {
+	$status->set( 406, "Unable to create instances in historic context" );
+	return;
+    }
+
     # Expire all properties
     for my $prop ($entity->properties()) {
 	$storage->expire( join(':', $entity->_userland_id(), $prop->_userland_id()), id => $self->{_id} );	
@@ -110,6 +127,7 @@ sub expire {
 
 sub _get_id {
     my $self = shift;
+    my $time = shift;
     my $entity = $self->{entity};
 
     my $idfetch = $self->storage()->fetch(
@@ -118,7 +136,8 @@ sub _get_id {
 		       id     => \qq{Instances.entity} ]	},
 	Instances   => {
 	    return => "id",
-	    where => [ visual_id => $self->id() ] } );
+	    where => [ visual_id => $self->id() ] },
+        $time );
 
     return $idfetch->[0]->{id};
 }
@@ -139,12 +158,13 @@ sub _get_in_tick {
 						       },
 					 'Instances', {
 						      return => [ "id", 'start', 'stop' ],
-						      where => [ visual_id => $visual_id ] } );
+						      where => [ visual_id => $visual_id ] },
+					 $time );
 
     my $id = $idref->[0]->{id};
     
     # Short circuit the joins if we're looking for the current object
-    unless (exists $time->{start} || exists $time->{stop}) {
+    unless( $self->stop() ) {
 	if ($id) {
 	    return { id => $id, 'start' => $idref->[0]->{start}, 'stop' => $idref->[0]->{stop} };
 	} else {
@@ -253,12 +273,14 @@ sub _filter_start_times {
 sub can_write {
     my $self = shift;
     
+    return if $self->stop();
     return $self->storage()->can( update => 'Instances', { id => $self->{_id} } );
 }
 
 sub can_expire {
     my $self = shift;
     
+    return if $self->stop();
     return $self->storage()->can( expire => 'Instances', { id => $self->{_id} } );
 }
 
@@ -266,12 +288,15 @@ sub can_expire_value {
     my $self = shift;
     my $prop = shift;
     
+    return if $self->stop();
     return $self->_property_allows( $prop, 'expire' );
 }
 
 sub can_write_value {
     my $self = shift;
     my $prop = shift;
+    
+    return if $self->stop();
     
     # Check to see if the property has any values. If the property
     # exists with a value, we'll get an OK status set, if the property
@@ -288,7 +313,7 @@ sub _property_allows {
     my $self = shift;
     my $prop = shift;
     my $call = shift;
-    
+
     my $storage = $self->storage();
     my $eobj    = $self->entity();
     my $propobj = ref $prop?$prop:$eobj->get_property( $prop );
@@ -307,6 +332,7 @@ sub get {
 
 sub set {
     my $self = shift;
+
     return $self->property( @_ );
 }
 
@@ -315,6 +341,9 @@ sub property_history {
     my $key  = shift;
     my %params = @_;
     my $p;
+
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;
 
     # We might be passed a property object and not its name as the
     # key.  Also verify that it's of the correct class.
@@ -334,7 +363,7 @@ sub property_history {
     my $entity = $self->{entity};
     my $name = join(":", $entity->_userland_id(), $key );
 
-    $p = Yggdrasil::Local::Property->get( yggdrasil => $self, entity => $entity, property => $key, time => $params{time} )
+    $p = Yggdrasil::Local::Property->get( yggdrasil => $self, entity => $entity, property => $key, time => $time )
       unless $p;
     
     unless ($p) {
@@ -342,11 +371,13 @@ sub property_history {
 	return;
     }
 
-    my $schemaref = $entity->property_exists( $key, time => $params{time} );
+    my $schemaref = $entity->property_exists( $key, time => $time );
     my $schema    = $schemaref->{name};
  
-    my $r = $storage->fetch( $schema => { return => ["start", "value"], as => 1, where => [ id => $self->{_id} ] },
-			     { start => 0, stop => undef } );
+    my $r = $storage->fetch( $schema => { return => ["start", "value"], 
+					  as => 1, 
+					  where => [ id => $self->{_id} ] }, 
+			     $time );
 
     if( @$r ) {
 	my %history;

@@ -155,6 +155,12 @@ sub expire {
     my $status  = $self->get_status();
     my $storage = $self->storage();
 
+    # Do not expire historic Entities
+    if( $self->stop() ) {
+	$status->set( 406, "Unable to expire historic entity" );
+	return 0;
+    }
+
     # Do not expire UNIVERSAL.  That's bad.
     if ($self->_internal_id() == 1) {
 	$status->set( 403, "Unable to expire the root entity, 'UNIVERSAL'");
@@ -196,7 +202,7 @@ sub fetch {
     my $self   = shift;
     my $name   = shift;
     my %params = @_;
-    
+
     return Yggdrasil::Local::Instance->fetch( yggdrasil => $self,
 					      entity    => $self,
 					      instance  => $name, 
@@ -208,11 +214,14 @@ sub instances {
     my $self   = shift;
     my %params = @_;
     
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;
+
     my $instances = $self->storage()->fetch( 
 	MetaEntity => { where  => [ entity => $self->_userland_id() ] },
 	Instances  => { return => [ 'visual_id', 'id', 'start', 'stop' ],
 			where  => [ entity => \qq{MetaEntity.id} ] },
-	$params{time} );
+	$time );
     
     # FIXME, find a way to create instance objects in a nice way
     my @i;
@@ -251,12 +260,14 @@ sub search {
 sub can_write {
     my $self = shift;
     
+    return unless $self->stop();
     return $self->storage()->can( update => 'MetaEntity', { id => $self->_internal_id() } );
 }
 
 sub can_expire {
     my $self = shift;
     
+    return unless $self->stop();
     return $self->storage()->can( expire => 'MetaEntity', { id => $self->_internal_id() } );
 }
 
@@ -302,8 +313,11 @@ sub property_exists {
     my ($self, $property) = (shift, shift);
     my %params = @_;
     
+    my $time = $self->_validate_temporal( $params{time} );
+    return unless $time;
+
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = $self->ancestors( $params{time} );
+    my @ancestors = $self->ancestors( $time );
     
     # Check to see if the property exists.
     foreach my $e ( @ancestors ) {
@@ -319,7 +333,7 @@ sub property_exists {
 		    ]
 	    },
 
-	    $params{time} );
+	    $time );
 
 	# The property name might be "0".
 	return { name  => join(":", $e, $property ),
@@ -335,8 +349,11 @@ sub properties {
     my $self = shift;
     my %params = @_;
     
+    my $time = $self->_validate_temporal( $params{time} );
+    return unless $time;
+
     my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = $self->ancestors( $params{time} );
+    my @ancestors = $self->ancestors( $time );
     my @rets;
 
     foreach my $e ( @ancestors ) {
@@ -348,9 +365,7 @@ sub properties {
 		return => [ 'property', 'id', 'start', 'stop' ],
 		where  => [ entity => \q<MetaEntity.id> ]
 	    },
-
-	    $params{time} );
-
+	    $time );
 
 	for my $p (@$aref) {
 	    my $eobj;
