@@ -62,6 +62,8 @@ my $term = new Term::ReadLine 'ycontrol';
 my $attribs = $term->Attribs;
 my $OUT = $term->OUT || \*STDOUT;
 
+my ($start, $stop) = (0, 0);
+
 my %cmd;
 %cmd = (
     help => \%cmd,
@@ -323,13 +325,20 @@ my %cmd;
 	current => \&tick_current,
     },
 
-    debug => {
-	_help => 'Turn on / off debugging options',
-	_DEBUGOPTIONS_ => {
-	    _DEBUGTOGGLE_ => \&debug,
+    set => {
+        debug => {
+            _help => 'Turn on / off debugging options',
+	    _DEBUGOPTIONS_ => {
+	       _DEBUGTOGGLE_ => \&set_debug,
+            },
+        },
+	temporal => {
+	    start => { _TICK_ => \&set_start },
+	    stop  => { _TICK_ => \&set_stop  },
+	    current => \&unset_start_and_stop,
         },
     },
-
+    	
     whoami     => \&whoami,
     uptime     => \&uptime,
     protocols  => \&protocols,
@@ -456,8 +465,22 @@ sub help {
     }
 }
 
-sub debug {
-    my ($debug, $command, $switch) = @_;
+sub set_start {
+    my ($set, $temporality, $startcommand, $starttime) = @_;
+    $start = $starttime;
+}
+
+sub set_stop {
+    my ($set, $temporality, $stopcommand, $stoptime) = @_;
+    $stop = $stoptime;
+}
+
+sub unset_start_and_stop {
+    $stop = $start = undef;
+}
+
+sub set_debug {
+    my ($set, $debug, $command, $switch) = @_;
     
     unless (exists $debug_switches{$command}) {
 	print "Unknown debug command, '$command'\n";
@@ -511,7 +534,7 @@ sub user_info {
     printf "%-15s - %s\n", 'Password', $user->password() || '';
     printf "%-15s - %s\n", 'Roles', join ", ", map { $_->id() } $user->member_of();
     
-    &display_tick( $user->start() );
+    display_tick( $user );
 }
 
 sub user_password {
@@ -605,8 +628,10 @@ sub user_expire {
 # Entity interface
 sub entity_info {
     my ($entity_command, $info_command, $entity) = @_;
-    my $eobj = $y->get_entity( $entity );
-
+    my ($key, $tstart, $tstop) = extract_temporality( $entity );
+    my $eobj;
+    
+    $eobj = $y->get_entity( $key, populate_times( $tstart, $tstop ) );
     my $status = $y->get_status();
 
     unless ($status->OK()) {
@@ -620,7 +645,7 @@ sub entity_info {
     my @instances = $eobj->instances();
     printf "%-15s - ", "Instances";
     if (@instances) {
-	print join (", ", map { $_->id() } @instances), "\n";
+	print join (", ", map { nameify( $_ ) } @instances), "\n";
     } else {
 	print "NULL\n";
     }
@@ -632,21 +657,25 @@ sub entity_info {
 	printf "  %-13s - %-10s - %-7s\n", 'Name', 'Type', 'Null?', 'Source';
 	for my $prop (@props) {
 	    my $prop_orig_entity = $prop->entity();
-	    next unless $prop_orig_entity;
+	    die unless $prop_orig_entity;
 	    my $source = $prop_orig_entity->id();
 	    my $type = $prop->type();
-	    printf "  %-13s - %-10s - %-7s%s\n",  $prop->id(), lc $prop->type(),
+	    printf "  %-13s - %-10s - %-7s%s\n",  nameify( $prop ), lc $prop->type(),
 	      $prop->null()?'TRUE':'FALSE',
 		$source ne $eobj->id()?" [$source]":'';
 	}
     } else {
 	printf "%-15s - NULL\n", "Properties";
     }
-    &display_tick( $eobj->start() );
+    display_tick( $eobj );
 }
 
 sub entity_create {
     my($entity_command, $create_command, $entity) = @_;
+    if ($start || $stop) {
+	print "Unable to create entities while in non-current state.  You might wish to do 'set temporal current'.";
+	return;
+    }
     
     my $e = $y->get_entity( $entity );
     
@@ -662,6 +691,10 @@ sub entity_create {
 
 sub entity_expire {
     my($entity_command, $expire_command, $entity) = @_;
+    if ($start || $stop) {
+	print "Unable to expire entities while in non-current state.  You might wish to do 'set temporal current'.";
+	return;
+    }
     
     my $e = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $e;
@@ -677,6 +710,10 @@ sub entity_expire {
 # Property interface
 sub property_create {
     my($property_command, $create_command, $entity, $property, $type, $nullp) = @_;
+    if ($start || $stop) {
+	print "Unable to create properties while in non-current state.  You might wish to do 'set temporal current'.";
+	return;
+    }
 
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
@@ -690,21 +727,24 @@ sub property_create {
 
 sub property_info {
     my($property_command, $info_command, $entity, $property) = @_;
-
-    my $eobj = $y->get_entity( $entity );
+    my ($ekey, $pkey, $tstart, $tstop);
+    ($ekey, $tstart, $tstop) = extract_temporality( $entity );
+    
+    my $eobj = $y->get_entity( $ekey, populate_times( $tstart, $tstop ) );
     print "'$entity', no such entity.\n" and return unless $eobj;
     
-    my $pobj = $eobj->get_property( $property );
+    ($pkey, $tstart, $tstop) = extract_temporality( $property );
+    my $pobj = $eobj->get_property( $pkey, populate_times( $tstart, $tstop ) );
     print "'$property', no such property in '$entity'.\n" and return unless $pobj;
     
-    printf "%-15s - %s\n", 'Full name', "$entity:$property";
-    printf "%-15s - %s\n%-15s - %s\n", 'Type', lc $pobj->type(), 'Null legal', $pobj->null()?'TRUE':'FALSE';
-    
-    &display_tick( $pobj->start() );
+    printf "%-15s - %s\n", 'Full name', "$ekey:$pkey";
+    printf "%-15s - %s\n%-15s - %s\n", 'Type', lc $pobj->type(), 'Null legal', $pobj->null()?'TRUE':'FALSE';    
+    display_tick( $pobj );
 }
 
 sub property_expire {
     my($property_command, $info_command, $entity, $property) = @_;
+    print "Unable to expire properties while in non-current state.  You might wish to do 'set temporal current'." and return if $start || $stop;
 
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
@@ -723,10 +763,14 @@ sub property_types {
 # Instance interface
 sub instance_info {
     my ($instance_command, $info_command, $entity, $instance) = @_;
-    my $eobj = $y->get_entity( $entity );
+    my ($ekey, $ikey, $tstart, $tstop);
+
+    ($ekey, $tstart, $tstop) = extract_temporality( $entity );
+    my $eobj = $y->get_entity( $ekey, populate_times( $tstart, $tstop ) );    
     print "'$entity', no such entity.\n" and return unless $eobj;
     
-    my $iobj = $eobj->fetch( $instance );
+    ($ikey, $tstart, $tstop) = extract_temporality( $instance );
+    my $iobj = $eobj->fetch( $ikey, populate_times( $tstart, $tstop) );
     print "'$instance', no such instance in $entity.\n" and return unless $iobj;
 
     print "$entity / $instance:\n";
@@ -745,11 +789,13 @@ sub instance_info {
 	printf "  %-13s - %s ($r$w$e)\n", $prop->id(), $value;
     }
 
-    &display_tick( $iobj->start() );
+    display_tick( $iobj );
 }
 
 sub instance_expire {
     my ($instance_command, $info_command, $entity, $instance) = @_;
+    print "Unable to expire instances while in non-current state.  You might wish to do 'set temporal current'." and return if $start || $stop;
+    
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
 
@@ -766,6 +812,8 @@ sub instance_expire {
 
 sub instance_edit {
     my ($instance_command, $info_command, $entity, $instance, $property) = @_;
+    print "Unable to edit instances while in non-current state.  You might wish to do 'set temporal current'." and return if $start || $stop;
+
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
     
@@ -787,6 +835,7 @@ sub instance_edit {
 
 sub instance_create {
     my ($instance_command, $create_command, $entity, $instance_name) = @_;
+    print "Unable to create instances while in non-current state.  You might wish to do 'set temporal current'." and return if $start || $stop;
 
     my $eobj = $y->get_entity( $entity );
     print "'$entity', no such entity.\n" and return unless $eobj;
@@ -804,7 +853,8 @@ sub instance_create {
 }
 
 # This doesn't work, we only get one item back from fetch(), we
-# probably need to look at _get_in_time in Instance.pm.
+# probably need to look at _get_in_time in Instance.pm.  Also, needs
+# temporality fixing, this is mucho currento.
 sub instance_history {
     my ($instance_command, $info_command, $full_command, $entity, $instance) = @_;
     my $eobj = $y->get_entity( $entity );
@@ -873,14 +923,18 @@ sub instance_history {
 
 sub instance_property_history {
     my($instance_command, $history_command, $prop_command, $entity, $instance, $property) = @_;
-    
-    my $eobj = $y->get_entity( $entity );
+    my ($ekey, $ikey, $pkey, $tstart, $tstop);
+
+    ($ekey, $tstart, $tstop) = extract_temporality( $entity );
+    my $eobj = $y->get_entity( $ekey, populate_times( $tstart, $tstop ) );    
     print "'$entity', no such entity.\n" and return unless $eobj;
 
-    my $iobj = $eobj->fetch($instance);
+    ($ikey, $tstart, $tstop) = extract_temporality( $instance );
+    my $iobj = $eobj->fetch( $ikey, populate_times( $tstart, $tstop ));
     print "'$instance', no such instance.\n" and return unless $iobj;
 
-    my %changes = $iobj->property_history($property);
+    ($pkey, $tstart, $tstop) = extract_temporality( $property );
+    my %changes = $iobj->property_history($pkey);
     for my $tick ( keys %changes ) {
 	print "* $tick [$changes{$tick}]\n";
     }
@@ -1161,17 +1215,52 @@ sub transaction_log {
     $y->transaction_stack_clear();
 }
 
+sub populate_times {
+    my ($tstart, $tstop) = @_;
+
+    return unless $tstart;
+    return time => { start => $tstart, stop => $tstop, format => 'tick' };
+}
+
+sub extract_temporality {
+    my $input = shift;
+    my ($key, $timeslice) = split /(?<=[^:]):(?=[^:])/, $input;
+    
+    if ($timeslice) {
+	my ($temporal_start, $temporal_stop) = split /-/, $timeslice;
+	return ($key, $temporal_start, $temporal_stop);
+    } else {
+	return $key;
+    }
+    
+}
+
 # Helper stuff.
 sub display_tick {
-    my $tickid = shift;
-    my $tick = $y->get_tick( $tickid );
-    printf "%-15s - %s (%d)\n", 'Created', $tick->{stamp}, $tickid;
-    printf "%-15s - %s\n", 'Committer', $tick->{committer};
+    my $obj  = shift;
+    my $tick = $y->get_tick( $obj->start() );
+    printf "%-15s - %s (%d) / %s\n", 'Created', $tick->{stamp}, $obj->start(), $tick->{committer};
+
+    if ($stop && $obj->stop()) {
+	$tick = $y->get_tick( $obj->stop() );
+	printf "%-15s - %s (%d) / %s\n", 'Expired', $tick->{stamp}, $obj->stop(), $tick->{committer};
+    }
+    
+}
+
+sub nameify {
+    my $obj = shift;
+    
+    if ($obj->stop()) {
+	return $obj->id() . ':' . $obj->start() . '-' . $obj->stop();
+    } else {
+	return $obj->id();
+    }
 }
 
 # Yggdrasil expand interface.
 sub expand_label {
-    return map { $_->id() } $y->relations();
+    return map { nameify( $_ ) } $y->relations( populate_times( $start, $stop ) );	
 }
 
 sub expand_user {
@@ -1183,16 +1272,17 @@ sub expand_role {
 }
 
 sub expand_entity {
-    return map { $_->id() } $y->entities();
+    return map { nameify( $_ ) } $y->entities( populate_times( $start, $stop ) );	
 }
 
 sub expand_instance {
     my( $instance, $entity ) = @_;
 
-    my $eobj = $y->get_entity( $entity );
+    my ($ekey, $tstart, $tstop) = extract_temporality( $entity );
+    my $eobj = $y->get_entity( $ekey, populate_times( $tstart, $tstop ) );
     return unless $eobj;
 
-    return map { $_->id() } $eobj->instances();    
+    return map { nameify( $_ ) } $eobj->instances();    
 }
 
 sub expand_instance_relation {
@@ -1221,10 +1311,11 @@ sub expand_instance_relation_right {
 sub expand_entity_property {
     my( $prop, $entity ) = @_;
 
-    my $eobj = $y->get_entity( $entity );
+    my ($ekey, $tstart, $tstop) = extract_temporality( $entity );
+    my $eobj = $y->get_entity( $ekey, populate_times( $tstart, $tstop ) );
     return unless $eobj;
 
-    return map { $_->id() } $eobj->properties();    
+    return map { nameify( $_ ) } $eobj->properties();    
 }
 
 sub expand_instance_property {
