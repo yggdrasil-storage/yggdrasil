@@ -13,6 +13,7 @@ our %TYPEMAP = (
 		DATE     => 'TIMESTAMP WITH TIME ZONE',
 		BINARY   => 'BYTEA',
                 PASSWORD => 'VARCHAR(255)',
+		SERIAL   => 'BIGSERIAL',
 	       );
 
 sub new {
@@ -32,6 +33,10 @@ sub new {
   $self->{db} = $data{db};
 
   return $self;
+}
+
+sub maxid {
+    return 9223372036854775807;
 }
 
 sub engine_version {

@@ -50,6 +50,10 @@ sub engine_version {
     return $VERSION;
 }
 
+sub maxid {
+    return 18446744073709551614;
+}
+
 sub engine_type {
     my $self = shift;
     return $self->_engine();
