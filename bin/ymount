@@ -66,9 +66,13 @@ my $root = FuseDir->new(
     "/",
     Yggdrasil::Fuse::Entities->new(Entities => $y),
     Yggdrasil::Fuse::Relations->new(Relations => $y),
-    FuseFile->new( README => "This is Yggdrasil Version!\n"),
-    FuseFile->new( Information => "Logged in as: " . $y->user(), "Server information: " . $y->info() ),
-
+    FuseFile->new( README => "This is Yggdrasil!\n"),
+    FuseFile->new( Information => sub { return "Username: " .  $y->user() .
+					  "\nServer: " . $y->info() .
+					    "\nUptime: " . $y->uptime() .
+					      "\nTick: " . $y->current_tick()
+					} ),
+			
     # --- TEST
     FuseDir->new( testdir => 
 		  FuseFile->new(a => "aaaa\n"),
@@ -148,7 +152,7 @@ sub fuse_statfs {
     # $namelen, $files, $files_free, $blocks, $blocks_avail, $blocksize
     return 255, $files*2, $files, $blocks*2, $blocks, 1024;
 }
-
+ 
 
 # If you run the script directly, it will run fusermount, which will in turn
 # re-run this script.  Hence the funky semantics.
@@ -373,7 +377,7 @@ sub unlink :method {
 ###################################################################### FuseFile
 package FuseFile;
 use parent -norequire, qw(FuseDir);
-use POSIX qw(:fcntl_h);
+use POSIX qw(:fcntl_h :errno_h);
 
 sub new {
     my $class   = shift;
@@ -381,22 +385,27 @@ sub new {
 
     $self->{name}    = shift;
 
-    my $content = join "\n", @_;
-    chomp $content;
-    $self->{content} = "$content\n";
-
+    if (ref $_[0] && ref $_[0] eq 'CODE') {
+	$self->{content} = $_[0];
+    } else {
+	my $content = join "\n", @_;
+	chomp $content;
+	$self->{content} = "$content\n";	
+    }
     
     return $self;
 }
 sub mode { 0600; }
 sub type { 0100; }
-sub size { my $self = shift; length( $self->{content}); }
-sub content { my $self = shift; $self->{content}; }
+sub size { my $self = shift; length( $self->content()); }
+sub content { my $self = shift; ref $self->{content}?$self->{content}->() . "\n":$self->{content}; }
 
 sub truncate {
     my $self = shift;
     my $off  = shift;
-
+    
+    return -EPERM() if ref $self->{content};
+    
     substr( $self->{content}, $off) = '';
     return 0;
 }
@@ -412,6 +421,8 @@ sub write :method {
     my $self = shift;
     my $content = shift;
     my $off = shift;
+
+    return -EPERM() if ref $self->{content};
 
     substr($self->{content}, $off) = $content;
     return length($content);
