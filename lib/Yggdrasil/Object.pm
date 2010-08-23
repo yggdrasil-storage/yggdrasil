@@ -72,6 +72,47 @@ sub objectify {
     }    
 }
 
+sub _validate_temporal {
+    my $self = shift;
+    my $time = shift || {};
+
+    # START
+    my $invalid = 0;
+    if( defined $time->{start} ) {
+	$invalid = "'start' out of range" if $time->{start} < $self->start();
+	$invalid = "'start' out of range" if $self->stop() && $time->{start} > $self->stop();
+    }
+
+    my $start = $time->{start} || $self->start();
+
+    # STOP
+    if( exists $time->{stop} ) {
+	if( defined $time->{stop} ) {
+	    $invalid = "'stop' out of range" if $time->{stop} < $self->start();
+	    $invalid = "'stop' out of range" if $self->stop() && $time->{stop} > $self->stop();
+	} else {
+	    # user specified 'stop', but value was 'undef'. This means
+	    # that the user has requested a slice from 'start' to
+	    # 'current', which (in order to differentiate from current
+	    # object), we set to some impossilby(?) large tick value
+	    $time->{stop} = $self->storage()->maxid();
+	}
+    }
+
+    my $stop = $time->{stop} || $self->stop();
+
+    if( $invalid ) {
+	$self->get_status()->set( 406, $invalid );
+	return;
+    }
+
+    if( $stop || $start != $self->start() ) {
+	return { start => $start, stop => $stop };
+    }
+
+    return {};
+}
+
 # Core internal ID retrieval. 
 sub _internal_id {
     my $self = shift;
