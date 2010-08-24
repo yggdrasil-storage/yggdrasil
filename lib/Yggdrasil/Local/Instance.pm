@@ -342,8 +342,16 @@ sub property_history {
     my %params = @_;
     my $p;
 
-    my $time = $self->_validate_temporal( $params{time} ); 
-    return unless $time;
+    # By default, get complete history for the property.
+    my ($start, $stop) = ($self->start(), undef);
+    if ($params{time}) {
+	$start = $params{time}->{start} if $params{time}->{start};
+	$stop  = $params{time}->{stop}  if $params{time}->{stop};
+    }
+    
+    # We explicitly want full history.
+    my $time = $self->_validate_temporal( { start => $start, stop => $stop } );
+    return unless keys %$time;
 
     # We might be passed a property object and not its name as the
     # key.  Also verify that it's of the correct class.
