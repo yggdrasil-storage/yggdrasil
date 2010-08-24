@@ -697,8 +697,17 @@ sub children {
     my %changes = $self->{obj}->property_history( $self->{realname}, time => $time );
     my @targets;
 
-    for my $tick (keys %changes) {
+    # Urkle.  This is not pretty, but we need to create objects with
+    # the appropriate time spans that contain the correct values.  The
+    # problem is that we can't create the instance at the time of the
+    # specified time, as we're not really after that slice any more,
+    # but the slice of the specific instance property...
+    my @ticks = sort keys %changes;
+    for (my $i=0; $i < @ticks; $i++) {
+	my $tick = $ticks[$i];
 	my $instance = $self->{obj}->entity()->fetch( $self->{obj}->id(), time => { start => $tick, stop => $tick } );
+	$instance->{_start} = $tick;
+	$instance->{_stop}  = $ticks[$i+1];
 	my $ip = Yggdrasil::Fuse::InstanceProperty->new( $tick, $self->{ygg}, $instance );
 	$ip->{realname} = $self->{realname};
 	push @targets, $ip;
