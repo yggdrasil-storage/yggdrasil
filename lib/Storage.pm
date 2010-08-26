@@ -693,20 +693,28 @@ sub _add_auth {
 
 	# 1. Find auth-bindings for this schema
 	my $cachename = $schema . ':' . $authtype;
-	my $typebindings; # = $self->cache( 'authbindings', $cachename );
+	my $typebindings = $self->cache( 'authbindings', $cachename );
 	my $mapped = $self->_get_schema_name( $schema ) || $schema;
-	unless ($typebindings) {
+	unless (defined $typebindings) {
 	    my $ret = $self->_fetch( $self->get_structure( 'authschema' ) =>
 				     {
 				      return => 'bindings',
 				      where  => [ usertable => $mapped, type => $authtype ]
 				     } );
-	    next unless $ret;
+
+	    # No bindings for the schema, set it as 0, which is
+	    # defined but false so the lack of a target doesn't make
+	    # us look this binding up again.	    
+	    unless (@$ret) {
+		$self->cache( 'authbindings', $cachename, 0 );
+		next;
+	    } 
 	    
 	    my $frozen_bindings = $ret->[0]->{bindings};
 	    $typebindings = Storable::thaw( $frozen_bindings );
-#	    $self->cache( 'authbindings', $cachename, $typebindings );
+	    $self->cache( 'authbindings', $cachename, $typebindings );
 	}
+	
 	next unless $typebindings;
 
 	# 2. Assign uniq alias for each auth-table.
@@ -1044,13 +1052,18 @@ sub cache {
     } elsif ($map eq 'authschemaname') {
 	$cachename = '_authschemaname';
     } elsif ($map eq 'authbindings') {
-	$cachename = $map;
+	$cachename = "_bindings_" . $map;
     } else {
 	Yggdrasil::fatal( "Unknown cache type '$map' requested for populating" );
     }
 
-    $self->{cache}->{$cachename}->{$from} = $to if $to;
-    return $self->{cache}->{$cachename}->{$from};
+    $self->{cache}->{$cachename}->{$from} = $to if defined $to;
+
+    if (ref $self->{cache}->{$cachename}->{$from}) {
+	return Storable::dclone( $self->{cache}->{$cachename}->{$from} ); 
+    } else {
+	return $self->{cache}->{$cachename}->{$from};
+    }
 }
 
 sub cache_is_populated {
