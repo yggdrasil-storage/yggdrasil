@@ -10,17 +10,29 @@ sub define {
     my $self   = $class->SUPER::new(@_);
     my %params = @_;
 
+    my $yggdrasil = $self->yggdrasil();
+    my $storage   = $yggdrasil->storage();
+    my $status    = $self->get_status();
+    
+    my $property_name = $params{property};
+    my $entity_name;
+
     # Deal with possibly being passed objects.  However, the property
     # is the id of the thing we wish to define, it better *not* be an
     # object.
-    my $entity   = ref $params{entity}?$params{entity}->_userland_id():$params{entity};
-    my $property = $params{property};
+    if (ref $params{entity}) {
+	$self->{entity} = $params{entity};
+	$entity_name = $self->{entity}->_userland_id();
+    } else {
+	$self->{entity} = $yggdrasil->get_entity( $params{entity} );
+	unless ($status->OK()) {
+	    $status->set( 400, "Unknown entity '$entity_name' requested for property '$property_name'." );
+	    return;
+	}
+	$entity_name = $params{entity};
+    }
     
-    my $yggdrasil = $self->yggdrasil();
-    my $storage   = $yggdrasil->storage();
-
-    my $status = $self->get_status();
-    unless (length $property) {
+    unless (length $property_name) {
 	$status->set( 400, "Unable to create properties with zero length names." );
 	return;
     }
@@ -31,17 +43,20 @@ sub define {
     
     # Auth passes MetaAuthUser request as a MetaAuth object, hackish.
     # This catches requests on the form MetaAuthRole:password and similar constructs.
-    if ($entity) {
-	if( $property =~ /:/ ) {
+    if ($entity_name) {
+	if( $property_name =~ /:/ ) {
 	    $status->set( 406, "Unable to create properties with names containing ':'." );
 	    return;
 	}
-    } elsif( $property =~ /:/ ) {
-	my @parts = split m/::/, $property;
+    } elsif( $property_name =~ /:/ ) {
+	my @parts = split m/::/, $property_name;
 	my $last = pop @parts;
-	($entity, $property) = (split m/:/, $last, 2);
-	push( @parts, $entity );
-	$entity = join('::', @parts);
+	($entity_name, $property_name) = (split m/:/, $last, 2);
+	push( @parts, $entity_name );
+	$entity_name = join('::', @parts);
+	$self->{entity} = $yggdrasil->get_entity( $entity_name );
+	$status->set( 400, "Unknown entity '$entity_name' requested for property '$property_name'." );
+	return unless $status->OK();
     } else {
 	# we have no entity and the property name contains no ":"
 	# This means we were called as $ygg->define_property( "foo" );
@@ -50,10 +65,9 @@ sub define {
 	return;
     }
     
-    my $name = join(":", $entity, $property);
+    my $name = join(":", $entity_name, $property_name);
 
-    $self->{name}   = $property;
-    $self->{entity} = $entity;
+    $self->{name}   = $property_name;
 
     # --- Set the default data type.
     $params{type}   = uc $params{type} if $params{type};
@@ -62,18 +76,10 @@ sub define {
 
     unless ($storage->is_valid_type( $params{type} )) {
 	my $ptype = $params{type};
-	$status->set( 400, "Unknown property type '$ptype' requested for property '$property'." );
+	$status->set( 400, "Unknown property type '$ptype' requested for property '$property_name'." );
 	return;
     }
     
-    my $idref = $storage->fetch( MetaEntity => { return => 'id',
-						 where  => [ entity => $entity ] } );
-    
-    unless (@$idref) {
-	$status->set( 400, "Unknown entity '$entity' requested for property '$property'." );
-	return;
-    }
-
     # --- Create Property table
     $storage->define( $name,
 		      fields   => { id    => { type => "INTEGER" },
@@ -122,20 +128,17 @@ sub define {
     # --- Add to MetaProperty
     # Why isn't this in Y::MetaProperty?
     if ($status->status() == 202) {
-	$self->{entity} = Yggdrasil::Local::Entity->get( entity => $self->entity(), yggdrasil => $self->yggdrasil() );
-	$status->set( 202, "Property '$property' already exists with the requested structure for entity '$entity'" )
-	  
+	$status->set( 202, "Property '$property_name' already exists with the requested structure for entity '$entity_name'" )
     } elsif ($status->status() >= 400 ) {
-	$status->set( 202, "Property '$property' already exists for '$entity', unable to create with requested parameters" );
+	$status->set( 202, "Property '$property_name' already exists for '$entity_name', unable to create with requested parameters" );
     } else {
 	$storage->store("MetaProperty", key => [qw/entity property/],
-			fields => { entity   => $idref->[0]->{id},
-				    property => $property,
+			fields => { entity   => $self->entity()->_internal_id(),
+				    property => $property_name,
 				    type     => $params{type},
 				    nullp    => $params{nullp},
 				  } ) unless $params{raw};
-	$self->{entity} = Yggdrasil::Local::Entity->get( entity => $self->entity(), yggdrasil => $self->yggdrasil() );	
-	$status->set( 201, "Property '$property' created for '$entity'." );
+	$status->set( 201, "Property '$property_name' created for '$entity_name'." );
     }
 
     return $self;
