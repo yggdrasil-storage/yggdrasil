@@ -217,10 +217,23 @@ sub instances {
     my $time = $self->_validate_temporal( $params{time} ); 
     return unless $time;
 
+    my (@filter, @operators);
+    if ($params{search}) {
+	@filter    = ( visual_id => $params{search} );
+	my $operator = 'LIKE';
+	$operator    = '=' if $params{exact};
+	@operators = ( operator  => [ '=', $operator ] );
+    }
+    
     my $instances = $self->storage()->fetch( 
 	MetaEntity => { where  => [ entity => $self->_userland_id() ] },
 	Instances  => { return => [ 'visual_id', 'id', 'start', 'stop' ],
-			where  => [ entity => \qq{MetaEntity.id} ] },
+			where  => [
+				   entity => \qq{MetaEntity.id},
+				   @filter,
+				  ],
+			@operators,
+		      },
 	$time );
     
     # FIXME, find a way to create instance objects in a nice way
@@ -238,23 +251,60 @@ sub instances {
     return @i;
 }
 
-sub search {
-    my ($self, $key, $value) = (shift, shift, shift);
-    
-    # Passing the possible time elements onwards as @_ to the Storage layer.
-    my ($nodes) = $self->storage()->search( $self->_userland_id(), $key, $value, @_);
-    
-    my @hits;
-    for my $hit (@$nodes) {
-	my $obj = bless {}, 'Yggdrasil::Local::Instance';
-	$obj->{entity}    = $self;
-	$obj->{yggdrasil} = $self->{yggdrasil};
-	for my $key (keys %$hit) {
-	    $obj->{$key} = $hit->{$key};
+sub find_instances_by_name {
+    my $self = shift;
+    my $key  = shift;
+
+    return $self->instances( search => $key, @_ );
+}
+
+sub find_instances_by_property_value {
+    my $self   = shift;
+    my %params = @_;
+
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;
+
+    my $status = $self->get_status();
+
+    for my $p (qw|key value|) {
+	unless (defined $params{$p}) {
+	    $status->set( 400, "Missing the required parameter '$p'" );
+	    return;
 	}
-	push @hits, $obj;
     }
-    return @hits;
+    
+    # Pass along temporality.  If we don't get a proper property
+    # object in return, it didn't exist at the given time (which may
+    # be NOW()).
+    my $prop = $self->get_property( $params{key}, time => $time );
+    return unless $self->get_status()->OK();
+
+    my $schema = $prop->full_name();
+
+    my $operator = 'LIKE';
+    $operator = '=' if $params{exact};
+    
+    my $hits = $self->storage()->fetch( $schema => { where    => [ value => $params{value} ],
+						     return   => [ 'value' ],			     
+						     operator => $operator },
+					Instances  => { return => [ 'visual_id', 'id', 'start', 'stop' ],
+							where  => [ id => \qq{$schema.id} ] },
+					$time );
+    
+    # FIXME, find a way to create instance objects in a nice way
+    my @i;
+    for my $i ( @$hits ) {
+	my $o = Yggdrasil::Local::Instance->new( yggdrasil => $self );
+	$o->{visual_id} = $i->{visual_id};
+	$o->{_start}    = $i->{start};
+	$o->{_stop}     = $i->{stop};
+	$o->{_id}       = $i->{id};
+	$o->{entity}    = $self;
+	push(@i,$o);
+    }
+
+    return @i;      
 }
 
 sub can_write {

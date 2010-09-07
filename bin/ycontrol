@@ -223,6 +223,10 @@ my %cmd;
 	    _help   => "Expire an entity, its properties and its instances.",
 	    _entity => \&entity_expire,
 	},
+	search => {
+	    _help   => "Search for instances based on .",
+	    _entity => { _entity_property => { _SEARCH_STRING_ => \&entity_search } },
+	},
     },
 
     property => {
@@ -706,6 +710,34 @@ sub entity_expire {
 	print $y->get_status()->message, "\n";
     }
 }
+
+sub entity_search {
+    my ($entity_command, $search_command, $entity, $property, $value) = @_;
+
+    my ($ekey, $tstart, $tstop) = extract_temporality( $entity );
+    my $eobj = $y->get_entity( $ekey, populate_times( $tstart, $tstop ) );
+    print "'$entity', no such entity.\n" and return unless $eobj;
+
+    my $pkey;
+    ($pkey, $tstart, $tstop) = extract_temporality( $property );
+    my $pobj = $eobj->get_property( $pkey, populate_times( $tstart, $tstop ) );
+    print "'$property', no such property in '$entity'.\n" and return unless $pobj;
+
+    my @hits = $eobj->find_instances_by_property_value( key => $pkey, value => $value );
+
+    my $status = $y->get_status();
+    print $status->message(), "\n" unless $status->OK();
+
+    if (@hits) {
+	printf "%-15s - %s\n", $ekey, $pkey;
+	for my $hit (@hits) {
+	    printf "%-15s - %s\n", $hit->id(), $hit->property( $pkey ) || '';
+	}
+    } else {
+	print "No hits.\n";
+    }
+}
+
 
 # Property interface
 sub property_create {
