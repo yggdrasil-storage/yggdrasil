@@ -409,6 +409,13 @@ sub current_tick {
     return $self->{mode}->get_current_tick();
 }
 
+sub search {
+    my $self = shift;
+    my $string = shift;
+    return $self->{mode}->search( search => $string, @_ );
+}
+
+
 # How to enter time formats... Best suggestions so far are:
 #  * epoch (duh)
 #  * YYYY-MM-DD HH:MM:SS

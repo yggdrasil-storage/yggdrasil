@@ -223,7 +223,7 @@ my %cmd;
 	    _help   => "Expire an entity, its properties and its instances.",
 	    _entity => \&entity_expire,
 	},
-	search => {
+	find_instance => {
 	    _help   => "Search for instances based on .",
 	    _entity => { _entity_property => { _SEARCH_STRING_ => \&entity_search } },
 	},
@@ -342,6 +342,10 @@ my %cmd;
 	    current => \&unset_start_and_stop,
         },
     },
+
+    search     => { _help => 'Search for entities, instances, properties and relations containing the given string',
+		    _SEARCH_STRING_ => \&ygg_search,
+		  },
     	
     whoami     => \&whoami,
     uptime     => \&uptime,
@@ -1231,6 +1235,46 @@ sub grant_revoke {
 	return;
     }
 
+}
+
+sub ygg_search {
+    my ($search_command, $search_string) = @_;
+    
+    my ($entities, $instances, $properties, $relations) = $y->search( $search_string );
+    
+    unless ($status->OK()) {
+	print $status->message(), "\n";
+	return;
+    }
+    
+    if (@$entities) {
+	print "Matching entities:\n";
+	for my $e (@$entities) {
+	    print " - ", $e->id(), "\n";
+	}
+    } 
+    
+    if (@$instances) {
+	print "Matching instances:\n";
+	for my $i (@$instances) {
+	    print " - ", $i->id(), " (", $i->entity()->id(), ")\n";
+	}
+    } 
+    
+    if (@$properties) {
+	print "Matching properties:\n";
+	for my $p (@$properties) {
+	    print " - ", $p->id(), " (", $p->entity()->id(), ")\n";
+	}
+    } 
+
+    if (@$relations) {
+	print "Matching relations:\n";
+	for my $r (@$relations) {
+	    my ($lval, $rval) = $r->entities();
+	    print " - ", $r->id(), " (", $lval->id(), " <-> ", $rval->id(), ")\n";
+	}
+    } 
 }
 
 sub transaction_log {
