@@ -48,6 +48,8 @@ sub new {
 		get_ticks_by_time => sub { _get_ticks_by_time( $y, @_ ) },
 		get_current_tick  => sub { _get_current_tick( $y ) },
 		
+		get_search        => sub { _get_search( $y, @_ ) },
+		
 		get_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
 		set_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
 
@@ -430,6 +432,16 @@ sub _get_current_tick {
     my $ygg = shift;
     $ygg->get_status()->set( 200 );
     return $ygg->current_tick();
+}
+
+sub _get_search {
+    my $ygg = shift;
+    my %params = @_;
+
+    my ($e, $i, $p, $r) = $ygg->search( $params{search} );
+    my @all_hits = (@$e, @$i, @$p, @$r);
+
+    return \@all_hits;
 }
 
 sub _get_property_meta {

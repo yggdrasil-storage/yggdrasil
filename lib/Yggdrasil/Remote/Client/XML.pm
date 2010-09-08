@@ -289,34 +289,40 @@ sub role_revoke {
 # Slurps.
 sub get_all_entities {
     my $self = shift;
-    return $self->_get( 'all_entities' );
+    return $self->_get( 'all_entities', @_ );
 }
 
 sub get_all_users {
     my $self = shift;
-    return $self->_get( 'all_users' );
+    return $self->_get( 'all_users', @_ );
 }
 
 sub get_all_relations {
     my $self = shift;
-    return $self->_get( 'all_relations' );
+    return $self->_get( 'all_relations', @_ );
 }
 
 sub get_all_roles {
     my $self = shift;
-    return $self->_get( 'all_roles' );
+    return $self->_get( 'all_roles', @_ );
 }
 
 sub get_all_instances {
     my $self   = shift;
     my $entity = shift;
-    return $self->_get( 'all_instances', entityid => $entity );
+    return $self->_get( 'all_instances', entityid => $entity, @_ );
 }
 
 sub get_all_properties {
     my $self   = shift;
     my $entity = shift;
-    return $self->_get( 'all_properties', entityid => $entity );
+    return $self->_get( 'all_properties', entityid => $entity, @_ );
+}
+
+sub search {
+    my $self = shift;
+    my %params = @_;
+    return $self->_get( 'search', search => $params{search} );
 }
 
 # Metaish stuff
@@ -419,9 +425,23 @@ sub _get_reply {
 	$reply_node = 'value';
     } elsif ($reply_node eq 'ticks_by_time') {
 	$reply_node = 'hash';
-    }
+    } 
 
-    my @data = $reply->get( 'reply', $reply_node );
+    my @data;
+    if ($reply_node eq 'search') {
+	# Search returns any number of objects from any of the four
+	# default types.  Check for all of them, order isn't relevant
+	# as we'll have to manually dig up the structures type again
+	# later.  The reason for this is (probably) that _pair only
+	# deals with a list and we don't have any pretty way of doing
+	# multiple _pairs in a query.
+	for my $node_type (qw/entity instance property relation/) {
+	    my @ret = $reply->get( 'reply', $node_type );
+	    push @data, @ret;
+	}
+    } else {
+	@data = $reply->get( 'reply', $reply_node );
+    }
     
     if ($s->OK()) {
 	my $req  = $reply->get( q/reply requestid/ );
@@ -461,6 +481,14 @@ sub _pair {
     for my $data (@_) {
 	my %pair;
 
+	# Okay, search can feed us empty structures.  Not very pretty,
+	# but at least we should handle it.
+	next unless $data;
+	
+	# Set the type of structure, search will need this as stuff is
+	# returned in a flat list.
+	$pair{_type} = lc $data->{tag};
+	
 	for my $k ( $data->children() ) {
 	    my $tag = $k->tag();
 	    if ($tag eq 'id') {

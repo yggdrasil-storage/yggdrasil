@@ -132,14 +132,20 @@ sub get_ticks {
 
 # I think I'll call this "proof of concept".  It works well enough for
 # the user, but we really need to clean some API here and there.  The
-# weird thing, it's fast.
+# weird thing, it's fast.  Also, we're passing yggdrasil along as we
+# don't want objects to be created with an Yggdrasil::Local as their
+# Ygg -- this would break calls to use that Ygg object via
+# $ygg->{mode} (which would be unset).  A better way might be to have
+# $ygg->mode() and have that check ref $self to see if the choice is
+# already made?
 sub search {
     my $self = shift;
     my %params = @_;
 
     my $storage = $self->{storage};
     my $target = $params{search};
-
+    my $ygg    = $params{yggdrasil};
+    
     my $time = ();
     $time = $params{time} if $params{time};
 
@@ -160,7 +166,7 @@ sub search {
 	push( @entities, Yggdrasil::Local::Entity::objectify(
 							     name      => $hit->{entity},
 							     parent    => $hit->{parent},
-							     yggdrasil => $self,
+							     yggdrasil => $ygg,
 							     id        => $hit->{id},
 							     start     => $hit->{start},
 							     stop      => $hit->{stop},
@@ -186,8 +192,8 @@ sub search {
 			   $time);
     for my $hit (@$ref) {
 	# Oh god.
-	my $o = Yggdrasil::Local::Instance->new( yggdrasil => $self );
-	my $entity = Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $hit->{entity}, time => $time );
+	my $o = Yggdrasil::Local::Instance->new( yggdrasil => $ygg );
+	my $entity = Yggdrasil::Local::Entity->get( yggdrasil => $ygg, id => $hit->{entity}, time => $time );
 	$o->{visual_id} = $hit->{visual_id};
 	$o->{_id}       = $hit->{id};
 	$o->{_start}    = $hit->{start};
@@ -208,11 +214,11 @@ sub search {
 					     return   => '*' },
 			   $time );
     for my $hit (@$ref) {
-	my $entity = Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $hit->{entity}, time => $time );
+	my $entity = Yggdrasil::Local::Entity->get( yggdrasil => $ygg, id => $hit->{entity}, time => $time );
 	push( @properties, Yggdrasil::Local::Property::objectify(
 								 name      => $hit->{property},
 								 entity    => $entity,
-								 yggdrasil => $self,
+								 yggdrasil => $ygg,
 								 id        => $hit->{id},
 								 start     => $hit->{start},
 								 stop      => $hit->{stop},
@@ -225,8 +231,8 @@ sub search {
 			   $time );
     my @relations;
     for my $hit (@$ref) {
-	my $lval = Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $hit->{lval}, time => $time );
-	my $rval = Yggdrasil::Local::Entity->get( yggdrasil => $self, id => $hit->{rval}, time => $time );
+	my $lval = Yggdrasil::Local::Entity->get( yggdrasil => $ygg, id => $hit->{lval}, time => $time );
+	my $rval = Yggdrasil::Local::Entity->get( yggdrasil => $ygg, id => $hit->{rval}, time => $time );
 	push( @relations, Yggdrasil::Local::Relation::objectify(
 								label     => $hit->{label},
 								id        => $hit->{id},
@@ -234,7 +240,7 @@ sub search {
 								stop      => $hit->{stop},
 								lval      => $lval,
 								rval      => $rval,
-								yggdrasil => $self,
+								yggdrasil => $ygg,
 							       ));
     }
 

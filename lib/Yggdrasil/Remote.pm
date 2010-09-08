@@ -88,6 +88,37 @@ sub get_tick {
     return $self->{storage}->{protocol}->get_ticks( shift );
 }
 
+sub search {
+    my $self = shift;    
+    my @hits = $self->{storage}->{protocol}->search( @_ );
+    my (@entities, @instances, @properties, @relations);
+    
+    my $y = $self->yggdrasil();
+
+    for my $o (@hits) {
+	if ($o->{_type} eq 'entity') {
+	    push @entities, Yggdrasil::Object::objectify( $y, 'Yggdrasil::Remote::Entity', $o );
+	} elsif ($o->{_type} eq 'instance') {
+	    $o = Yggdrasil::Object::objectify( $y, 'Yggdrasil::Remote::Instance', $o );
+	    $o->{visual_id} = $o->{id};
+ 	    $o->{entity} = $y->get_entity( $o->{entity} );
+	    push @instances, $o;
+	} elsif ($o->{_type} eq 'property') {
+	    $o = Yggdrasil::Object::objectify( $y, 'Yggdrasil::Remote::Property', $o );
+ 	    $o->{entity} = $y->get_entity( $o->{entity} );
+	    push @properties, $o;
+	} elsif ($o->{_type} eq 'relations') {
+ 	    $o->{lval} = $y->get_entity( $o->{lval} );
+ 	    $o->{rval} = $y->get_entity( $o->{rval} );
+ 	    $o->{label} = $o->{id};
+	} else {
+	    my $type =  $o->{_type} || 'NOT SET!';
+	    Yggdrasil::fatal( "Unknown structured returned to search, type was '$type'" );
+	}
+    }
+
+    return (\@entities, \@instances, \@properties, \@relations);
+}
 
 sub transaction_stack_get {
 
