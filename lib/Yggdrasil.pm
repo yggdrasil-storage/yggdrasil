@@ -412,7 +412,7 @@ sub current_tick {
 sub search {
     my $self = shift;
     my $string = shift;
-    return $self->{mode}->search( search => $string, @_ );
+    return $self->{mode}->search( yggdrasil => $self, search => $string, @_ );
 }
 
 
