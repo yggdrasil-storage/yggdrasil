@@ -649,6 +649,11 @@ sub entity_info {
     
     printf "%-15s - %s\n", 'Name', $entity;
 
+    printf "%-15s - ", "Permissions";
+    printf "Edit: %s / ", $eobj->can_write()?'Yes':'No';
+    printf "Expire: %s / ", $eobj->can_expire()?'Yes':'No';
+    printf "Create instances: %s\n", $eobj->can_instanciate()?'Yes':'No';
+
     # Add multiline support.
     my @instances = $eobj->instances();
     printf "%-15s - ", "Instances";
@@ -656,8 +661,8 @@ sub entity_info {
 	print join (", ", map { nameify( $_ ) } @instances), "\n";
     } else {
 	print "NULL\n";
-    }
-
+    }    
+    
     my @props = $eobj->properties();
 
     if (@props) {
@@ -774,6 +779,10 @@ sub property_info {
     print "'$property', no such property in '$entity'.\n" and return unless $pobj;
     
     printf "%-15s - %s\n", 'Full name', "$ekey:$pkey";
+
+    printf "%-15s - ", "Permissions";
+    printf "Expire: %s\n", $pobj->can_expire()?'Yes':'No';
+    
     printf "%-15s - %s\n%-15s - %s\n", 'Type', lc $pobj->type(), 'Null legal', $pobj->null()?'TRUE':'FALSE';    
     display_tick( $pobj );
 }
@@ -1037,6 +1046,11 @@ sub relation_info {
     print $status->message(), "\n" and return unless $status->OK();
 
     print "$label\n";
+
+    printf "%-15s - ", "Permissions";
+    printf "Edit: %s / ", $rel->can_write()?'Yes':'No';
+    printf "Expire: %s\n", $rel->can_expire()?'Yes':'No';
+    
     my ($e1o, $e2o) = $rel->entities();
     my @pairs = $rel->participants();
     

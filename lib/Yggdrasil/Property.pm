@@ -87,4 +87,15 @@ sub type {
     return $self->_get_meta( 'type', @_ );
 }
 
+sub can_write {
+    return 0;
+}
+
+sub can_expire {
+    my $self = shift;
+    
+    return $self->storage()->can( expire => 'MetaProperty', { id => $self->_internal_id() } );
+}
+
+
 1;

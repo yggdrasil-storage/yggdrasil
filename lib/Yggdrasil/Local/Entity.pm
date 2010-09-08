@@ -307,26 +307,6 @@ sub find_instances_by_property_value {
     return @i;      
 }
 
-sub can_write {
-    my $self = shift;
-    
-    return unless $self->stop();
-    return $self->storage()->can( update => 'MetaEntity', { id => $self->_internal_id() } );
-}
-
-sub can_expire {
-    my $self = shift;
-    
-    return unless $self->stop();
-    return $self->storage()->can( expire => 'MetaEntity', { id => $self->_internal_id() } );
-}
-
-sub can_instanciate {
-    my $self = shift;
-
-    return $self->storage()->can( create => 'Instances', { entity => $self->_internal_id() } );
-}
-
 sub parent {
     my $self = shift;
 

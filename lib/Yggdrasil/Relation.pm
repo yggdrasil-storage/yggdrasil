@@ -59,4 +59,74 @@ sub _userland_id {
     return $self->id();
 }
 
+sub can_write {
+    my $self = shift;
+    
+    return $self->storage()->can( update => 'MetaRelation', { id => $self->_internal_id() } );
+}
+
+sub can_expire {
+    my $self = shift;
+    
+    return $self->storage()->can( expire => 'MetaRelation', { id => $self->_internal_id() } );
+}
+
+sub can_link {
+    my $self = shift;
+    my $lval = shift;
+    my $rval = shift;
+    
+    return unless $self->_validate_link_objects( $lval, $rval );
+    return $self->storage()->can( create => 'Relation', { relationid => $self->_internal_id(), 
+							  lval => $lval->_internal_id(),
+							  rval => $rval->_internal_id() } );
+}
+
+sub can_unlink {
+    my $self = shift;
+    my $lval = shift;
+    my $rval = shift;
+
+    return unless $self->_validate_link_objects( $lval, $rval );
+    return $self->storage()->can( expire => 'Relation', { relationid => $self->_internal_id(), 
+							  lval => $lval->_internal_id(),
+							  rval => $rval->_internal_id() } );
+    
+}
+
+sub _validate_link_objects {
+    my $self = shift;
+    my $lval = shift;
+    my $rval = shift;
+
+    my $label = $self->{label};
+    
+    my $reallval = $self->_get_real_val( 'lval', $label );
+    my $realrval = $self->_get_real_val( 'rval', $label );
+    
+    my $status = $self->get_status();
+    
+    unless ($lval && ref $lval && ref $lval->isa( 'Yggdrasil::Instance' )) {
+	$status->set( 406, "The first paramter to link has to be an instance object." );
+	return undef;      
+    }
+    
+    unless ($rval && ref $rval && ref $rval->isa( 'Yggdrasil::Instance' )) {
+	$status->set( 406, "The second paramter to link has to be an instance object." );
+	return undef;      
+  }
+    
+    unless ($lval->is_a( $reallval )) {
+	$status->set( 406, $lval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
+	return undef;
+    }
+    
+    unless ($rval->is_a( $realrval )) {
+	$status->set( 406, $rval->id() . " cannot use the relation $label, incompatible instance / inheritance." );
+	return undef;
+    }
+
+    return 1;
+}
+
 1;

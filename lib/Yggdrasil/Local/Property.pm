@@ -249,16 +249,6 @@ sub _get_meta {
     }
 }
 
-sub can_write {
-    return 0;
-}
-
-sub can_expire {
-    my $self = shift;
-    
-    return $self->storage()->can( expire => 'MetaProperty', { id => $self->{_id} } );
-}
-
 sub _admin_dump {
     my $self = shift;
     my $entity = shift;
