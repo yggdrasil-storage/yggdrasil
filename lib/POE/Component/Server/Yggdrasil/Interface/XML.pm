@@ -182,7 +182,6 @@ sub _array_xml {
     my @rets;
     for my $hashref (@$arrayref) {
 	push @rets, $self->_hash_xml( $hashref );
-	
     }    
     return ( array => { @rets } );
 }
