@@ -475,9 +475,10 @@ sub get_ticks {
 }
 
 sub get_tick {
-    my $self  = shift;
-
-    return ($self->{mode}->get_ticks( start => shift ))[0];
+    my $self = shift;
+    my $tick = shift;
+    
+    return ($self->{mode}->get_ticks( start => $tick, stop => $tick ))[0];
 }
 
 
