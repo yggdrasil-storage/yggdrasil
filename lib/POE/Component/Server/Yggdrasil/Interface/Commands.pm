@@ -450,7 +450,7 @@ sub _get_can {
     my $ygg = shift;
     my %params = @_;
 
-    return $ygg->storage()->can( $params{operation} => $params{target}, { id => $params{id} } ) || 0;
+    return $ygg->storage()->can( $params{operation} => $params{target}, { $params{key} => $params{value} } ) || 0;
 }
 
 

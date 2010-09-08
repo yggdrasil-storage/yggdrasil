@@ -357,8 +357,11 @@ sub get_current_tick {
 sub can {
     my $self = shift;
     my ($operation, $schema) = (shift, shift);
-    my $paramshash = shift;
-    return $self->_get( 'can', operation => $operation, target => $schema, 'id', $paramshash->{id} );
+    my $hashref = shift;
+    my $key = (keys %$hashref)[0];
+
+    return $self->_get( 'can', operation => $operation, target => $schema,
+			key => $key, value => $hashref->{$key} );
 }
 
 # Introspective calls, handle with care.
