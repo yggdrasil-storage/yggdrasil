@@ -354,6 +354,13 @@ sub get_current_tick {
     return $self->_get( 'current_tick' );
 }
 
+sub can {
+    my $self = shift;
+    my ($operation, $schema) = (shift, shift);
+    my $paramshash = shift;
+    return $self->_get( 'can', operation => $operation, target => $schema, 'id', $paramshash->{id} );
+}
+
 # Introspective calls, handle with care.
 sub uptime {
     my $self = shift;
@@ -425,7 +432,9 @@ sub _get_reply {
 	$reply_node = 'value';
     } elsif ($reply_node eq 'ticks_by_time') {
 	$reply_node = 'hash';
-    } 
+    } elsif ($reply_node eq 'can') {
+	$reply_node = 'value';
+    }
 
     my @data;
     if ($reply_node eq 'search') {
@@ -495,6 +504,9 @@ sub _pair {
 		$pair{'name'} = $k->text();
 	    } elsif ($tag eq 'start' || $tag eq 'stop') {
 		$pair{"_$tag"} = $k->text();
+		next;
+	    } elsif ($tag eq '_internal_id') {
+		$pair{_id} = $k->text();
 		next;
 	    }
 	    

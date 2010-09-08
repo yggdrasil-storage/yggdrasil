@@ -92,6 +92,7 @@ sub _entity_xml {
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $entity );
     
     return entity => {
+		      _internal_id => $entity->_internal_id(),
 		      id => $name,
 		      start => $start,
 		      stop => $stop,
@@ -108,6 +109,7 @@ sub _property_xml {
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $property );
 
     return property => {
+			_internal_id => $property->_internal_id(),
 			id => $name,
 			entity => $property->entity()->_userland_id(),
 			start => $start,
@@ -125,6 +127,7 @@ sub _instance_xml {
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $instance );
 
     return instance => {
+			_internal_id => $instance->_internal_id(),
 			id => $name,
 			entity => $instance->entity()->_userland_id(),
 			start => $start,
@@ -143,6 +146,7 @@ sub _relation_xml {
     my ($lval, $rval) = $relation->entities();
     
     return relation => {
+			_internal_id => $relation->_internal_id(),
 			id => $name,
 			label => $name,
 			lval => $lval->_userland_id(),

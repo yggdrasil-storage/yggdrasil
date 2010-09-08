@@ -151,4 +151,9 @@ sub get_status {
     return $self->{status};
 }
 
+sub can {
+    my $self = shift;
+    return $self->{protocol}->can( @_ );
+}
+
 1;
