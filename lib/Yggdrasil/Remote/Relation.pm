@@ -55,7 +55,7 @@ sub get_all {
 
 sub participants {
     my $self = shift;
-    my $me = $self->label();
+    my $me = $self->_userland_id();
 
     my @ret;
     for my $set ($self->storage()->{protocol}->relation_participants( $me )) {
