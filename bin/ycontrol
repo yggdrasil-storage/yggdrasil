@@ -666,7 +666,7 @@ sub entity_info {
     my @props = $eobj->properties();
 
     if (@props) {
-	print "Properties:\n";
+	print "Properties\n";
 	printf "  %-13s - %-10s - %-7s\n", 'Name', 'Type', 'Null?', 'Source';
 	for my $prop (@props) {
 	    my $prop_orig_entity = $prop->entity();
@@ -819,6 +819,10 @@ sub instance_info {
     print "'$instance', no such instance in $entity.\n" and return unless $iobj;
 
     print "$entity / $instance:\n";
+
+    printf "%-15s - ", "Permissions";
+    printf "Edit: %s / ", $iobj->can_write()?'Yes':'No';    
+    printf "Expire: %s\n", $iobj->can_expire()?'Yes':'No';    
     
     my @props = $eobj->properties();
     printf "%-15s - %s\n", 'Property', 'Value' if @props;
@@ -1055,7 +1059,7 @@ sub relation_info {
     my @pairs = $rel->participants();
     
     if (@pairs) {
-	print "Participants:\n";
+	print "Participants\n";
 	for my $p (@pairs) {
 	    my ($li, $ri) = @$p;
 	    printf "  %20s <-> %-20s\n", $li->id(), $ri->id();
