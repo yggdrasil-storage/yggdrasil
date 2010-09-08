@@ -60,19 +60,18 @@ sub entity {
     return $self->{entity};
 }
 
-
 sub can_write {
     my $self = shift;
     
     return if $self->stop();
-    return $self->storage()->can( update => 'Instances', { id => $self->{_id} } );
+    return $self->storage()->can( update => 'Instances', { id => $self->_internal_id() } );
 }
 
 sub can_expire {
     my $self = shift;
     
     return if $self->stop();
-    return $self->storage()->can( expire => 'Instances', { id => $self->{_id} } );
+    return $self->storage()->can( expire => 'Instances', { id => $self->_internal_id() } );
 }
 
 sub can_expire_value {
@@ -113,7 +112,7 @@ sub _property_allows {
     
     my $schema = join(':', $eobj->_userland_id(), $propobj->_userland_id());
     return $storage->can( $call => $schema,
-			  { id => $propobj->{_id} });
+			  { id => $propobj->_internal_id() });
 }
 
 1;
