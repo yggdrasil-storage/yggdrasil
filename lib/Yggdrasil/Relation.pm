@@ -105,13 +105,12 @@ sub _validate_link_objects {
     my $realrval = $self->_get_real_val( 'rval', $label );
     
     my $status = $self->get_status();
-    
-    unless ($lval && ref $lval && ref $lval->isa( 'Yggdrasil::Instance' )) {
+    unless ($lval && ref $lval && $lval->isa( 'Yggdrasil::Instance' )) {
 	$status->set( 406, "The first paramter to link has to be an instance object." );
 	return undef;      
     }
     
-    unless ($rval && ref $rval && ref $rval->isa( 'Yggdrasil::Instance' )) {
+    unless ($rval && ref $rval && $rval->isa( 'Yggdrasil::Instance' )) {
 	$status->set( 406, "The second paramter to link has to be an instance object." );
 	return undef;      
   }
