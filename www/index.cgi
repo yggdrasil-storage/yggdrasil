@@ -17,6 +17,7 @@ my $www = Yggdrasil::Interface::WWW->new( yggdrasil => $y );
 my $user = $www->param('user');
 my $pass = $www->param('pass');
 my $sess = $www->cookie('sessionID');
+my $mode = $www->param( 'mode' );
 
 my $version = Yggdrasil->version();
 
@@ -67,5 +68,10 @@ $menu->display();
 $search->display();
 $entity->display();
 $instance->display();
+
+if ($mode eq 'about') {
+    my $about = Yggdrasil::Interface::WWW::Module::About->new( www => $www );
+    $about->display();
+}
 
 $www->end();

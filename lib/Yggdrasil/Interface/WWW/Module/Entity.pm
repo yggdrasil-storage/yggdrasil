@@ -17,7 +17,6 @@ sub new {
 	       };
 
     $self->{entity} = $self->{www}->{cgi}->param( 'entity' );
-    $self->{ygg}    = $self->{www}->{yggdrasil};
     
     return bless $self, $class;
 }
@@ -29,14 +28,12 @@ sub display {
     return unless $self->{entity};
     return if $cgi->param( 'instance' );
     
-    my $ygg = $self->{www}->{yggdrasil};
+    my $ygg = $self->yggdrasil();
 
     my $entity = $ygg->get_entity( $self->{entity} );
     
     unless ($entity) {
-	$cgi->div( { class => 'error' },
-		   $ygg->get_status()->message(),
-		 );
+	$self->error( $ygg->get_status()->message() );
 	return;
     }
 
@@ -46,8 +43,7 @@ sub display {
 
     my ($expire_code, $instanciate_code) = ('', '');
     if ($can_expire || 1) {
-	$expire_code = $cgi->span( { class => 'expiretext' }, 
-				   $cgi->a( { href => "?entity=" . $entity->id() . ";action=expire" }, ' (expire)' ));
+	$expire_code = $self->expire( "entity=" . $entity->id() );
     }
 
     if ($can_instanciate) {
@@ -116,7 +112,7 @@ sub display {
 	
     }
 
-    print $cgi->p( $self->tick_info( $entity ) );
+    print $self->tick_info( $entity );
 }
 
 1;

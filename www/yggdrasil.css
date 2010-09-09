@@ -17,12 +17,15 @@ li:before { content: counter(item, disc); counter-increment: item } */
 li { counter-increment: item } 
 
 
-table { padding: 0; margin: 0; width: 100%; border-collapse: collapse; border-top: 3px solid #b0b0f0; border-bottom: 3px solid #b0b0f0; }
-td:first-child { text-transform: capitalize; font-weight: bold; border-right: 1px solid #b0b0f0; width: 25% }
+table { padding: 0; margin: 0; width: 100%; border-collapse: collapse; border-top: 3px solid #b0b0b0; border-bottom: 3px solid #b0b0b0; }
+td:first-child { font-weight: bold; border-right: 1px solid #b0b0b0; width: 25% }
 td { padding: 0.5em; }
 tr.odd { background-color: #f0f0ff }
 tr.even { background-color: #f0fff0 }
 tr:hover { background-color: #d6d6d6; }
+
+td { border-bottom: 1px dotted #b0b0b0 }
+
 
 table.login { margin-top: 15%; margin-left: auto; margin-right: auto; background-color: #f0f0ff; width: 50%; }
 table.login td + td { text-align: left; width: 20% }
@@ -61,10 +64,15 @@ div.searchhit_normal p  {
   padding-bottom: 0.4em;
 }
 
-span.expiretext {
+h1 span.expiretext {
   font-size: 0.5em;
 }
 
 div.createinstance  {
   padding-top: 0.5em;
+}
+
+p.about { 
+  padding-left: 20%;
+  padding-right: 20%;
 }

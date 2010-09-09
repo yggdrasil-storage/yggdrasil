@@ -140,6 +140,7 @@ sub present_login {
 		       $cgi->TR( $cgi->td("username"), $cgi->td( $cgi->input( {type=>"text", name=>"user"} ) ) ),
 		       $cgi->TR( $cgi->td("password"), $cgi->td( $cgi->input( {type=>"password", name=>"pass"} ) ) ),
 		       $cgi->TR( $cgi->td( {colspan=>2}, $cgi->input( {type=>"submit",value=>"Login"} ) ) ) );
+    print $cgi->hidden( { name=>"mode", value=>"about" } );
     print $cgi->end_form();
     print $cgi->end_html();
     

@@ -31,9 +31,9 @@ sub display {
 <div id="menu">
  <a href="?mode=entities" class="menulink" id="entitylink">Structure</a> |
  <a href="?mode=user" class="menulink" id="usernamelink">$username</a> |
- <a href="?mode=help="menulink" id="helplink">Help</a> |
- <a href="?mode=about="menulink" id="aboutlink">About</a> |
- <a href="?mode=logout="menulink" id="logoutlink">Logout</a> 
+ <a href="?mode=help" class="menulink" id="helplink">Help</a> |
+ <a href="?mode=about" class="menulink" id="aboutlink">About</a> |
+ <a href="?mode=logout" class="menulink" id="logoutlink">Logout</a> 
 </div>
 EOT
 }

@@ -68,7 +68,7 @@ sub display {
 				      $cgi->a( { href => "?$type=$id" . $entitystring }, $id ),
 				      " ($displaytype) ", 
 				      $cgi->br(),
-				      $cgi->span( {class => 'searchinfo' }, $self->tick_info( $o ) ),
+				      $cgi->span( {class => 'searchinfo' }, $self->tick_info( $o, 'inline' ) ),
 				    );		
 		
 		if ($id eq $self->{search}) {
