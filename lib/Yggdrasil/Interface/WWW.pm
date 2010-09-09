@@ -1,7 +1,5 @@
 package Yggdrasil::Interface::WWW;
 
-use Yggdrasil::Interface::WWW::Container;
-
 use strict;
 use warnings;
 
@@ -9,6 +7,7 @@ use CGI::Pretty qw/-debug/;
 
 sub new {
     my $class = shift;
+    my %params = @_;
 
     my $self = {
 		elements => [],
@@ -25,15 +24,45 @@ sub new {
 			     }
 			    ],
 		style    => [ { src => 'yggdrasil.css', }, ],
+		defaultmods => [ qw/Search Entities Instances / ],
     };
 
+    for my $key (keys %params) {
+	$self->{$key} = $params{$key};
+    }
+
+    my $status = $self->{yggdrasil}->get_status();
+    
     if ($ENV{HTTP_USER_AGENT} && $ENV{HTTP_USER_AGENT} =~ /iphone/i) {
 	$self->{style} = [ { src => 'iPhone.css', }, ]
+    }
+
+    my $file = join('.', join('/', split '::', __PACKAGE__), "pm" );
+    my $path = $INC{$file};
+    $path =~ s/\.pm$//;
+    $path = join('/', "$path/Module");
+
+    if (opendir( DIR, $path )) {
+ 	my $module;
+	while ($module = readdir(DIR))  {
+	    my $fqfile = "$path/$module";
+	    next unless -f $fqfile && -r $fqfile;
+	    next unless $module =~ s/\.pm$//;
+	    my $module_class = join("::", __PACKAGE__, "Module", $module );
+	    eval qq( require $module_class );
+	    if ($@) {
+		die( $@ );
+	    }
+	}
+	closedir DIR;
+    } else {
+	$status->set( 503, "Unable to find modules under $path: $!");
+	return undef;
     }
     
     return bless $self, $class;
 }
-
+    
 sub param {
     my $self = shift;
 
@@ -68,36 +97,25 @@ sub set_session {
     $self->add_header( "-cookie", $cookie );
 }
 
-sub add {
-    my $self = shift;
-    my $container = new Yggdrasil::Interface::WWW::Container;
-    
-    $container->add( @_ );
-    push @{ $self->{elements} }, $container;
-    return $container;
-}
-
-sub display {
+sub start {
     my $self = shift;
     my %param = @_;
 
     my $title  = $param{title};
     my $sheet  = $param{style}  || $self->{style};
     my $script = $param{script} || $self->{script};
-
-    my $cgi = $self->{cgi};
-
+    my $cgi    = $self->{cgi};
+    
     print $cgi->header( %{ $self->{headers} } );
     print $cgi->start_html( -title  => $title,
 			    -style  => $sheet,
 			    -script => $script,
-			    
-	);
+			  );
+}
 
-    foreach my $container (@{ $self->{elements} }) {
-	print $container->display( $self->{cgi} );
-    }
-
+sub end {
+    my $self = shift;
+    my $cgi  = $self->{cgi};
     print $cgi->end_html();
 }
 
@@ -126,6 +144,5 @@ sub present_login {
     print $cgi->end_html();
     
 }
-
 
 1;
