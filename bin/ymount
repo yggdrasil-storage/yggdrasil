@@ -447,6 +447,18 @@ sub new {
     return $self;
 }
 
+sub temporal_name {
+    my $self = shift;
+    my $name = shift;
+    my $obj  = shift;
+    
+    my $time;
+    $time = join("-", $obj->realstart(), $obj->realstop()) if $obj->realstop();
+    $name .= ":" . $time if $time;
+
+    return $name;
+}
+
 sub status {
     my $self = shift;
 
@@ -532,11 +544,7 @@ sub children {
 
     my @c;
     for my $child ( $self->{ygg}->entities( time => { start => 0, stop => undef } ) ) {
-	my $time;
-	$time = join("-", $child->start(), $child->stop()) if $child->stop();
-	my $name = $child->id();
-	$name .= ":" . $time if $time;
-
+	my $name = $self->temporal_name( $child->id(), $child );
 	push( @c, Yggdrasil::Fuse::Entity->new($name, $self->{ygg}, $child) );
     }
     
@@ -553,35 +561,26 @@ sub children {
     my $self = shift;
 
     my @c;
-    my $time = {};
     my $iname = sub { $_[0]->id() };
-    my $pname = sub { join(":", $_[0]->id( time => $time ),
-			   $_[0]->type( time => $time ), 
+    my $pname = sub { join(":", $_[0]->id(),
+			   $_[0]->type(), 
 			   ($_[0]->null()?'TRUE':'FALSE') ) };
     if( $self->inpath(":attic") ) {
-	$time = { start => $self->{obj}->start(), stop => $self->{obj}->stop() };
-	my $tsub = sub {
-	    my $t = '';
-	    $t = ":" . join("-", $_[0]->start(), $_[0]->stop()) if $_[0]->stop();
-	    return $t;
-	};
-
 	$iname = sub { 
 	    my $name = $_[0]->id();
-	    $name .= $tsub->(@_);
-	    return $name
+	    return $self->temporal_name( $name, $_[0] );
 	};
 	$pname = sub { 
-	    my $name = join(":", $_[0]->id( time => $time ),
-			    $_[0]->type( time => $time ), 
+	    my $name = join(":", $_[0]->id(),
+			    $_[0]->type(), 
 			    ($_[0]->null()?'TRUE':'FALSE') );
-	    $name .= $tsub->(@_);
-	    return $name;
+	    print "PROP=[$name], (", $_[0]->start(), ", ", $_[0]->stop(), ")\n";
+	    return $self->temporal_name( $name, $_[0] );
 	};
     }
 
-    my @i = map { Yggdrasil::Fuse::Instance->new( $iname->($_), $self->{ygg}, $_) } $self->{obj}->instances( time => $time );
-    my @p = map { Yggdrasil::Fuse::EntityProperty->new( $pname->($_), $self->{ygg}, $_) } $self->{obj}->properties( time => $time );
+    my @i = map { Yggdrasil::Fuse::Instance->new( $iname->($_), $self->{ygg}, $_) } $self->{obj}->instances();
+    my @p = map { Yggdrasil::Fuse::EntityProperty->new( $pname->($_), $self->{ygg}, $_) } $self->{obj}->properties();
 
     return @i, @p;
 }
@@ -642,22 +641,15 @@ sub children {
     my $self = shift;
 
     my @c;
-    my $time = {};
     if( $self->inpath(":attic") ) {
-	$time = { start => $self->{obj}->start(), stop => $self->{obj}->stop() };
-	
-	for my $child ( $self->{obj}->entity()->properties( time => $time ) ) {
-	    my $t;
-	    $t = join("-", $child->start(), $child->stop()) if $child->stop();
-	    my $name = $child->id();
-	    $name .= ":" . $t if $t;
-
+	for my $child ( $self->{obj}->entity()->properties() ) {
+	    my $name = $self->temporal_name( $child->id(), $child );
 	    push( @c, Yggdrasil::Fuse::HistoricInstanceProperty->new($name, $self->{ygg}, $self->{obj}) );
 	    $c[-1]->{realname} = $child->id();
 	}
     } else {
 	push( @c, Yggdrasil::Fuse::HistoricInstanceProperties->new( ':history', $self->{ygg}, $self->{obj} ) );
-	push( @c, map { Yggdrasil::Fuse::InstanceProperty->new($_->id(), $self->{ygg}, $self->{obj}) } $self->{obj}->entity()->properties( time => $time ) );
+	push( @c, map { Yggdrasil::Fuse::InstanceProperty->new($_->id(), $self->{ygg}, $self->{obj}) } $self->{obj}->entity()->properties() );
     }
 
     return @c;
@@ -688,13 +680,8 @@ use parent -norequire, qw(Yggdrasil::Fuse);
 sub children {
     my $self = shift;
 
-    my $time = {};
-    if( $self->inpath(":attic") ) {
-	$time = { start => $self->{obj}->start(), stop => $self->{obj}->stop() };
-    }
-
     # Return the ticks where this property changed.
-    my %changes = $self->{obj}->property_history( $self->{realname}, time => $time );
+    my %changes = $self->{obj}->property_history( $self->{realname} );
     my @targets;
 
     # Urkle.  This is not pretty, but we need to create objects with
@@ -706,8 +693,6 @@ sub children {
     for (my $i=0; $i < @ticks; $i++) {
 	my $tick = $ticks[$i];
 	my $instance = $self->{obj}->entity()->fetch( $self->{obj}->id(), time => { start => $tick, stop => $tick } );
-	$instance->{_start} = $tick;
-	$instance->{_stop}  = $ticks[$i+1];
 	my $ip = Yggdrasil::Fuse::InstanceProperty->new( $tick, $self->{ygg}, $instance );
 	$ip->{realname} = $self->{realname};
 	push @targets, $ip;
@@ -732,7 +717,7 @@ sub size {
 sub content {
     my $self = shift;
 
-    my $c = $self->{obj}->property( $self->{realname} || $self->name()); 
+    my $c = $self->{obj}->property( $self->{realname} || $self->name() ); 
     return defined $c ? $c : '';
 }
 
@@ -767,7 +752,7 @@ sub content {
     my $self = shift;
 
     my $p = $self->{obj};
-    my @data = ("Full name: ", $p->entity()->id(), ":", $p->id(), "\n",
+    my @data = ("Full name: ", $p->full_name(), "\n",
 		"Type: ", $p->type(), "\n",
 		"Null: ", ($p->null()?'TRUE':'FALSE'), "\n");
 		

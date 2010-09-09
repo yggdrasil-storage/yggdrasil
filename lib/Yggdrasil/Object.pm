@@ -55,6 +55,16 @@ sub stop {
     return $self->{_stop};
 }
 
+sub realstart {
+    my $self = shift;
+    return $self->{_realstart};
+}
+
+sub realstop {
+    my $self = shift;
+    return $self->{_realstop};
+}
+
 sub can_read {
     return 1;
 }
@@ -93,9 +103,8 @@ sub _validate_temporal {
 	} else {
 	    # user specified 'stop', but value was 'undef'. This means
 	    # that the user has requested a slice from 'start' to
-	    # 'current', which (in order to differentiate from current
-	    # object), we set to some impossilby(?) large tick value
-	    $time->{stop} = $self->storage()->maxid();
+	    # 'current', 
+	    $time->{stop} = $self->yggdrasil()->current_tick();
 	}
     }
 

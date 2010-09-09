@@ -150,11 +150,13 @@ sub objectify {
     my $obj = new Yggdrasil::Local::Property( name      => $params{name},
 					      entity    => $params{entity},
 					      yggdrasil => $params{yggdrasil} );
-    $obj->{name}   = $params{name};
-    $obj->{entity} = $params{entity};
-    $obj->{_id}    = $params{id};
-    $obj->{_start} = $params{start};
-    $obj->{_stop}  = $params{stop};
+    $obj->{name}       = $params{name};
+    $obj->{entity}     = $params{entity};
+    $obj->{_id}        = $params{id};
+    $obj->{_start}     = $params{start};
+    $obj->{_stop}      = $params{stop};
+    $obj->{_realstart} = $params{realstart};
+    $obj->{_realstop}  = $params{realstop};
     return $obj;
 }
 
@@ -165,6 +167,8 @@ sub get {
     
     my $status = $self->get_status();
     my ($entityobj, $entity, $propname);
+
+    my $time = $params{time} || {};
 
     if ($params{entity}) {
 	$propname = $params{property};
@@ -179,20 +183,22 @@ sub get {
     if (ref $params{entity}) {
 	$entityobj = $params{entity}; 
     } else {
-	$entityobj = $self->yggdrasil()->get_entity( $params{entity}, time => $params{time} );
+	$entityobj = $self->yggdrasil()->get_entity( $params{entity}, time => $time );
     }
 
     # property_exists does not require the entity to actually exist
     # for the test to be valid, so there's no reason to ask storage to
     # create a proper entity object above, hence we use objectify and
     # then call propert_exists on that object directly.
-    my $prop = $entityobj->property_exists( $propname, time => $params{time} );
+    my $prop = $entityobj->property_exists( $propname );
     if ($prop) {
-	$self->{name}   = $propname;
-	$self->{entity} = $entityobj;
-	$self->{_id}    = $prop->{id};
-	$self->{_start} = $prop->{start};
-	$self->{_stop}  = $prop->{stop};
+	$self->{name}       = $propname;
+	$self->{entity}     = $entityobj;
+	$self->{_id}        = $prop->{id};
+	$self->{_realstart} = $prop->{start};
+	$self->{_realstop}  = $prop->{stop};
+	$self->{_start}     = $time->{start} || $prop->{start};
+	$self->{_stop}      = $time->{stop} || $prop->{stop};
 	$status->set( 200 );
 	return $self;
     } else {
@@ -205,13 +211,21 @@ sub expire {
     my $self = shift;
     my $storage = $self->storage();
 
+    my $status = $self->get_status();
+
+    # Can't expire historic object
+    if( $self->stop() ) {
+	$status->set( 406, "Unable to expire properties in historic context" );
+	return;
+    }
+
     # You might not have permission to do this, can fails now either way.
 #    for my $instance ($self->{entity}->instances()) {
 #	$storage->expire( $self->{entity}->_userland_id() . ':' . $self->_userland_id(), id => $self->{_id} );
 #    }
     
     $storage->expire( 'MetaProperty', id => $self->{_id} );
-    return 1 if $self->get_status()->OK();
+    return 1 if $status->OK();
     return;
 }
 
@@ -224,6 +238,9 @@ sub _get_meta {
 
     my $status = $self->get_status();
 
+    my $time = $self->_validate_temporal( $params{time} );
+    return unless $time;
+
     unless ($meta eq 'null' || $meta eq 'type') {
 	$status->set( 406, "$meta is not a valid metadata request" );
 	return undef;
@@ -233,16 +250,16 @@ sub _get_meta {
     # FIX: why cant null() send 'nullp' as param instead of 'null' and void this test?
     $meta = 'nullp' if $meta eq 'null';
 
-    my $entity = $self->{entity};
-    my $storage = $self->{yggdrasil}->{storage};
-    my @ancestors = $entity->ancestors( $params{time} );
+    my $entity = $self->entity();
+    my $storage = $self->storage();
+    my @ancestors = $entity->ancestors( $time );
 
     foreach my $e ( @ancestors ) {
 	my $ret = $storage->fetch('MetaEntity', { where => [ entity => $e ] },
 				  'MetaProperty',{ return => $meta,
 						   where  => [ entity   => \qq{MetaEntity.id},
 							       property => $property ]},
-				  $params{time} );
+				  $time );
 	
 	next unless @$ret;
 	return $ret->[0]->{$meta};

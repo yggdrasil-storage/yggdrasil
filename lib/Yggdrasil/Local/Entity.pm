@@ -80,6 +80,7 @@ sub get {
     }
     
     my %params = @_;
+    my $time = $params{time} || {};
 
     my $identifier = $params{entity} || $params{id};
     my @query;
@@ -95,7 +96,7 @@ sub get {
 
     my $aref = $self->storage()->fetch( 'MetaEntity', { where => [ @query ],
 							return => [ 'id', 'entity', 'parent', 'start', 'stop' ] },
-					$params{time},
+					$time,
 				      );
     
     unless (defined $aref->[0]->{id}) {
@@ -107,8 +108,10 @@ sub get {
     my @objs = map { objectify( name      => $_->{entity},
 				parent    => $_->{parent},
 				id        => $_->{id},
-				start     => $_->{start},
-				stop      => $_->{stop},
+				realstart => $_->{start},
+				realstop  => $_->{stop},
+				start     => $time->{start} || $_->{start},
+				stop      => $time->{stop} || $_->{stop},
 				yggdrasil => $self->{yggdrasil},
 			      ) } @$aref;
     if (wantarray) {
@@ -124,15 +127,22 @@ sub get_all {
     my $self   = $class->SUPER::new( @_ );
     my %params = @_;
     
+    my $time = $params{time} || {};
+    if( exists $time->{stop} && ! defined $time->{stop} ) {
+	$time->{stop} = $self->yggdrasil()->current_tick();
+    }
+
     my $aref = $self->storage()->fetch( MetaEntity => { return => [ 'id', 'entity', 'parent', 'start', 'stop' ] },
-					$params{time},
+					$time,
 				      );
 
     return map { objectify( name      => $_->{entity},
 			    parent    => $_->{parent},
 			    id        => $_->{id},
-			    start     => $_->{start},
-			    stop      => $_->{stop},
+			    realstart => $_->{start},
+			    realstop  => $_->{stop},
+			    start     => $time->{start} || $_->{start},
+			    stop      => $time->{stop} || $_->{stop},
 			    yggdrasil => $self->{yggdrasil},
 			  ) } @$aref;
 }
@@ -141,11 +151,13 @@ sub objectify {
     my %params = @_;
     
     my $obj = new Yggdrasil::Local::Entity( name => $params{name}, yggdrasil => $params{yggdrasil} );
-    $obj->{name}    = $params{name};
-    $obj->{_id}     = $params{id};
-    $obj->{_start}  = $params{start};
-    $obj->{_stop}   = $params{stop};
-    $obj->{parent}  = $params{parent};
+    $obj->{name}       = $params{name};
+    $obj->{_id}        = $params{id};
+    $obj->{_start}     = $params{start};
+    $obj->{_stop}      = $params{stop};
+    $obj->{_realstart} = $params{realstart};
+    $obj->{_realstop}  = $params{realstop};
+    $obj->{parent}     = $params{parent};
     return $obj;
 }
 
@@ -240,11 +252,13 @@ sub instances {
     my @i;
     for my $i ( @$instances ) {
 	my $o = Yggdrasil::Local::Instance->new( yggdrasil => $self );
-	$o->{visual_id} = $i->{visual_id};
-	$o->{_start}    = $i->{start};
-	$o->{_stop}     = $i->{stop};
-	$o->{_id}       = $i->{id};
-	$o->{entity}    = $self;
+	$o->{visual_id}  = $i->{visual_id};
+	$o->{_start}     = $time->{start} || $i->{start};
+	$o->{_stop}      = $time->{stop} || $i->{stop};
+	$o->{_realstart} = $i->{start};
+	$o->{_realstop}  = $i->{stop};
+	$o->{_id}        = $i->{id};
+	$o->{entity}     = $self;
 	push(@i,$o);
     }
 
@@ -366,10 +380,13 @@ sub property_exists {
 	    $time );
 
 	# The property name might be "0".
-	return { name  => join(":", $e, $property ),
-		 id    => $aref->[0]->{id},
-		 start => $aref->[0]->{start},
-		 stop  => $aref->[0]->{stop} } if defined $aref->[0]->{property};
+	return { name      => join(":", $e, $property ),
+		 id        => $aref->[0]->{id},
+		 realstart => $aref->[0]->{start},
+		 realstop  => $aref->[0]->{stop},
+		 start     => $time->{start} || $aref->[0]->{start},
+		 stop      => $time->{stop} || $aref->[0]->{stop} } 
+	  if defined $aref->[0]->{property};
     }
     
     return;
@@ -409,8 +426,10 @@ sub properties {
 	    push @rets, Yggdrasil::Local::Property::objectify( name      => $p->{property},
 							       yggdrasil => $self->{yggdrasil},
 							       id        => $p->{id},
-							       start     => $p->{start},
-							       stop      => $p->{stop},
+							       start     => $time->{start} || $p->{start},
+							       stop      => $time->{stop} || $p->{stop},
+							       realstart => $p->{start},
+							       realstop  => $p->{stop},
 							       entity    => $eobj );
 	}
     }

@@ -46,7 +46,7 @@ sub create {
 							entity    => $eid } );
 
     $status->set( 201, "Created instance '$vid' in entity '$ename'." );
-    return $self;
+    return __PACKAGE__->fetch( yggdrasil => $self, %params );
 }
 
 sub fetch {
@@ -77,11 +77,13 @@ sub fetch {
     for my $dataref ( $self->_get_in_tick($vid, $time) ) {
 	# UGH ...
 	my $o = __PACKAGE__->new( yggdrasil => $self );
-	$o->{visual_id} = $vid;
-	$o->{_id}       = $id;
-	$o->{_start}    = $dataref->{start};
-	$o->{_stop}     = $dataref->{stop};
-	$o->{entity}    = $entity;
+	$o->{visual_id}  = $vid;
+	$o->{_id}        = $id;
+	$o->{_start}     = $time->{start} || $dataref->{start};
+	$o->{_stop}      = $time->{stop} || $dataref->{stop};
+	$o->{_realstart} = $dataref->{start};
+	$o->{_realstop}  = $dataref->{stop};
+	$o->{entity}     = $entity;
 	push( @instances, $o );
     }
 
@@ -106,7 +108,7 @@ sub expire {
 
     # Can't expire historic object
     if( $self->stop() ) {
-	$status->set( 406, "Unable to create instances in historic context" );
+	$status->set( 406, "Unable to expire instances in historic context" );
 	return;
     }
 
@@ -287,16 +289,12 @@ sub property_history {
     my %params = @_;
     my $p;
 
-    # By default, get complete history for the property.
-    my ($start, $stop) = ($self->start(), undef);
-    if ($params{time}) {
-	$start = $params{time}->{start} if $params{time}->{start};
-	$stop  = $params{time}->{stop}  if $params{time}->{stop};
-    }
-    
-    # We explicitly want full history.
-    my $time = $self->_validate_temporal( { start => $start, stop => $stop } );
-    return unless keys %$time;
+    my $time = $self->_validate_temporal( $params{time} );
+    return unless $time;
+
+    # have to set stop to get history instead of current properties
+    $time->{stop} ||= $self->yggdrasil()->current_tick();
+    $time->{start} ||= $self->start();
 
     # We might be passed a property object and not its name as the
     # key.  Also verify that it's of the correct class.
@@ -334,7 +332,6 @@ sub property_history {
 
     if( @$r ) {
 	my %history;
-
 	foreach my $entry (@$r) {
 	    $history{ $entry->{$schema . '_start'} } = $entry->{value};
 	}
@@ -489,12 +486,14 @@ sub pathlength {
 sub fetch_related {
   my $self = shift;
   my $relative = shift;
-  my($start, $stop) = Yggdrasil::Utilities::get_times_from( @_ );
+
+    my $time = $self->_validate_temporal( {} );
+    return unless $time;  
 
   # FIX: relative can either be an Y::E object or the name of an Entity
   #      for now, only objects
   my $source = $self->{entity};
-  my $paths = $self->_fetch_related( $source->{_id}, $relative->{_id}, undef, undef, $start, $stop );
+  my $paths = $self->_fetch_related( $source->{_id}, $relative->{_id}, undef, undef, $time );
 
   my %result;
   foreach my $path ( @$paths ) {
@@ -530,7 +529,7 @@ sub fetch_related {
 			      bind => "or" },
 	       Instances => { where => [ entity => $step ] } );
 
-	  $res = $self->storage()->fetch( @schema, { start => $start, stop => $stop } );
+	  $res = $self->storage()->fetch( @schema, $time );
 	  @id = map { $_->{id} } @$res;
 	  last unless @id;
       }
@@ -550,41 +549,41 @@ sub fetch_related {
 
 sub _fetch_related {
   my $self = shift;
-  my $start = shift;
-  my $stop = shift;
+  my $first = shift;
+  my $last = shift;
   my $path = [ @{ shift || [] } ];
   my $all = shift || [];
-  my($tstart, $tstop) = (shift, shift);
+  my $time = shift;
 
   my $storage = $self->storage();
 
   # This is less than pretty, but we're checking if we're going within
   # the same entity.
   if (! @$path) {
-      if ($start eq $stop) {
-	  return [ [ $start, $stop ] ];
+      if ($first eq $last) {
+	  return [ [ $first, $last ] ];
       }
   }
   
-  return if grep { $_ eq $start } @$path;
-  push( @$path, $start );
+  return if grep { $_ eq $first } @$path;
+  push( @$path, $first );
 
-  return $path if $start eq $stop;
+  return $path if $first eq $last;
 
-  # Fetch links which on either side has $start as it's value. Filter
-  # out the side which does not has $start, and use this as the new
-  # $start, in this way we build up a possible path from $start to
-  # $stop
+  # Fetch links which on either side has $first as it's value. Filter
+  # out the side which does not has $first, and use this as the new
+  # $first, in this way we build up a possible path from $first to
+  # $last
   my $other = $storage->fetch( 'MetaRelation',
 			       { return => [ qw/lval rval/ ],
-				 where => [ lval => $start,
-					    rval => $start ],
+				 where => [ lval => $first,
+					    rval => $first ],
 				 bind => "or"
-			       }, { start => $tstart, stop => $tstop } );
+			       }, $time );
 
-  my @siblings = uniq( map { $_->{lval} eq $start ? $_->{rval} : $_->{lval} } @$other );
+  my @siblings = uniq( map { $_->{lval} eq $first ? $_->{rval} : $_->{lval} } @$other );
   foreach my $child ( @siblings ) {
-      my $found_path = $self->_fetch_related( $child, $stop, $path, $all, $tstart, $tstop );
+      my $found_path = $self->_fetch_related( $child, $last, $path, $all, $time );
       
       push( @$all, $found_path ) if $found_path;
   }

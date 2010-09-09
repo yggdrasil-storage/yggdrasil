@@ -1332,12 +1332,12 @@ sub extract_temporality {
 # Helper stuff.
 sub display_tick {
     my $obj  = shift;
-    my $tick = $y->get_tick( $obj->start() );
-    printf "%-15s - %s (%d) / %s\n", 'Created', $tick->{stamp}, $obj->start(), $tick->{committer};
+    my $tick = $y->get_tick( $obj->realstart() );
+    printf "%-15s - %s (%d) / %s\n", 'Created', $tick->{stamp}, $obj->realstart(), $tick->{committer};
 
-    if ($stop && $obj->stop()) {
-	$tick = $y->get_tick( $obj->stop() );
-	printf "%-15s - %s (%d) / %s\n", 'Expired', $tick->{stamp}, $obj->stop(), $tick->{committer};
+    if ($stop && $obj->realstop()) {
+	$tick = $y->get_tick( $obj->realstop() );
+	printf "%-15s - %s (%d) / %s\n", 'Expired', $tick->{stamp}, $obj->realstop(), $tick->{committer};
     }
     
 }
@@ -1346,7 +1346,7 @@ sub nameify {
     my $obj = shift;
     
     if ($obj->stop()) {
-	return $obj->id() . ':' . $obj->start() . '-' . $obj->stop();
+	return $obj->id() . ':' . $obj->realstart() . '-' . $obj->stop();
     } else {
 	return $obj->id();
     }
