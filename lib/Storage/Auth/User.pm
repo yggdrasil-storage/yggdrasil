@@ -27,6 +27,12 @@ sub define {
     my $user    = shift;
     my $pwd     = shift;
     
+    my $u = $class->get( $storage, $user );
+    if( $u ) {
+	$storage->get_status()->set( 202 );
+	return $u;
+    }
+
     my $uid = $storage->store( $storage->get_structure( 'authuser' ),
 			       key => qw/name/,
 			       fields => { name => $user } );
