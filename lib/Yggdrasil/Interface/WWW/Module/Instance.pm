@@ -14,7 +14,6 @@ sub new {
     
     my $self = {
 		www    => $params{www},
-		entity => $params{entity},
 	       };
 
     return bless $self, $class;

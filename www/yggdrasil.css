@@ -83,10 +83,13 @@ div.error:before {
   content: "Error: ";
 }
 
-div.error {  
+div.info, div.error {  
   padding-top: 3em;
   text-align: center;
   font-weight: bold;
+}
+
+div.error {  
   color: red;
   font-size: 1.5em;
 }

@@ -39,8 +39,10 @@ sub display {
 
 	print "<div class='searchhits'>\n";
 	if (@$eref || @$iref || @$pref || @$rref) {
+	    my $last_hit;
 	    my (@hits, @exacts);
 	    for my $o (@$eref, @$iref, @$pref, @$rref) {
+		$last_hit = $o;
 		my $id = $o->id();
 
 		my $type = $self->get_type( $o );
@@ -67,9 +69,25 @@ sub display {
 		}
 	    }
 
-	    print $cgi->div( { class => 'searchhit_exact' }, @exacts ) if @exacts;
-	    print $cgi->div( { class => 'searchhit_normal' }, @hits )  if @hits;
-	} 
+	    if (@exacts == 1 && !@hits) {
+		# $last_hit will contain the only hit, which has to be the
+		# only hit at this point.  Set the proper params so
+		# the correct module will pick it up later and do
+		# nothing else.
+		my $type = $self->get_type( $last_hit );
+		if ($type eq 'instance' || $type eq 'property') {
+		    $self->{www}->param( $type, $last_hit->id() );
+		    $self->{www}->param( 'entity', $last_hit->entity()->id() );
+		} else {
+		    $self->{www}->param( $type, $last_hit->id() );
+		}
+	    } else {
+		print $cgi->div( { class => 'searchhit_exact' }, @exacts ) if @exacts;
+		print $cgi->div( { class => 'searchhit_normal' }, @hits )  if @hits;		
+	    }
+	} else {
+	    $self->info( "No hits on '" . $self->{search} . "'" );
+	}
 	print "</div>\n";
 	
     } 

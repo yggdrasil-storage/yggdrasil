@@ -16,8 +16,6 @@ sub new {
 		www    => $params{www},
 	       };
 
-    $self->{entity} = $self->{www}->{cgi}->param( 'entity' );
-    
     return bless $self, $class;
 }
 
@@ -25,6 +23,8 @@ sub display {
     my $self = shift;
     my $cgi  = $self->{www}->{cgi};
 
+    $self->{entity} = $self->{www}->{cgi}->param( 'entity' );
+    
     return unless $self->{entity};
     return if $cgi->param( 'instance' );
     

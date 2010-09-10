@@ -58,6 +58,12 @@ sub error {
     print $self->{www}->{cgi}->div( { class => 'error' }, $string );
 }
 
+sub info {
+    my $self   = shift;
+    my $string = shift;
+    print $self->{www}->{cgi}->div( { class => 'info' }, $string );
+}
+
 sub expire {
     my $self   = shift;
     my $target = shift;
