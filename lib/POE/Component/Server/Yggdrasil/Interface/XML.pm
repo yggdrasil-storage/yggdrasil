@@ -96,6 +96,8 @@ sub _entity_xml {
 		      id => $name,
 		      start => $start,
 		      stop => $stop,
+		      realstart => $entity->realstart(),
+		      realstop => $entity->realstop(),
 		      starttime => $starttime,
 		      stoptime => $stoptime,
 		     };
@@ -114,6 +116,8 @@ sub _property_xml {
 			entity => $property->entity()->_userland_id(),
 			start => $start,
 			stop => $stop,
+			realstart => $property->realstart(),
+			realstop => $property->realstop(),
 			starttime => $starttime,
 			stoptime => $stoptime,
 		       };
@@ -132,6 +136,8 @@ sub _instance_xml {
 			entity => $instance->entity()->_userland_id(),
 			start => $start,
 			stop => $stop,
+			realstart => $instance->realstart(),
+			realstop => $instance->realstop(),
 			starttime => $starttime,
 			stoptime => $stoptime,
 		       };
@@ -151,6 +157,8 @@ sub _relation_xml {
 			label => $name,
 			lval => $lval->_userland_id(),
 			rval => $rval->_userland_id(),
+			realstart => $relation->realstart(),
+			realstop => $relation->realstop(),
 			start => $start,
 			stop => $stop,
 			starttime => $starttime,
@@ -203,6 +211,8 @@ sub _user_or_role_xml {
 		      stop => $stop,
 		      starttime => $starttime,
 		      stoptime => $stoptime,
+		      realstart => $obj->realstart(),
+		      realstop => $obj->realstop(),
 		     };
 }
 

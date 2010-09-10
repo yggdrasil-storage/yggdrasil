@@ -505,7 +505,7 @@ sub _pair {
 	    my $tag = $k->tag();
 	    if ($tag eq 'id') {
 		$pair{'name'} = $k->text();
-	    } elsif ($tag eq 'start' || $tag eq 'stop') {
+	    } elsif ($tag eq 'start' || $tag eq 'stop' || $tag eq 'realstart' || $tag eq 'realstop') {
 		$pair{"_$tag"} = $k->text();
 		next;
 	    } elsif ($tag eq '_internal_id') {
