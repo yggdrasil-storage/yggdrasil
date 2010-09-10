@@ -69,4 +69,13 @@ sub expire {
 		       $cgi->a( { href => "?$target;action=expire" }, ' (expire)' ));
 }
 
+sub static_dir_path {
+    my $self = shift;
+    
+    my $file = join('.', join('/', split '::', __PACKAGE__), "pm" );
+    my $path = $INC{$file};
+    $path =~ s|Module.pm$|static|;
+    return $path;
+}
+
 1;

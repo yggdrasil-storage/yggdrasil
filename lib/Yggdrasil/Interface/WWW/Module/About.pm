@@ -22,28 +22,24 @@ sub new {
 sub display {
     my $self = shift;
 
-    my $file = join('.', join('/', split '::', __PACKAGE__), "pm" );
-    my $path = $INC{$file};
-    $path =~ s/\.pm$/.html/;
-
     my $cgi = $self->{www}->{cgi};
     my $ygg = $self->yggdrasil();
+
+    my $static_path = $self->static_dir_path();
     
-    if (open FILE, $path) {
+    print '<div class="about">';
+    if (open FILE, "$static_path/About.html") {
 	print while (<FILE>);
 	close FILE;
     } 
-
-    print $cgi->p( { class => 'about' }, "This yggdrasil installation runs version " . $ygg->version(),
-		   $cgi->br(),
-		   "Server: " . $ygg->info(),
-		   $cgi->br(),
-		   "Uptime: " . $ygg->uptime(),
-		   $cgi->br(),
-		   "The current Yggdrasil tick is: " . $ygg->current_tick(),
-		   $cgi->br(),
-		   $ygg->is_remote?join(",", $ygg->server_data()):'',
+    
+    print $cgi->p( "This yggdrasil installation runs version " . $ygg->version(),
+		   " and the data is stored by a " . $ygg->info(),
+		   "The current Yggdrasil tick is " . $ygg->current_tick() . '.',
+		   $ygg->is_remote()?$cgi->br() . join(",", $ygg->server_data()):'',
+		   $ygg->is_remote()?"Running time: " . $ygg->uptime(). $cgi->br():''
 		 );
+    print "</div>\n";
 }
 
 
