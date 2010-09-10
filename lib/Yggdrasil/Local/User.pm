@@ -75,6 +75,16 @@ sub stop {
     return $self->{_user_obj}->stop();
 }
 
+sub realstart {
+    my $self = shift;
+    return $self->{_user_obj}->start();    
+}
+
+sub realstop {
+    my $self = shift;
+    return $self->{_user_obj}->stop();    
+}
+
 sub expire {
     my $self = shift;
     $self->{_user_obj}->expire();
