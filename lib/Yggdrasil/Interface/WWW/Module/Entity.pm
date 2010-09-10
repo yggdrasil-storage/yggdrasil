@@ -90,17 +90,20 @@ sub display {
 				       );
 	}
 
-	if ($can_write) {
-	    my @types = map { ucfirst lc $_ } $ygg->property_types();
-	    push @propdisplay,
-	      $cgi->TR(
-		       $cgi->td( $cgi->input( { type => "text", name  => "name" } ) ),
-		       $cgi->td( $cgi->popup_menu( -name=> 'type', -values=> \@types )),
-		       $cgi->td( $cgi->popup_menu( -name=> 'null', -values=> [ qw/Yes No/ ] )),
-		       $cgi->td( $cgi->submit( { type => "submit", value => "Create" }, 'Create' ) ),
-		    ),
-	}
-	
+    }
+    
+    if ($can_write) {
+	my @types = map { ucfirst lc $_ } $ygg->property_types();
+	push @propdisplay,
+	  $cgi->TR(
+		   $cgi->td( $cgi->input( { type => "text", name  => "name" } ) ),
+		   $cgi->td( $cgi->popup_menu( -name=> 'type', -values=> \@types )),
+		   $cgi->td( $cgi->popup_menu( -name=> 'null', -values=> [ qw/Yes No/ ] )),
+		   $cgi->td( $cgi->submit( { type => "submit", value => "Create" }, 'Create' ) ),
+		  );
+    }
+
+    if (@propdisplay) {
 	print $cgi->start_form( { id => 'propertycreate' }, -method => "POST", -action => 'index.cgi' ) if $can_write;
 	print $cgi->table(
 			  { class => 'properties' },
@@ -108,10 +111,8 @@ sub display {
 			  @propdisplay,
 			 );
 	print $cgi->end_form() if $can_write;
-	
-	
     }
-
+    
     print $self->tick_info( $entity );
 }
 
