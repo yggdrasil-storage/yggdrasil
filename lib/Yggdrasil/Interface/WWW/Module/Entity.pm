@@ -47,8 +47,10 @@ sub display {
     }
 
     if ($can_instanciate) {
-	$instanciate_code  = $cgi->start_form( { id => 'instanciate' }, -method => "POST", -action => 'index.cgi' );
+	$instanciate_code  = '<form method="post" action="index.cgi" enctype="multipart/form-data" id="eiform">';
 	$instanciate_code .= 'Create new instance ';
+	$instanciate_code .= $cgi->hidden( { name => 'entity', value => $self->{entity} } );
+	$instanciate_code .= $cgi->hidden( { name => 'create', value => 1 } );
 	$instanciate_code .= $cgi->input( { type => "text", name  => "instance", class => 'iform' } );
 	$instanciate_code .= $cgi->submit( { type => "submit", value => "OK", name => 'isubmit', class => 'iform' }, 'Create Instance' );
 	$instanciate_code .= $cgi->end_form();
@@ -71,6 +73,7 @@ sub display {
 		    $instanciate_code,
 		   );
 
+    $self->create_property( $entity ) if $self->{www}->{cgi}->param( 'create' );
 
     my @props = $entity->properties();
     print $cgi->h2( 'Properties' );
@@ -96,7 +99,7 @@ sub display {
 	my @types = map { ucfirst lc $_ } $ygg->property_types();
 	push @propdisplay,
 	  $cgi->TR(
-		   $cgi->td( $cgi->input( { type => "text", name  => "name" } ) ),
+		   $cgi->td( $cgi->input( { type => "text", name => "property" } ) ),
 		   $cgi->td( $cgi->popup_menu( -name=> 'type', -values=> \@types )),
 		   $cgi->td( $cgi->popup_menu( -name=> 'null', -values=> [ qw/Yes No/ ] )),
 		   $cgi->td( $cgi->submit( { type => "submit", value => "Create" }, 'Create' ) ),
@@ -104,7 +107,10 @@ sub display {
     }
 
     if (@propdisplay) {
-	print $cgi->start_form( { id => 'propertycreate' }, -method => "POST", -action => 'index.cgi' ) if $can_write;
+	print '<form method="post" action="index.cgi" enctype="multipart/form-data" id="epform">';
+	print $cgi->hidden( { name => 'entity', value => $self->{entity} } );
+	print $cgi->hidden( { name => 'create', value => 1 } );
+	
 	print $cgi->table(
 			  { class => 'properties' },
 			  $cgi->TR( $cgi->td( 'Name' ), $cgi->td( 'Type' ), $cgi->td( 'Null allowed' ), $cgi->td( 'Source' )),
@@ -114,6 +120,16 @@ sub display {
     }
     
     print $self->tick_info( $entity );
+}
+
+sub create_property {
+    my $self   = shift;
+    my $entity = shift;
+    my $www    = $self->{www};
+    
+    my ($property_name, $type, $null) = ($www->param( 'property'), $www->param( 'type' ), $www->param( 'null' ) );
+
+    return $entity->define_property( $property_name, type => uc $type, nullp => $null eq 'YES'?0:1 );
 }
 
 1;

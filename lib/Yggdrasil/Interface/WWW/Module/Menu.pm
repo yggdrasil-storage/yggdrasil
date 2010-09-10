@@ -39,12 +39,12 @@ EOT
     
     my $cgi = $self->{www}->{cgi};
     print $cgi->div( { id => 'search' },
-		     $cgi->start_form( { id => 'searchform' }, -method => "POST", -action => 'index.cgi' ),
+		     '<form method="post" action="index.cgi" enctype="multipart/form-data" id="searchform">' . "\n",
 		     $cgi->input( { type => "text",   name  => "search", id => 'searchfield' } ),
 		     $cgi->popup_menu( -name=> 'searchtarget',
 				       -values=>[ 'Structure','Structure and Data','Data only']),
 		     $cgi->submit( { type => "submit", value => "Search"} ),
-		     $cgi->end_form(),
+		     "</form>\n",
 		   );
 }
 

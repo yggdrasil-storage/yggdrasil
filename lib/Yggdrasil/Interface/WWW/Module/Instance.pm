@@ -36,6 +36,8 @@ sub display {
     }
 
     my $instance = $entity->fetch( $iname );
+    $instance = $entity->create( $iname ) if $self->{www}->param( 'create' );
+    
     unless ($instance) {
 	$self->error( $ygg->get_status()->message() );
 	return;
@@ -56,15 +58,23 @@ sub display {
     # We need a has_value, loading a multi-MB PDF into memory to see
     # if the value is set is...  Not good.
     for my $prop (@props) {
-	my $value = $instance->get( $prop ) || '';	    
+	my $value = $instance->get( $prop ) || '';
+
+	# FIXME, setting undef?  Blargh.  Need a checkbox for that.  :-(
+	my $new_value = $self->{www}->param( $prop->id() );
+	if ($new_value && $new_value ne $value) {
+	    $instance->property( $prop, $new_value );
+	    $value = $new_value if $ygg->get_status->OK();
+	}
+	
 	my $can_write = $instance->can_write_value( $prop );
 	$needform++ if $can_write;
 	
 	if (lc $prop->type() eq 'binary') {
-	    $value .= $cgi->a( { href => "?mode=binary;entity=$ename;instance=$iname;property=" . $prop->id() }, 'view' ) if $value;
+	    $value = $cgi->a( { href => "?mode=binary;entity=$ename;instance=$iname;property=" . $prop->id() }, 'view' ) if $value;
 	    $value .= $cgi->input( { type => "file", name  => $prop->id() } );
 	} else {
-	    $value = $cgi->input( { type => "text", name  => $prop->id(), value => $value } ) if $can_write;
+	    $value = $cgi->input( { type => "text", name => $prop->id(), value => $value } ) if $can_write;
 	}
 
 	if ($instance->can_expire_value( $prop )) {
@@ -78,10 +88,15 @@ sub display {
     }
 
     if (@proplist) {
-	print $cgi->start_form( -method => "POST", -action => 'index.cgi' ) if $needform;
+	if ($needform) {
+	    print '<form method="post" action="index.cgi" enctype="multipart/form-data" id="instanceform">';
+	    print $cgi->hidden( { name => 'entity',   value => $ename } );
+	    print $cgi->hidden( { name => 'instance', value => $iname } );
+	}
+	
 	print $cgi->table( @proplist );
 	
-	if ($needform) {
+	if ($needform) {	    
 	    print $cgi->submit( { type => "submit", value => "Update values" } );
 	    print $cgi->end_form();
 	}
