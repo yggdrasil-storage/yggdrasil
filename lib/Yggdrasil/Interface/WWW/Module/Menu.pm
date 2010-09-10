@@ -36,6 +36,16 @@ sub display {
  <a href="?mode=logout" class="menulink" id="logoutlink">Logout</a> 
 </div>
 EOT
+    
+    my $cgi = $self->{www}->{cgi};
+    print $cgi->div( { id => 'search' },
+		     $cgi->start_form( { id => 'searchform' }, -method => "POST", -action => 'index.cgi' ),
+		     $cgi->input( { type => "text",   name  => "search", id => 'searchfield' } ),
+		     $cgi->popup_menu( -name=> 'searchtarget',
+				       -values=>[ 'Structure','Structure and Data','Data only']),
+		     $cgi->submit( { type => "submit", value => "Search"} ),
+		     $cgi->end_form(),
+		   );
 }
 
 1;

@@ -21,15 +21,14 @@ my $mode = $www->param( 'mode' );
 
 my $version = Yggdrasil->version();
 
-my $yhost = 'db.math.uio.no';
+my $yhost = '127.0.0.1';
 $y->connect( user     => "yggdrasil", 
-	     password => "beY6KAAVNbhPa6SP",
+	     password => "KhcneJLuQ8GWqqKj",
 
 	     host   => $yhost,
 	     db     => "yggdrasil",
 	     engine => "mysql",
 	   );
-
 
 my $u = $y->login( username => $user, password => $pass, session => $sess );
 unless( $u ) {
@@ -65,6 +64,9 @@ my $instance = Yggdrasil::Interface::WWW::Module::Instance->new(
 
 $www->start( title => "Yggweb / " . $u->id() );
 $menu->display();
+
+print "<hr style='clear: both' />\n<div class='content'>\n";
+
 $search->display();
 $entity->display();
 $instance->display();
@@ -72,6 +74,11 @@ $instance->display();
 if ($mode eq 'about') {
     my $about = Yggdrasil::Interface::WWW::Module::About->new( www => $www );
     $about->display();
+} elsif ($mode eq 'user') {
+    my $uinfo = Yggdrasil::Interface::WWW::Module::User->new( www => $www );
+    $uinfo->display();
 }
+
+print "</div>\n";
 
 $www->end();

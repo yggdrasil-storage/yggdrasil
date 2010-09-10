@@ -72,7 +72,9 @@ div.createinstance  {
   padding-top: 0.5em;
 }
 
-p.about { 
-  padding-left: 20%;
-  padding-right: 20%;
+div.content { 
+              max-width: 750px;
+              margin-left: auto;
+              margin-right: auto;
+
 }

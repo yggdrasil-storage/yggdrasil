@@ -27,17 +27,6 @@ sub display {
     
     my $cgi = $self->{www}->{cgi};
 
-    print $cgi->div( { id => 'search' },
-		     $cgi->start_form( { id => 'searchform' }, -method => "POST", -action => 'index.cgi' ),
-		     $cgi->input( { type => "text",   name  => "search", id => 'searchfield' } ),
-		     $cgi->popup_menu( -name=> 'searchtarget',
-				       -values=>[ 'Structure','Structure and Data','Data only']),
-		     $cgi->submit( { type => "submit", value => "Search"} ),
-		     $cgi->end_form(),
-		   );
-
-    print $cgi->hr( { id => 'searchend' } );
-
     # Idea; if we get one exact hit, return the loosly matching stuff
     # as a list ala the menu, but give the single exact match a proper
     # showing.  If we get multiple exact matches (instance and entity
