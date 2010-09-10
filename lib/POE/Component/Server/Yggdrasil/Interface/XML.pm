@@ -211,8 +211,8 @@ sub _user_or_role_xml {
 		      stop => $stop,
 		      starttime => $starttime,
 		      stoptime => $stoptime,
-		      realstart => $obj->realstart(),
-		      realstop => $obj->realstop(),
+		      realstart => $obj->start(),
+		      realstop => $obj->stop(),
 		     };
 }
 
