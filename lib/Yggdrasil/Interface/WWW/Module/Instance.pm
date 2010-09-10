@@ -53,7 +53,6 @@ sub display {
     print $cgi->h1( $cgi->a( { href => "?entity=$ename" }, $ename ) . ' // ' . $iname, $expire_code );
 
     my @props = $entity->properties();
-
     my (@proplist, $needform);
     # We need a has_value, loading a multi-MB PDF into memory to see
     # if the value is set is...  Not good.
@@ -79,11 +78,17 @@ sub display {
 				);	
     }
 
-    print $cgi->start_form( -method => "POST", -action => 'index.cgi' ) if $needform;
-    print $cgi->table( @proplist );
-    print $cgi->submit( { type => "submit", value => "Update values" } );
-    print $cgi->end_form() if $needform;
-    
+    if (@proplist) {
+	print $cgi->start_form( -method => "POST", -action => 'index.cgi' ) if $needform;
+	print $cgi->table( @proplist );
+	
+	if ($needform) {
+	    print $cgi->submit( { type => "submit", value => "Update values" } );
+	    print $cgi->end_form();
+	}
+    } else {
+	print $cgi->p( "No properties for this entity so the instance is empty." );
+    }
     print $self->tick_info( $instance );
 }
 
