@@ -93,3 +93,9 @@ div.error {
   color: red;
   font-size: 1.5em;
 }
+
+div.tickinfo { 
+               font-style: italic;
+               text-align: center;
+               padding-top: 0.5em;
+}
