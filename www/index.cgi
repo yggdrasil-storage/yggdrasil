@@ -10,6 +10,7 @@ use Yggdrasil;
 use Yggdrasil::User;
 use Yggdrasil::Role;
 use Yggdrasil::Interface::WWW;
+use Yggdrasil::Common::Config;
 
 my $y   = Yggdrasil->new();
 my $www = Yggdrasil::Interface::WWW->new( yggdrasil => $y );
@@ -17,28 +18,41 @@ my $www = Yggdrasil::Interface::WWW->new( yggdrasil => $y );
 my $user = $www->param('user');
 my $pass = $www->param('pass');
 my $sess = $www->cookie('sessionID');
-my $mode = $www->param( 'mode' );
+my $mode = $www->param( 'mode' ) || '';
 
 my $version = Yggdrasil->version();
 
-my $yhost = '127.0.0.1';
-$y->connect( user     => "yggdrasil", 
-	     password => "KhcneJLuQ8GWqqKj",
+my $c = Yggdrasil::Common::Config->new();
+my $config = $c->get( 'web' );
+die "Unable to load the web configuration" unless $config;
+
+my $yhost  = $config->get( 'enginehost' );
+
+$y->connect( user     => $config->get( 'engineuser' ),
+	     password => $config->get( 'enginepassword' ),
 
 	     host   => $yhost,
-	     db     => "yggdrasil",
-	     engine => "mysql",
+	     db     => $config->get( 'enginedb' ),
+	     engine => $config->get( 'enginetype' ),
 	   );
 
 my $u = $y->login( username => $user, password => $pass, session => $sess );
-unless( $u ) {
+$u = $y->get_user( $u );
+
+if ($mode eq 'logout') {
+    $u->session( '' );
+    print $www->{cgi}->redirect( $www->{cgi}->url() );
+    exit;
+}
+
+unless ($u) {
     $www->present_login( title => "Login", info => "(version $version / yggdrasil\@$yhost)" );
     exit;
 }
 
-$u = $y->get_user( $u );
 $www->{userobj} = $u;
 $www->set_session( $u->session() );
+
 
 # Menu module.  Presents Ygg as a dynamic tree.  Defaults to
 # horizontal view.
