@@ -79,7 +79,7 @@ my $instance = Yggdrasil::Interface::WWW::Module::Instance->new(
 $www->start( title => "Yggweb / " . $u->id() );
 $menu->display();
 
-print "<hr style='clear: both' />\n<div class='content'>\n";
+print "<div id='content'>\n";
 
 $search->display();
 $entity->display();
@@ -93,6 +93,7 @@ if ($mode eq 'about') {
     $uinfo->display();
 }
 
+# Close "container", then "content".
 print "</div>\n";
 
 $www->end();

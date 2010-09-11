@@ -28,24 +28,25 @@ sub display {
     
     # Main headers.
     print <<EOT;
-<div id="menu">
- <a href="?mode=entities" class="menulink" id="entitylink">Structure</a> |
- <a href="?mode=user" class="menulink" id="usernamelink">$username</a> |
- <a href="?mode=help" class="menulink" id="helplink">Help</a> |
- <a href="?mode=about" class="menulink" id="aboutlink">About</a> |
- <a href="?mode=logout" class="menulink" id="logoutlink">Logout</a> 
-</div>
+    <div id="utility">
+        <ul>
+            <li><a href="?mode=entities">Structure</a></li>
+            <li><a href="?mode=about">About</a></li>
+            <li><a href="?mode=user">User</a></li>
+            <li><a href="?mode=help">Help</a></li>
+            <li><a href="?mode=logout">Log out</a></li>
+            <li>
+	      <form action="index.cgi" method="post">
+		<input type="text" name="search" autocorrect="off"
+		       placeholder="search" autocapitalize="off" id="searchbox">
+<!--		<input type="image" src="images/chevron_circle.png"
+		height="26" width="35" id="submitbutton" > -->
+	      </form>
+	    </li>
+        </ul>
+    </div>
+   </div> <!-- closes the header div -->
 EOT
-    
-    my $cgi = $self->{www}->{cgi};
-    print $cgi->div( { id => 'search' },
-		     '<form method="post" action="index.cgi" enctype="multipart/form-data" id="searchform">' . "\n",
-		     $cgi->input( { type => "text",   name  => "search", id => 'searchfield' } ),
-		     $cgi->popup_menu( -name=> 'searchtarget',
-				       -values=>[ 'Structure','Structure and Data','Data only']),
-		     $cgi->submit( { type => "submit", value => "Search"} ),
-		     "</form>\n",
-		   );
 }
 
 1;

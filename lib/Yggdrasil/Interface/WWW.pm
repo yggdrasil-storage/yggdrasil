@@ -13,18 +13,17 @@ sub new {
 		elements => [],
 		headers  => {},
 		cgi      => CGI::Pretty->new(),
-		script   => [ 
-			     {
-			      language => 'javascript',
-			      src      => 'yggdrasil.js',
-			     },
-			     {
-			      language => 'javascript',
-			      src      => 'http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js',
-			     }
-			    ],
-		style    => [ { src => 'yggdrasil.css', }, ],
-		defaultmods => [ qw/Search Entities Instances / ],
+# 		script   => [ 
+# 			     {
+# 			      language => 'javascript',
+# 			      src      => 'yggdrasil.js',
+# 			     },
+# 			     {
+# 			      language => 'javascript',
+# 			      src      => 'http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js',
+# 			     }
+# 			    ],
+# 		style    => [ { src => 'yggdrasil.css', }, ],
     };
 
     for my $key (keys %params) {
@@ -32,10 +31,6 @@ sub new {
     }
 
     my $status = $self->{yggdrasil}->get_status();
-    
-    if ($ENV{HTTP_USER_AGENT} && $ENV{HTTP_USER_AGENT} =~ /iphone/i) {
-	$self->{style} = [ { src => 'iPhone.css', }, ]
-    }
 
     my $file = join('.', join('/', split '::', __PACKAGE__), "pm" );
     my $path = $INC{$file};
@@ -105,17 +100,41 @@ sub start {
     my $sheet  = $param{style}  || $self->{style};
     my $script = $param{script} || $self->{script};
     my $cgi    = $self->{cgi};
-    
+
     print $cgi->header( %{ $self->{headers} } );
-    print $cgi->start_html( -title  => $title,
-			    -style  => $sheet,
-			    -script => $script,
-			  );
+    print <<"EOT";
+<html>
+  <script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.min.js"></script>
+  <script type="text/javascript" src="iphone.js"></script>
+  <script type="text/javascript" src="yggdrasil.js"></script>
+
+  <link rel="stylesheet" type="text/css" 
+	href="iphone.css" media="only screen and (max-width: 480px)" />
+  <link rel="stylesheet" type="text/css" 
+	href="desktop.css" media="screen and (min-width: 481px)" />            
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+  <link rel="apple-touch-icon" href="phone.png" />
+  <meta name="viewport" content="user-scalable=no, width=device-width" />
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" href="desktop.css" media="all" />
+<![endif]-->
+
+  <title>$title</title>
+</head>
+<body>
+<div id="container">
+  <div id="header">
+    <h1><a href="./">Yggdrasil</a></h1>
+EOT
 }
 
 sub end {
     my $self = shift;
     my $cgi  = $self->{cgi};
+    print "</div>\n";
     print $cgi->end_html();
 }
 
@@ -130,11 +149,34 @@ sub present_login {
     my $cgi = $self->{cgi};
 
     print $cgi->header();
-    print $cgi->start_html( -title  => $title,
-			    -style  => $sheet,
-			    -script => $script,
-			  );
-    
+
+    print <<"EOT";
+<html>
+  <link rel="stylesheet" type="text/css" 
+	href="iphone.css" media="screen and (max-width: 480px)" />
+  <link rel="stylesheet" type="text/css" 
+	href="desktop.css" media="screen and (min-width: 481px)" />            
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="iphone.js"></script>
+  <script type="text/javascript" src="yggdrasil.js"></script>
+
+  <link rel="apple-touch-icon" href="phone.png" />
+  <meta name="viewport" content="user-scalable=no, width=device-width" />
+<!--[if IE]>
+<link rel="stylesheet" type="text/css" href="desktop.css" media="all" />
+<![endif]-->
+
+  <title>$title</title>
+</head>
+<body>
+<div id="container">
+<h1 class="login">Login to Yggdrasil</h1>
+EOT
+
     print $cgi->start_form( -method => "POST" );
     print $cgi->table( {class=>"login"}, 
 		       $cgi->TR( $cgi->td("username"), $cgi->td( $cgi->input( {type=>"text", name=>"user"} ) ) ),
