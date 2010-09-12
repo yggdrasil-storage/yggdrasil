@@ -215,3 +215,7 @@ img#closer {
              top: 2px;
              left: 2px;
 }
+
+span.expiretext { 
+                  font-size: 0.5em;
+}

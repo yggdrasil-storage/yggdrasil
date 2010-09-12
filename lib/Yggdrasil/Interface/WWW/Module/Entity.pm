@@ -43,16 +43,15 @@ sub display {
 
     my ($expire_code, $instanciate_code) = ('', '');
     if ($can_expire || 1) {
-	$expire_code = $self->expire( "entity=" . $entity->id() );
+	$expire_code = $self->expire( "entity=" . $entity->id(), ' ' );
     }
 
     if ($can_instanciate) {
 	$instanciate_code  = '<form method="post" action="index.cgi" enctype="multipart/form-data" id="eiform">';
-	$instanciate_code .= 'Create new instance ';
 	$instanciate_code .= $cgi->hidden( { name => 'entity', value => $self->{entity} } );
 	$instanciate_code .= $cgi->hidden( { name => 'create', value => 1 } );
-	$instanciate_code .= $cgi->input( { type => "text", name  => "instance", class => 'iform' } );
-	$instanciate_code .= $cgi->submit( { type => "submit", value => "OK", name => 'isubmit', class => 'iform' }, 'Create Instance' );
+	$instanciate_code .= $cgi->input( { type => "text", name  => "instance", autocorrection => 'off',
+					    class => 'iform', autocapitalize => 'off', placeholder => 'new instance' } );
 	$instanciate_code .= $cgi->end_form();
     }
     
@@ -99,7 +98,8 @@ sub display {
 	my @types = map { ucfirst lc $_ } $ygg->property_types();
 	push @propdisplay,
 	  $cgi->TR(
-		   $cgi->td( $cgi->input( { type => "text", name => "property" } ) ),
+		   $cgi->td( $cgi->input( { type => "text", name => "property",  autocorrection => 'off',
+					    autocapitalize => 'off', placeholder => 'name of new property' } ) ),
 		   $cgi->td( $cgi->popup_menu( -name=> 'type', -values=> \@types )),
 		   $cgi->td( $cgi->popup_menu( -name=> 'null', -values=> [ qw/Yes No/ ] )),
 		   $cgi->td( $cgi->submit( { type => "submit", value => "Create" }, 'Create' ) ),

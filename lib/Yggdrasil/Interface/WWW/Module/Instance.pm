@@ -48,7 +48,7 @@ sub display {
 
     my $expire_code;
     if ($can_expire || 1) {
-	$expire_code = $self->expire( "entity=$ename;instance=$iname" );
+	$expire_code = $self->expire( "entity=$ename;instance=$iname", ' ' );
     }
 
     print $cgi->h1( $cgi->a( { href => "?entity=$ename" }, $ename ) . ' // ' . $iname, $expire_code );
