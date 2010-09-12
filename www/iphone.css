@@ -62,6 +62,7 @@ ul li a {
     padding: 12px 10px;
     text-decoration: none;
 }
+
 ul li:first-child a {
     -webkit-border-top-left-radius: 8px;
     -webkit-border-top-right-radius: 8px;
@@ -138,6 +139,29 @@ ul li a:active,ul li a:hover {
     -webkit-border-image: url(images/button_clicked.png) 0 8 0 14;
 }
 
+#header div.rightButton {
+    font-weight: bold;
+    text-align: center;
+    line-height: 28px;
+    color: white;
+    text-shadow: rgba(0,0,0,0.6) 0px -1px 0px;
+    position: absolute;
+    top: 7px;
+    left: 260px;
+    max-width: 50px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-width: 0 8px 0 14px;
+    -webkit-border-image: url(images/button.png) 0 8 0 14;
+}
+
+#header div.rightButton.clicked {
+    -webkit-border-image: url(images/button_clicked.png) 0 8 0 14;
+}
+
+
+
 input { 
     -webkit-text-size-adjust: 150%;
     vertical-align: bottom;    
@@ -161,4 +185,81 @@ table.login td { border: 0; }
 
 h1.login { 
            text-align: center;
+}
+
+#entities ul, #entitydetails ul {
+    list-style: none;
+    margin: 10px;
+    padding: 0;
+}
+
+#entities ul li, #entitydetails ul li {
+    background-color: #FFF;
+    border: 1px solid #999;
+    color: #222;
+    display: block;
+    font-size: 17px;
+    font-weight: bold;
+    margin-bottom: -1px;
+    padding: 12px 10px;
+    text-decoration: none;
+}
+
+ul li:first-child a {
+    -webkit-border-top-left-radius: 8px;
+    -webkit-border-top-right-radius: 8px;
+}
+ul li:last-child a {
+    -webkit-border-bottom-left-radius: 8px;
+    -webkit-border-bottom-right-radius: 8px;
+}
+
+ul li:first-child {
+    -webkit-border-top-left-radius: 8px;
+    -webkit-border-top-right-radius: 8px;
+}
+ul li:last-child {
+    -webkit-border-bottom-left-radius: 8px;
+    -webkit-border-bottom-right-radius: 8px;
+}
+
+ul li a:active,ul li a:hover, #entities ul li:hover {
+    background-color:blue;
+    color:white;
+}
+
+
+div#entities {
+               position: absolute;
+               top: 46px;
+               left: 0px;
+               display: block;
+               padding: 0;
+               background: #ccc;
+               display: none;
+               width: 320px;
+               z-index: 19;
+}
+
+div#entitydetails {
+               position: absolute;
+               top: 46px;
+               left: 0px;
+               display: block;
+               padding: 0;
+               background: #ccc;
+               width: 320px;
+               z-index: 20;
+}
+
+img#closer { 
+             display: none;
+}
+
+#entities h3, #entitydetails h4 { 
+               display:none;
+}
+
+span.expiretext { 
+                  font-size: 0.5em;
 }

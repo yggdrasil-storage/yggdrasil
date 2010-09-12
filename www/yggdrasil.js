@@ -104,9 +104,16 @@ function processEntity( e, data ) {
     $('#entitydetails').remove();
     $('#container').append('<div id="entitydetails"></div>' );
 
-    $('#entitydetails').css( 'position', 'absolute' );
-    $('#entitydetails').css( 'top', '50px' );
-    $('#entitydetails').css( 'left', ewidth + 50 );
+    var agent     = navigator.userAgent.toLowerCase();
+    var is_iphone = ((agent.indexOf('iphone') != -1));
+
+    if (! is_iphone ) {
+	$('#entitydetails').css( 'position', 'absolute' );
+	$('#entitydetails').css( 'top', '50px' );
+	$('#entitydetails').css( 'left', ewidth + 50 );
+    } else {
+	$('#entities').remove();
+    }
 
     $('#entitydetails').show( 100 );
 
