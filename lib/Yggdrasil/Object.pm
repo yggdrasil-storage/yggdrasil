@@ -115,7 +115,11 @@ sub _validate_temporal {
 	return;
     }
 
-    if( $stop || $start != $self->start() ) {
+    # If we're calling _validate_temporal on an object that has just
+    # been created via Object::new (SUPER::new() in the code), and we
+    # haven't passed any time params, there is no start, no stop and
+    # it's all current.
+    if( $stop || ( $start && $start != $self->start() )) {
 	return { start => $start, stop => $stop };
     }
 
