@@ -36,8 +36,8 @@ body {
 }
 
 #header ul { 
-    padding-top: 8px;
-    padding-bottom: 8px;
+    padding-top: 9px;
+    padding-bottom: 10px;
     text-align: right;
 }
 
@@ -147,4 +147,71 @@ table.login td { border: 0; }
 
 h1.login { 
            text-align: center;
+}
+
+#entities h3 { 
+               font-size: 1.2em;
+               padding: 0;
+               padding-left: 5px;
+               margin: 0;
+               border-bottom: 1px solid black;
+}
+
+#entitydetails h4 { 
+               font-size: 1.2em;
+               padding: 0;
+               margin: 0;
+               border-bottom: 1px solid black;
+}
+
+
+#entities ul, #entitydetails ul { 
+              padding: 0;
+              margin: 0;
+              list-style: none;
+}
+
+#entities ul li, #entitydetails ul li { 
+                  padding-top: 4px;
+                  padding-bottom: 4px;
+                  }                  
+
+#entities ul li + li, #entitydetails ul li + li { 
+                  border-top: 1px dotted black;
+}
+
+#entities ul li:hover, #entitydetails ul li:hover { 
+                  background: #999;
+}
+
+
+div#entities {
+               border: 1px solid black;
+               position: absolute;
+               top: 50px;
+               left: 9px;
+               display: block;
+               padding-top: 0.5em;
+               padding-bottom: 0.5em;
+               padding-right: 1em;
+               padding-left: 1em;
+               background: #ccc;
+               display: none;
+}
+
+div#entitydetails {
+               border: 1px solid black;
+               display: block;
+               background: #ccc;
+               display: none;
+               padding-top: 0.5em;
+               padding-bottom: 0.5em;
+               padding-right: 1em;
+               padding-left: 1em;
+}
+
+img#closer { 
+             position: absolute;
+             top: 2px;
+             left: 2px;
 }
