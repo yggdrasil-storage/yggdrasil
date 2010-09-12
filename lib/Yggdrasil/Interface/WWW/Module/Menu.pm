@@ -30,7 +30,6 @@ sub display {
     print <<EOT;
     <div id="utility">
         <ul>
-            <li><a href="?mode=entities">Structure</a></li>
             <li><a href="?mode=about">About</a></li>
             <li><a href="?mode=user">User</a></li>
             <li><a href="?mode=help">Help</a></li>
@@ -39,8 +38,6 @@ sub display {
 	      <form action="index.cgi" method="post">
 		<input type="text" name="search" autocorrect="off"
 		       placeholder="search" autocapitalize="off" id="searchbox">
-<!--		<input type="image" src="images/chevron_circle.png"
-		height="26" width="35" id="submitbutton" > -->
 	      </form>
 	    </li>
         </ul>

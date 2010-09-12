@@ -127,7 +127,7 @@ sub start {
 <body>
 <div id="container">
   <div id="header">
-    <h1><a href="./">Yggdrasil</a></h1>
+    <h1><a href="?mode=entities" id="structure" onMouseOver="showStructure()">Yggdrasil</a></h1>
 EOT
 }
 
