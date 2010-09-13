@@ -82,8 +82,8 @@ function process( q, d ) {
 // 		wipeRight: function() { alert( this.innerHTML ) },
 // 		    });
 
-	$('#entities ul li').click( 500, doentity );
-	$('#entities ul li').click( gotoEntity );
+	$('#entities ul li').longclick( 500, gotoEntity );
+	$('#entities ul li').click( doentity );
     } else {
 	$('#entities ul li').click( doentity );
 	$('#entities ul li').dblclick( gotoEntity );
