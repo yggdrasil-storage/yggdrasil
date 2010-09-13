@@ -1,3 +1,6 @@
+var agent     = navigator.userAgent.toLowerCase();
+var is_iphone = ((agent.indexOf('iphone') != -1));
+
 function flipper(one, two) {
     var id_one = "#" + one;
     var id_two = "#" + two;
@@ -73,13 +76,23 @@ function process( q, d ) {
 	}
 	$('#entities').append( list );
     }
-    $('#entities ul li').click( doentity );
-    $('#entities ul li').dblclick( gotoEntity );
+
+    if ( is_iphone ) {	
+// 	$('#entities ul li').touchwipe({
+// 		wipeRight: function() { alert( this.innerHTML ) },
+// 		    });
+
+	$('#entities ul li').click( 500, doentity );
+	$('#entities ul li').click( gotoEntity );
+    } else {
+	$('#entities ul li').click( doentity );
+	$('#entities ul li').dblclick( gotoEntity );
+    }
 }
 
 function gotoEntity() {
     var entity = this.innerHTML;
-    
+
     window.location = '?entity=' + entity;
 }
 
@@ -103,9 +116,6 @@ function processEntity( e, data ) {
 
     $('#entitydetails').remove();
     $('#container').append('<div id="entitydetails"></div>' );
-
-    var agent     = navigator.userAgent.toLowerCase();
-    var is_iphone = ((agent.indexOf('iphone') != -1));
 
     if (! is_iphone ) {
 	$('#entitydetails').css( 'position', 'absolute' );
