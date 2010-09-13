@@ -105,6 +105,8 @@ sub start {
     print <<"EOT";
 <html>
   <script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.min.js"></script>
+  <script type="text/javascript" src="jquery.touchwipe.min.js"></script>
+  <script type="text/javascript" src="jquery.longclick-min.js"></script>
   <script type="text/javascript" src="iphone.js"></script>
   <script type="text/javascript" src="yggdrasil.js"></script>
 
@@ -160,7 +162,6 @@ sub present_login {
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 
-  <script type="text/javascript" src="jquery.js"></script>
   <script type="text/javascript" src="iphone.js"></script>
   <script type="text/javascript" src="yggdrasil.js"></script>
 
