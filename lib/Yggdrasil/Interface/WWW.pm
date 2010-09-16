@@ -119,7 +119,7 @@ sub start {
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 
   <link rel="apple-touch-icon" href="phone.png" />
-  <meta name="viewport" content="user-scalable=no, width=device-width" />
+  <meta name="viewport" content="user-scalable=yes, width=device-width" />
 <!--[if IE]>
 <link rel="stylesheet" type="text/css" href="desktop.css" media="all" />
 <![endif]-->
@@ -180,8 +180,16 @@ EOT
 
     print $cgi->start_form( -method => "POST" );
     print $cgi->table( {class=>"login"}, 
-		       $cgi->TR( $cgi->td("username"), $cgi->td( $cgi->input( {type=>"text", name=>"user"} ) ) ),
-		       $cgi->TR( $cgi->td("password"), $cgi->td( $cgi->input( {type=>"password", name=>"pass"} ) ) ),
+		       $cgi->TR( $cgi->td("username"), $cgi->td( $cgi->input( { type => "text",
+									        name => "user",
+										autocorrection => 'off',
+									        autocapitalize => 'off',
+										placeholder => 'username' } ) ) ),
+		       $cgi->TR( $cgi->td("password"), $cgi->td( $cgi->input( { type => "password",
+									        name => "pass",
+										autocorrection => 'off',
+									        autocapitalize => 'off',
+										placeholder => 'password' } ) ) ),		       
 		       $cgi->TR( $cgi->td( {colspan=>2}, $cgi->input( {type=>"submit",value=>"Login"} ) ) ) );
     print $cgi->hidden( { name=>"mode", value=>"about" } );
     print $cgi->end_form();

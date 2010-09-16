@@ -99,7 +99,7 @@ sub display {
 	push @propdisplay,
 	  $cgi->TR(
 		   $cgi->td( $cgi->input( { type => "text", name => "property",  autocorrection => 'off',
-					    autocapitalize => 'off', placeholder => 'name of new property' } ) ),
+					    autocapitalize => 'off', placeholder => 'property' } ) ),
 		   $cgi->td( $cgi->popup_menu( -name=> 'type', -values=> \@types )),
 		   $cgi->td( $cgi->popup_menu( -name=> 'null', -values=> [ qw/Yes No/ ] )),
 		   $cgi->td( $cgi->submit( { type => "submit", value => "Create" }, 'Create' ) ),
