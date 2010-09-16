@@ -248,3 +248,7 @@ img#closer {
 span.expiretext { 
                   font-size: 0.5em;
 }
+
+#container { 
+  height: 100%;
+}
