@@ -1,5 +1,5 @@
 var agent     = navigator.userAgent.toLowerCase();
-var is_iphone = ((agent.indexOf('iphone') != -1));
+var is_iphone = ((agent.indexOf('iphone') != -1) || (agent.indexOf('android') != -1) );
 
 function flipper(one, two) {
     var id_one = "#" + one;
