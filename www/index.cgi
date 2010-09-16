@@ -54,6 +54,13 @@ $www->{userobj} = $u;
 $www->set_session( $u->session() );
 
 
+# The binary module must be able to set its own headers and stuff.
+if ($mode eq 'binary') {
+    my $bin = Yggdrasil::Interface::WWW::Module::Binary->new( www => $www );
+    $bin->display();
+    exit;
+}
+
 # Menu module.  Presents Ygg as a dynamic tree.  Defaults to
 # horizontal view.
 my $menu = Yggdrasil::Interface::WWW::Module::Menu->new(

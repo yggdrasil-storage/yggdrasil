@@ -63,6 +63,15 @@ sub display {
 	# FIXME, setting undef?  Blargh.  Need a checkbox for that.  :-(
 	my $new_value = $self->{www}->param( $prop->id() );
 	if ($new_value && $new_value ne $value) {
+	    if (lc $prop->type() eq 'binary') {
+		my $fh = $cgi->upload( $prop->id() );
+		my $data;
+		while (<$fh>) {
+		    $data .= $_;
+		}
+		$new_value = $data;
+	    } 
+	    
 	    $instance->property( $prop, $new_value );
 	    $value = $new_value if $ygg->get_status->OK();
 	}
@@ -72,7 +81,7 @@ sub display {
 	
 	if (lc $prop->type() eq 'binary') {
 	    $value = $cgi->a( { href => "?mode=binary;entity=$ename;instance=$iname;property=" . $prop->id() }, 'view' ) if $value;
-	    $value .= $cgi->input( { type => "file", name  => $prop->id() } );
+	    $value .= $cgi->filefield( { name  => $prop->id() } );
 	} else {
 	    $value = $cgi->input( { type => "text", name => $prop->id(), value => $value } ) if $can_write;
 	}
