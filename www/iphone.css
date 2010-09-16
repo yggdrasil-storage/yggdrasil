@@ -187,13 +187,13 @@ h1.login {
            text-align: center;
 }
 
-#entities ul, #entitydetails ul {
+#entitydetails ul {
     list-style: none;
     margin: 10px;
     padding: 0;
 }
 
-#entities ul li, #entitydetails ul li {
+#entitydetails ul li {
     background-color: #FFF;
     border: 1px solid #999;
     color: #222;
@@ -223,7 +223,7 @@ ul li:last-child {
     -webkit-border-bottom-right-radius: 8px;
 }
 
-ul li a:active,ul li a:hover, #entities ul li:hover {
+ul li a:hover, #entities ul li:hover {
     background-color:blue;
     color:white;
 }
@@ -262,4 +262,10 @@ img#closer {
 
 span.expiretext { 
                   font-size: 0.5em;
+}
+
+.goright { 
+           position: absolute;
+           left: 277px;
+           margin-top: -37px;
 }

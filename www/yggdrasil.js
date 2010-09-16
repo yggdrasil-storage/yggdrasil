@@ -69,21 +69,32 @@ function process( q, d ) {
 	list.className = 'entitylist';
 	for (var i=0; i<input.length; i++) {
 	    var newPara = document.createElement( 'li' );
-	    var newParaText = document.createTextNode( input[i] );
-	    newPara.setAttribute( 'title', "Click to expand, double click to display" );
-	    newPara.appendChild( newParaText );
+
+	    if (is_iphone) {
+		var slink = document.createElement( 'a' );
+		slink.setAttribute( 'href', '?entity=' + input[i] );
+		var slinktext = document.createTextNode( input[i] );
+		slink.appendChild( slinktext );
+		newPara.appendChild( slink );
+		
+		var rightArrow = document.createElement( 'img' );
+		rightArrow.setAttribute( 'src', 'images/chevron_circle.png' );
+		rightArrow.setAttribute( 'class', 'goright' );
+		newPara.appendChild( rightArrow );
+	    } else {
+		newParaText = document.createTextNode( input[i] );
+		newPara.appendChild( newParaText );
+		newPara.setAttribute( 'title', "Click to expand, double click to display" );
+	    }
+	    
 	    list.appendChild( newPara );
 	}
 	$('#entities').append( list );
     }
 
     if ( is_iphone ) {	
-// 	$('#entities ul li').touchwipe({
-// 		wipeRight: function() { alert( this.innerHTML ) },
-// 		    });
-
-	$('#entities ul li').longclick( 500, gotoEntity );
-	$('#entities ul li').click( doentity );
+	//	$('#entities ul li a').click( gotoEntity );
+	$('#entities ul li img').click( doentity );
     } else {
 	$('#entities ul li').click( doentity );
 	$('#entities ul li').dblclick( gotoEntity );
@@ -91,14 +102,26 @@ function process( q, d ) {
 }
 
 function gotoEntity() {
-    var entity = this.innerHTML;
+    var entity;
+
+    if ( is_iphone ) {
+	entity = this.parentElement.firstChild.data;
+    } else {
+	entity = this.firstChild.data;
+    }
 
     window.location = '?entity=' + entity;
 }
 
 function doentity() {
-    var entity = this.innerHTML;
+    var entity;
 
+    if ( is_iphone ) {
+	entity = this.parentElement.firstChild.innerHTML;
+    } else {
+	entity = this.firstChild.data;
+    }
+    
     var entitycb = function(data) {
 	processEntity( entity, data );	
     }
