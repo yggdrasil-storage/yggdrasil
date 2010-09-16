@@ -141,8 +141,6 @@ function processEntity( e, data ) {
     $('#container').append('<div id="entitydetails"></div>' );
 
     if (! is_iphone ) {
-	$('#entitydetails').css( 'position', 'absolute' );
-	$('#entitydetails').css( 'top', '50px' );
 	$('#entitydetails').css( 'left', ewidth + 50 );
     } else {
 	$('#entities').remove();

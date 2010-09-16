@@ -36,8 +36,8 @@ body {
 }
 
 #header ul { 
-    padding-top: 9px;
-    padding-bottom: 10px;
+    padding-top: 11px;
+    padding-bottom: 11px;
     text-align: right;
 }
 
@@ -150,70 +150,99 @@ h1.login {
 }
 
 #entities h3 { 
-               font-size: 1.2em;
-               padding: 0;
-               padding-left: 5px;
-               margin: 0;
-               border-bottom: 1px solid black;
+  text-align: center;
+  font-size: 1.2em;
+  padding: 0;
+  margin: 0;
 }
 
 #entitydetails h4 { 
-               font-size: 1.2em;
-               padding: 0;
-               margin: 0;
-               border-bottom: 1px solid black;
+  text-align: center;
+  font-size: 1.2em;
+  padding: 0;
+  margin: 0;
 }
 
 
 #entities ul, #entitydetails ul { 
-              padding: 0;
-              margin: 0;
-              list-style: none;
+  padding: 0;
+  margin: 0;
+  list-style: none;    
 }
 
+#entities ul li:before, #entitydetails ul li:before { 
+  content: '- ';
+}
+
+
 #entities ul li, #entitydetails ul li { 
-                  padding-top: 4px;
-                  padding-bottom: 4px;
-                  }                  
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 1em;
+  padding-right: 1em;
+  background: #fff;
+  border-left: 1px solid black;
+  
+}                  
+
+/* #entities ul li:first-child, #entitydetails ul li:first-child { */
+/*   -moz-border-radius-topright: 8px; */
+/*   -moz-border-radius-topleft: 8px; */
+/*   border-top-left-radius: 8px; */
+/*   border-top-right-radius: 8px; */
+/* } */
+
+/* #entities ul li:last-child, #entitydetails ul li:last-child { */
+/*   -moz-border-radius-bottomright: 8px; */
+/*   -moz-border-radius-bottomleft: 8px; */
+/*   border-bottom-left-radius: 8px; */
+/*   border-bottom-right-radius: 8px; */
+
+/* } */
+
 
 #entities ul li + li, #entitydetails ul li + li { 
-                  border-top: 1px dotted black;
+  border-top: 0;
 }
 
 #entities ul li:hover, #entitydetails ul li:hover { 
-                  background: #999;
+  background: #33c;
+  color: white;
 }
 
 
 div#entities {
-               border: 1px solid black;
+  border: 1px dotted black;
                position: absolute;
-               top: 50px;
+               top: 54px;
                left: 9px;
                display: block;
                padding-top: 0.5em;
-               padding-bottom: 0.5em;
+               padding-bottom: 1em;
                padding-right: 1em;
                padding-left: 1em;
-               background: #ccc;
+               background: #eee;
                display: none;
 }
 
 div#entitydetails {
-               border: 1px solid black;
+               position: absolute;
+               top: 54px;
                display: block;
-               background: #ccc;
+               background: #eee;
                display: none;
                padding-top: 0.5em;
-               padding-bottom: 0.5em;
+               padding-bottom: 1em;
                padding-right: 1em;
                padding-left: 1em;
+  border: 1px dotted black;
 }
 
 img#closer { 
-             position: absolute;
-             top: 2px;
-             left: 2px;
+/*   position: absolute; */
+/*   top: 2px; */
+/*   left: 2px; */
+  display: none;
 }
 
 span.expiretext { 
