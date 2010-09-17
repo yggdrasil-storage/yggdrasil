@@ -112,7 +112,7 @@ sub _property_allows {
     
     my $schema = join(':', $eobj->_userland_id(), $propobj->_userland_id());
     return $storage->can( $call => $schema,
-			  { id => $propobj->_internal_id() });
+			  { id => $self->_internal_id() } );
 }
 
 1;
