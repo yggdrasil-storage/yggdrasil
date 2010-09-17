@@ -48,7 +48,6 @@ sub display {
     }
     
     my $data = $instance->get( $pname );
-    print STDERR length $data;
     unless ($ygg->get_status()->OK()) {
 	$self->error( $ygg->get_status()->message() );
 	return;	
@@ -61,8 +60,6 @@ sub display {
 
     my $ft = File::Type->new();
     my $type = $ft->mime_type( $data );
-
-    print STDERR $type;
 
     my $ext = $type;
     $ext =~ s|^.*/||;
