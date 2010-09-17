@@ -422,8 +422,7 @@ sub store {
 
     # Check if the entry exists
     my $real_schema = $self->_get_schema_name( $schema ) || $schema;
-    my $aref = $self->_fetch( $real_schema => { where => [ %keys ] } );
-
+    my $aref = $self->_fetch( $real_schema => { where => [ %keys ], return => '*' } );
     my $update = 0;
     if( @$aref ) {
 	# An entry exists - we have to check if the values for the
@@ -432,7 +431,7 @@ sub store {
 	my $fields = $params{fields};
 	my $equal  = 1;
 	foreach my $field ( keys %$fields ) {
-	    if( ! exists $values->{$field} || $fields->{$field} ne $values->{$field} ) { 
+	    if( ! defined $values->{$field} || $fields->{$field} ne $values->{$field} ) { 
 		# FIX: "ne"? should use a proper equality test, !=,
 		# ne, other?
 		$equal = 0;
@@ -465,6 +464,15 @@ sub store {
 		return;
 	    }
 
+	    # copy values in aref into params unless they already have been set
+	    foreach my $field ( keys %$values ) {
+		next if $field eq "start" || $field eq "stop" || $field eq "id";
+		next if defined $fields->{$field};
+		next unless defined $values->{$field};
+		
+		$fields->{$field} = $values->{$field};
+	    }
+
 	    # note for later that we should perform an update
 	    $update = 1;
 	}
@@ -491,7 +499,7 @@ sub store {
     }
 
     $transaction->log( "Store: $schema " . join( ", ", map { defined()?$_:"" } %keys ) );
-    $transaction->commit();    
+    $transaction->commit();
     my $r = $self->_store( $real_schema, tick => $tick, %params );
     my $user = $self->user();
     

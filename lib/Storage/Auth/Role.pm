@@ -188,12 +188,14 @@ sub _access :method {
 
     my $storage = $self->{_storage};
 
+    my $mapped_schema = $storage->_get_schema_name($schema) || $schema;
+
     my $storageauthschema = $storage->get_structure( 'authschema' );
 
     # 1. find authschema for schema
     my $authschema = $storage->fetch( $storageauthschema =>
 				      {
-				       where  => [ usertable => $schema ],
+				       where  => [ usertable => $mapped_schema ],
 				       return => 'authtable'
 				      } );
 
