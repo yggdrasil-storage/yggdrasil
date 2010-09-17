@@ -37,12 +37,12 @@ sub display {
 	return;
     }
 
-    my $can_write = 1; #$entity->can_write();
+    my $can_write = $entity->can_write();
     my $can_expire = $entity->can_expire();
     my $can_instanciate = $entity->can_instanciate();
 
     my ($expire_code, $instanciate_code) = ('', '');
-    if ($can_expire || 1) {
+    if ($can_expire) {
 	$expire_code = $self->expire( "entity=" . $entity->id(), ' ' );
     }
 
