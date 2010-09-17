@@ -78,11 +78,28 @@ sub get_all {
 sub instances {
     my $self = shift;
 
-    return Yggdrasil::Object::objectify(
-					$self->yggdrasil(),
-					__PACKAGE__,
-					$self->storage()->{protocol}->get_all_instances( $self->_userland_id() ),
-				       );
+    return map { $_->{visual_id} = $_->{id}; $_ }
+      Yggdrasil::Object::objectify(
+				   $self->yggdrasil(),
+				   'Yggdrasil::Remote::Instance',
+				   $self->storage()->{protocol}->get_all_instances( $self->_userland_id() ),
+				  );
+}
+
+sub relations {
+    my $self = shift;
+
+    my @objs = Yggdrasil::Object::objectify(
+					    $self->yggdrasil(),
+					    'Yggdrasil::Remote::Relation',
+					    $self->storage()->{protocol}->get_all_entity_relations( $self->_userland_id() ),
+					   );
+
+    for my $o (@objs) {
+	$o->{lval} = $self->yggdrasil()->get_entity( $o->{lval} );
+	$o->{rval} = $self->yggdrasil()->get_entity( $o->{rval} );
+    }
+    return @objs;
 }
 
 sub properties {

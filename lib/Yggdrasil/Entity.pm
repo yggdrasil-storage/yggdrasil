@@ -69,6 +69,16 @@ sub instances {
     return $entity->instances( @_ );
 }
 
+sub relations {
+    my $class = shift;
+    my %params = @_;
+    my $yggdrasil = $params{yggdrasil};
+    my $entity = $yggdrasil->get_entity( $params{entity} );
+    
+    return unless $yggdrasil->get_status()->OK();
+    return $entity->relations( @_ );
+}
+
 sub properties {
     my $class = shift;
     my %params = @_;

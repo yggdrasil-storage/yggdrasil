@@ -437,8 +437,53 @@ sub properties {
     return sort { $a->_userland_id() cmp $b->_userland_id() } @rets;
 }
 
+sub relations {
+    my $self = shift;
+    my %params = @_;
+
+    my $time = $self->_validate_temporal( $params{time} );
+    return unless $time;
+
+    my $storage = $self->{yggdrasil}->{storage};
+    my @ancestors = $self->ancestors( $time );
+    my @rets;
+    
+    my $aref = $storage->fetch(
+	    MetaEntity => {
+		where => [ entity => \@ancestors ]
+	    },
+	    MetaRelation => {
+		return => [ 'label', 'id', 'start', 'stop', 'rval', 'lval' ],
+		where  => [
+			   lval => \q<MetaEntity.id>,
+			   rval => \q<MetaEntity.id>,
+			  ],
+		bind => 'or',
+	    },
+	    $time );
+
+    for my $o (@$aref) {
+	my ($lval, $rval) = (Yggdrasil::Local::Entity->get( id => $o->{lval}, yggdrasil => $self->yggdrasil(), time => $time ),
+			     Yggdrasil::Local::Entity->get( id => $o->{rval}, yggdrasil => $self->yggdrasil(), time => $time ));
+	
+	push @rets, Yggdrasil::Local::Relation::objectify( label     => $o->{label},
+							   yggdrasil => $self->{yggdrasil},
+							   id        => $o->{id},
+							   start     => $time->{start} || $o->{start},
+							   stop      => $time->{stop} || $o->{stop},
+							   realstart => $o->{start},
+							   realstop  => $o->{stop},
+							   lval      => $lval,
+							   rval      => $rval,
+							 );
+    }
+
+    return sort { $a->_userland_id() cmp $b->_userland_id() } @rets;
+}
+
 # Word of warnings, ancestors returns *names* not objects.  However,
-# this is *probably* acceptable.
+# this is *probably* acceptable.  The source entity is included in the
+# returned array (ie, X is an ancestor of X).
 sub ancestors {
     my $self = shift;
     my $time = shift;

@@ -667,10 +667,8 @@ sub entity_info {
 
     if (@props) {
 	print "Properties\n";
-	printf "  %-13s - %-10s - %-7s\n", 'Name', 'Type', 'Null?', 'Source';
 	for my $prop (@props) {
 	    my $prop_orig_entity = $prop->entity();
-	    die unless $prop_orig_entity;
 	    my $source = $prop_orig_entity->id();
 	    my $type = $prop->type();
 	    printf "  %-13s - %-10s - %-7s%s\n",  nameify( $prop ), lc $prop->type(),
@@ -680,6 +678,20 @@ sub entity_info {
     } else {
 	printf "%-15s - NULL\n", "Properties";
     }
+
+    my @rels = $eobj->relations();
+    
+    if (@rels) {
+	print "Relations\n";
+	for my $o (@rels) {
+	    my $orig_entity = $o->entities();
+	    my ($lval, $rval) = $o->entities();
+	    printf "  %-13s - %10s<->%-10s\n", nameify( $o ), $lval->id(), $rval->id();
+	}
+    } else {
+	printf "%-15s - NULL\n", "Relations";
+    }
+    
     display_tick( $eobj );
 }
 

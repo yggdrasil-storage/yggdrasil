@@ -313,6 +313,12 @@ sub get_all_instances {
     return $self->_get( 'all_instances', entityid => $entity, @_ );
 }
 
+sub get_all_entity_relations {
+    my $self   = shift;
+    my $entity = shift;
+    return $self->_get( 'all_entity_relations', entityid => $entity, @_ );
+}
+
 sub get_all_properties {
     my $self   = shift;
     my $entity = shift;
@@ -401,6 +407,8 @@ sub _get_reply {
 
     if ($reply_node eq 'all_entities') {
 	$reply_node = 'entity';
+    } elsif ($reply_node eq 'all_entity_relations') {
+	$reply_node = 'relation';
     } elsif ($reply_node eq 'all_users') {
 	$reply_node = 'user';
     } elsif ($reply_node eq 'all_roles') {
