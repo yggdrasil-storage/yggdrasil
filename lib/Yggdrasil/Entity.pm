@@ -120,4 +120,11 @@ sub can_instanciate {
     return $self->storage()->can( create => 'Instances', { entity => $self->_internal_id() } );
 }
 
+sub can_create_subentity {
+    my $self = shift;
+
+    return $self->storage()->can( create => 'MetaEntity', { parent => $self->_internal_id() } );
+}
+
+
 1;
