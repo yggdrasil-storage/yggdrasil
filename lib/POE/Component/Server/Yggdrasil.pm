@@ -38,7 +38,7 @@ sub spawn {
     }
 
     my %yggcache;
-    $self->{alias}     = defined $params{alias} || 'Yggdrasil Daemon v.X';
+    $self->{alias}     = defined $params{alias} || "Yggdrasil Daemon v.$VERSION";
     $self->{port}      = $params{port} || 59999;
     $self->{address}   = $params{address} || 'localhost';
     $self->{startup}   = time;
@@ -76,8 +76,9 @@ sub spawn {
 sub preamble {
     my ($server, $client) = @_;
     my $protos = join ', ', sort keys %{$server->{supported_protocol}};
-    return "Server version: $VERSION
-Yggdrasil version: $Yggdrasil::VERSION
+    return "Host: $server->{address}:$server->{port}
+Server version: $server->{alias}
+Yggdrasil version: $Yggdrasil::VERSION 
 Available protocols: $protos
 OK";
 }
