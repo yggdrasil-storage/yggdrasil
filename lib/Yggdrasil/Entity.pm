@@ -101,7 +101,7 @@ sub parent {
     return unless $self->{parent};
 
     if( $self->yggdrasil()->is_remote() ) {
-	return Yggdrasil::Remote::Entity->get( id => $self->{parent}, yggdrasil => $self->yggdrasil() );
+	return Yggdrasil::Remote::Entity->get( entity => $self->{parent}, yggdrasil => $self->yggdrasil() );
     } else {
 	return Yggdrasil::Local::Entity->get( id => $self->{parent}, yggdrasil => $self->yggdrasil() );
     }

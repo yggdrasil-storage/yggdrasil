@@ -94,7 +94,7 @@ sub _entity_xml {
     my $p = $entity->parent();
     
     if ($p) {
-	$p = $p->_internal_id() if $p;
+	$p = $p->_userland_id() if $p;
     } else {
 	$p = '';
     }
