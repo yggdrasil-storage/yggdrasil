@@ -37,6 +37,14 @@ sub display {
     } else {
 	$entity = $ygg->get_entity( $ename );
     }
+
+    my $action = $cgi->param( 'action' );
+    if ($action eq 'expire') {
+	my $name = $entity->id();
+	$entity->expire();
+	print $cgi->h1( "$name is expired" );
+	return;
+    }
     
     unless ($entity) {
 	$self->error( $ygg->get_status()->message() );
