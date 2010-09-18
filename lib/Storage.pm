@@ -910,14 +910,7 @@ sub authenticate {
     } elsif ($session) {
 	# Or, we got a session id - see if we find a user with this session id	
 	$user_obj = Storage::Auth::User->get_by_session( $self, $session );
-    } elsif (-t && ! defined $user && ! defined $pass) {
-	# Lastly, let see if we're connected to a tty without getting a
-	# username / password, at which point we're already authenticated
-	# and we don't want to touch the session.  $> is effective UID.
-	my $uname = (getpwuid($>))[0];
-	$user_obj = Storage::Auth::User->get( $self, $uname );
-	$session = "invalid";
-    }
+    } 
 
     if( $user_obj ) {
 	$self->{user} = $user_obj;
