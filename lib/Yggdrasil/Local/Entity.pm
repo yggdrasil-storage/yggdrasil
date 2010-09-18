@@ -37,9 +37,11 @@ sub define {
     $parent = $UNIVERSAL if ! defined $parent && $name ne $UNIVERSAL;
 
     my $parent_id = undef;
+    my $pentity;
+    
     my $status = $self->get_status();
     if( defined $parent ) {
-	my $pentity = Yggdrasil::Local::Entity->get( yggdrasil => $self,
+	$pentity = Yggdrasil::Local::Entity->get( yggdrasil => $self,
 						     entity    => $parent );
 
 	unless( $pentity ) {
@@ -50,6 +52,12 @@ sub define {
 	$parent_id = $pentity->_internal_id();
     }
 
+    if ($parent_id != 1) {
+	$fqn = join "::", $pentity->id(), $name;
+    } else {
+	$fqn = $name;
+    }
+    
     # --- Add to MetaEntity, noop if it exists.
     my %entity_params = (
 			 yggdrasil => $self,
@@ -86,6 +94,7 @@ sub get {
     my @query;
     
     if ($params{entity}) {
+	$params{entity} =~ s/^UNIVERSAL:://;
 	@query = ('entity' => $params{entity});
     } elsif ($params{id}) {
 	@query = ('id' => $params{id});
@@ -329,13 +338,6 @@ sub find_instances_by_property_value {
     }
 
     return @i;      
-}
-
-sub parent {
-    my $self = shift;
-
-    return unless $self->{parent};
-    return __PACKAGE__->get( id => $self->{parent}, yggdrasil => $self );
 }
 
 # Handle property definition and deletion

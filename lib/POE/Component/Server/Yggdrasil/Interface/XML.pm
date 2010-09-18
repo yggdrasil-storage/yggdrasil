@@ -90,12 +90,21 @@ sub _entity_xml {
 
     my $name = $entity->_userland_id();
     my ($start, $stop, $starttime, $stoptime) = $self->_get_times( $entity );
+
+    my $p = $entity->parent();
+    
+    if ($p) {
+	$p = $p->_internal_id() if $p;
+    } else {
+	$p = '';
+    }
     
     return entity => {
 		      _internal_id => $entity->_internal_id(),
 		      id => $name,
 		      start => $start,
 		      stop => $stop,
+		      parent => $p,
 		      realstart => $entity->realstart(),
 		      realstop => $entity->realstop(),
 		      starttime => $starttime,

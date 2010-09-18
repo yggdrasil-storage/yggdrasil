@@ -95,6 +95,18 @@ sub id {
     return $self->{name};
 }
 
+sub parent {
+    my $self = shift;
+
+    return unless $self->{parent};
+
+    if( $self->yggdrasil()->is_remote() ) {
+	return Yggdrasil::Remote::Entity->get( id => $self->{parent}, yggdrasil => $self->yggdrasil() );
+    } else {
+	return Yggdrasil::Local::Entity->get( id => $self->{parent}, yggdrasil => $self->yggdrasil() );
+    }
+}
+
 sub _userland_id {
     my $self = shift;
     return $self->id();
