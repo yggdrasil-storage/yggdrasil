@@ -921,7 +921,7 @@ sub authenticate {
 
     if( $user_obj ) {
 	$self->{user} = $user_obj;
-	unless ($session) {
+	if (! $session && ! -t) {
 	    $session = md5_hex(time() * $$ * rand(time() + $$));
 	    $user_obj->session( $session );
 	}
