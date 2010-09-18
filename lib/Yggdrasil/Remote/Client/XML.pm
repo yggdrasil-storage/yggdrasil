@@ -121,6 +121,11 @@ sub expire_entity {
     return $self->_expire( 'entity', entityid => $id );
 }
 
+sub get_entity_descendants {
+    my ($self, $id) = @_;
+    return $self->_get( 'entity_descendants', entityid => $id );
+}
+
 # Property interface.
 sub get_property {
     my ($self, $eid, $pid) = @_;
@@ -444,6 +449,8 @@ sub _get_reply {
     } elsif ($reply_node eq 'ticks_by_time') {
 	$reply_node = 'hash';
     } elsif ($reply_node eq 'can') {
+	$reply_node = 'value';
+    } elsif ($reply_node eq 'entity_descendants') {
 	$reply_node = 'value';
     }
 

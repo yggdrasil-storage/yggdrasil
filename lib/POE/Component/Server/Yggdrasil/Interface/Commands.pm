@@ -35,6 +35,7 @@ sub new {
 		get_all_roles      => sub { _get_all_roles( $y, @_ ) },
 		get_all_entities   => sub { _get_all_entities( $y, @_ ) },
 
+		get_entity_descendants   => sub { _get_entity_decendants( $y, @_ ) },
 		get_all_entity_relations => sub { _get_all_entity_relations( $y, @_ ) },
 		get_all_instances        => sub { _get_all_instances( $y, @_ ) },
 		get_all_properties       => sub { _get_all_properties( $y, @_ ) },
@@ -248,6 +249,14 @@ sub _get_all_entity_relations {
     for my $i (@data) {
 	$i->{id} = $i->_userland_id();
     }
+    return \@data;
+}
+
+sub _get_entity_decendants {
+    my $ygg = shift;
+    my %params = @_;
+    my $entity = $ygg->get_entity( $params{entityid} );
+    my @data = $entity->descendants();
     return \@data;
 }
 

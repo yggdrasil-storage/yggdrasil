@@ -40,6 +40,11 @@ sub property_exists {
     return $self->get_property( @_ );
 }
 
+sub descendants {
+    my $self = shift;
+    return $self->storage()->{protocol}->get_entity_descendants( $self->_userland_id() );
+}
+
 sub fetch {
     my $self = shift;
     my $instance = shift;
