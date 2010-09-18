@@ -467,9 +467,10 @@ sub _expire {
 	    return;	    
 	}
     }
-    my $keys = join " and ", @sets;
+    my $keys = "";
+    $keys = " and " . join(" and ", @sets) if @sets;
 
-    $self->_sql( "UPDATE $schema SET stop = ? WHERE stop $nullopr NULL and $keys", $tick, values %params );
+    $self->_sql( "UPDATE $schema SET stop = ? WHERE stop $nullopr NULL $keys", $tick, values %params );
 
     $status->set( 200 ) if $status->OK();
 }
