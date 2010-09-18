@@ -3,7 +3,7 @@ package Yggdrasil::Interface::WWW;
 use strict;
 use warnings;
 
-use CGI::Pretty qw/-debug/;
+use CGI qw/-debug -nosticky/;
 
 sub new {
     my $class = shift;
@@ -12,7 +12,7 @@ sub new {
     my $self = {
 		elements => [],
 		headers  => {},
-		cgi      => CGI::Pretty->new(),
+		cgi      => CGI->new(),
 # 		script   => [ 
 # 			     {
 # 			      language => 'javascript',
