@@ -45,6 +45,18 @@ sub descendants {
     return $self->storage()->{protocol}->get_entity_descendants( $self->_userland_id() );
 }
 
+sub ancestors {
+    my $self = shift;
+    return $self->storage()->{protocol}->get_entity_ancestors( $self->_userland_id() );
+}
+
+sub children {
+    my $self = shift;
+    return Yggdrasil::Object::objectify( $self->yggdrasil(),
+					 __PACKAGE__,
+					 $self->storage()->{protocol}->get_entity_children( $self->_userland_id() ));
+}
+
 sub fetch {
     my $self = shift;
     my $instance = shift;

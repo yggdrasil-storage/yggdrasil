@@ -126,6 +126,16 @@ sub get_entity_descendants {
     return $self->_get( 'entity_descendants', entityid => $id );
 }
 
+sub get_entity_ancestors {
+    my ($self, $id) = @_;
+    return $self->_get( 'entity_ancestors', entityid => $id );
+}
+
+sub get_entity_children {
+    my ($self, $id) = @_;
+    return $self->_get( 'entity_children', entityid => $id );
+}
+
 # Property interface.
 sub get_property {
     my ($self, $eid, $pid) = @_;
@@ -452,6 +462,10 @@ sub _get_reply {
 	$reply_node = 'value';
     } elsif ($reply_node eq 'entity_descendants') {
 	$reply_node = 'value';
+    } elsif ($reply_node eq 'entity_ancestors') {
+	$reply_node = 'value';
+    } elsif ($reply_node eq 'entity_children') {
+	$reply_node = 'entity';
     }
 
     my @data;
