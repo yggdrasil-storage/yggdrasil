@@ -6,6 +6,7 @@ use warnings;
 use Test::More;
 
 use Yggdrasil;
+use Yggdrasil::Common::Config;
 use Storage::Status;
 
 use Digest::SHA qw|sha256_hex|;
@@ -35,6 +36,10 @@ sub new {
     my $class = shift;
     my $self  = {};
 
+    $self->{label} = $ENV{YGG_LABEL} || 'default';
+    my $c = Yggdrasil::Common::Config->new();
+    $self->{config} = $c->get( $self->{label} ) || $c->get('ENV');
+
     return bless $self, $class;
 }
 
@@ -53,12 +58,13 @@ sub new_yggdrasil {
 sub connect {
     my $self = shift;
 
-    my $r = $self->{ygg}->connect( engine    => $ENV{YGG_ENGINE},
-				   host      => $ENV{YGG_HOST},
-				   port      => $ENV{YGG_PORT},
-				   db        => $ENV{YGG_DB},
-				   user      => $ENV{YGG_USER},
-				   password  => $ENV{YGG_PASSWORD},
+    my $c = $self->{config};
+    my $r = $self->{ygg}->connect( engine    => $c->get('enginetype'),
+				   host      => $c->get('enginehost'),
+				   port      => $c->get('engineport'),
+				   db        => $c->get('enginedb'),
+				   user      => $c->get('engineuser'),
+				   password  => $c->get('enginepassword'),
 				   @_
 	);
     is( $r, 1, "$Y->connect(): return value was true" );
@@ -87,8 +93,11 @@ sub bootstrap {
 
 sub login {
     my $self = shift;
-
-    my $r = $self->{ygg}->login();
+    
+    my $c = $self->{config};
+    my $user = $c->get('authuser') || (getpwuid($>))[0];
+    my $pass = $c->get('authpass');
+    my $r = $self->{ygg}->login( username => $user, password => $pass );
     ok( defined($r), "$Y->login(): Authenticated as $r" );
     ok( $self->OK(), "$Y->login(): Logged in with status ".$self->code() );
 }
