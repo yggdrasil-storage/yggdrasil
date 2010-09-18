@@ -131,7 +131,6 @@ sub display {
 
     if ($can_subclass) {
 	print $cgi->h2( 'Create subentity' );
-	print $entity->id();
 	print '<form method="post" action="index.cgi" enctype="multipart/form-data" id="ecform" name="ecform">';
 	print "<input type='hidden' name='entity' value='" . $entity->id() . "' />\n";
 	print $cgi->hidden( { name => 'create', value => 1 } );
@@ -149,6 +148,8 @@ sub create_property {
     my $www    = $self->{www};
     
     my ($property_name, $type, $null) = ($www->param( 'property'), $www->param( 'type' ), $www->param( 'null' ) );
+
+    return unless ( $property_name && $type && $null );
 
     return $e->define_property( $property_name, type => uc $type, nullp => $null eq 'YES'?0:1 );
 }
