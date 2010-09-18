@@ -184,6 +184,11 @@ sub expire {
 	$child->expire();
     }
 
+    # Expire all relevant relations
+    for my $relation ($self->relations(level=>1)) {
+	$relation->expire();
+    }
+
     # Expire all instances
     for my $instance ($self->instances()) {
 	$instance->expire();
@@ -451,6 +456,11 @@ sub relations {
 
     my $storage = $self->{yggdrasil}->{storage};
     my @ancestors = $self->ancestors( $time );
+
+    # Only go N-levels deep. level==1 retains only the first ancestor
+    # which is yourself, level==2 retains yourself + 1, and so on.
+    splice( @ancestors, $params{level} ) if $params{level};
+    
     my @rets;
     
     my $aref = $storage->fetch(
