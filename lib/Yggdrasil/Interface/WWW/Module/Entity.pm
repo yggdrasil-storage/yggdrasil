@@ -23,14 +23,20 @@ sub display {
     my $self = shift;
     my $cgi  = $self->{www}->{cgi};
 
-    $self->{entity} = $self->{www}->{cgi}->param( 'entity' );
+    my $ename = $self->{www}->{cgi}->param( 'entity' );
     
-    return unless $self->{entity};
+    return unless $ename;
     return if $cgi->param( 'instance' );
-    
+
     my $ygg = $self->yggdrasil();
 
-    my $entity = $ygg->get_entity( $self->{entity} );
+    my $entity;
+    my $newentity = $cgi->param( 'newentity' );
+    if ($newentity) {
+	$entity = $ygg->define_entity( $newentity, inherit => $ename );
+    } else {
+	$entity = $ygg->get_entity( $ename );
+    }
     
     unless ($entity) {
 	$self->error( $ygg->get_status()->message() );
@@ -40,15 +46,17 @@ sub display {
     my $can_write = $entity->can_write();
     my $can_expire = $entity->can_expire();
     my $can_instanciate = $entity->can_instanciate();
-
+    my $can_subclass = $entity->can_create_subentity();
+    
     my ($expire_code, $instanciate_code) = ('', '');
     if ($can_expire) {
 	$expire_code = $self->expire( "entity=" . $entity->id(), ' ' );
     }
 
     if ($can_instanciate) {
-	$instanciate_code  = '<form method="post" action="index.cgi" enctype="multipart/form-data" id="eiform">';
-	$instanciate_code .= $cgi->hidden( { name => 'entity', value => $self->{entity} } );
+	$instanciate_code  = '<form method="post" action="index.cgi" enctype="multipart/form-data" id="eiform" name="niform">';
+	$instanciate_code .= "<input type='hidden' name='entity' value='" . $entity->id() . "' />\n";
+	$instanciate_code .= $cgi->hidden( { name => 'entity', value => 'Daille::Foo' } );
 	$instanciate_code .= $cgi->hidden( { name => 'create', value => 1 } );
 	$instanciate_code .= $cgi->input( { type => "text", name  => "instance", autocorrection => 'off',
 					    class => 'iform', autocapitalize => 'off', placeholder => 'new instance' } );
@@ -107,9 +115,11 @@ sub display {
     }
 
     if (@propdisplay) {
-	print '<form method="post" action="index.cgi" enctype="multipart/form-data" id="epform">';
-	print $cgi->hidden( { name => 'entity', value => $self->{entity} } );
-	print $cgi->hidden( { name => 'create', value => 1 } );
+	if ($can_write) {
+	    print '<form method="post" action="index.cgi" enctype="multipart/form-data" id="epform" name="propform">';
+	    print "<input type='hidden' name='entity' value='" . $entity->id() . "' />\n";
+	    print $cgi->hidden( { name => 'create', value => 1 } );
+	}
 	
 	print $cgi->table(
 			  { class => 'properties' },
@@ -118,18 +128,29 @@ sub display {
 			 );
 	print $cgi->end_form() if $can_write;
     }
+
+    if ($can_subclass) {
+	print $cgi->h2( 'Create subentity' );
+	print $entity->id();
+	print '<form method="post" action="index.cgi" enctype="multipart/form-data" id="ecform" name="ecform">';
+	print "<input type='hidden' name='entity' value='" . $entity->id() . "' />\n";
+	print $cgi->hidden( { name => 'create', value => 1 } );
+	print $cgi->input( { type => "text", name => "newentity", autocorrection => 'off',
+			     class => 'iform', autocapitalize => 'off', placeholder => 'new subentity' } );
+	print $cgi->end_form();
+    }
     
     print $self->tick_info( $entity );
 }
 
 sub create_property {
     my $self   = shift;
-    my $entity = shift;
+    my $e      = shift;
     my $www    = $self->{www};
     
     my ($property_name, $type, $null) = ($www->param( 'property'), $www->param( 'type' ), $www->param( 'null' ) );
 
-    return $entity->define_property( $property_name, type => uc $type, nullp => $null eq 'YES'?0:1 );
+    return $e->define_property( $property_name, type => uc $type, nullp => $null eq 'YES'?0:1 );
 }
 
 1;
