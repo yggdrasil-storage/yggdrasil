@@ -92,11 +92,15 @@ sub can_write_value {
     # exists with a value, we'll get an OK status set, if the property
     # doesn't exist (yet), we'll get something else[tm].
     $self->get( $prop );
-    if ($self->get_status()->OK()) {
+    if ( $self->get_status()->OK() ) {
+	if ($self->get_status()->status() == 210) {
+	    return $self->_property_allows( $prop, 'create' );
+	}
+
 	return $self->_property_allows( $prop, 'update' );
-    } else {
-	return $self->_property_allows( $prop, 'create' );
     }
+
+    return;
 }
 
 sub _property_allows {

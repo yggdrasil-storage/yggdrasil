@@ -407,8 +407,13 @@ sub property {
     if ($self->{_stop}) { # Historic object, search for property by start / stop times.
 	@times = ( start => $self->start(), stop => $self->stop() );
     }
-    my $r = $storage->fetch( $schema => { return => "value", where => [ id => $self->{_id} ] },
+    my $r = $storage->fetch( $schema => { return => [qw/id value/], where => [ id => $self->{_id} ] },
 			     { @times } );
+
+    if( ! defined $r->[0]->{id} ) {
+	$status->set( 210 );
+	return;
+    }
 
     if ($r->[0]->{value}) {
 	# Pass through return value from Storage, it'll be 200 / 202 correctly.

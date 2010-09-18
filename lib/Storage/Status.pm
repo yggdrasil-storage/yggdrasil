@@ -14,6 +14,7 @@ my %map = (
 	   202 => 'Accepted', # no return value, batched.
 	   203 => 'Non-authorative information', # cached?
 	   204 => 'No content',
+	   210 => 'Uninitialized',
 
 	   # 300 series, things are moved, but the request
 	   # is still processed and returned OK.
