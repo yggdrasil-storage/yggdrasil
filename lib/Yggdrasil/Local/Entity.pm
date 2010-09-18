@@ -179,6 +179,11 @@ sub expire {
 	return 0;
     }
     
+    # Expire all descendants first
+    for my $child ($self->children()) {
+	$child->expire();
+    }
+
     # Expire all instances
     for my $instance ($self->instances()) {
 	$instance->expire();
@@ -542,6 +547,23 @@ sub descendants {
     }
 
     return @descendants;
+}
+
+sub children {
+    my $self = shift;
+    my $time = shift;
+
+    my $storage = $self->storage();
+    my $r = $storage->fetch( MetaEntity => { return => [qw/id entity parent/],
+					     where  => [ parent => $self->_internal_id() ] },
+			     $time );
+
+    my @children;
+    foreach my $child (@$r) {
+	push( @children, __PACKAGE__->get(yggdrasil => $self, entity => $child->{entity}) );
+    }
+
+    return @children;
 }
 
 sub _admin_dump {
