@@ -10,7 +10,12 @@ sub define {
     my $self = $class->SUPER::new(@_);
     my %params = @_;
 
-    my $dataref = $self->storage()->{protocol}->define_entity( $params{entity} );
+    my $ename = $params{entity};
+    if ($params{parent}) {
+	$ename = join "::", $params{parent}, $params{entity};
+    }
+    
+    my $dataref = $self->storage()->{protocol}->define_entity( $ename );
     return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );    
 }
 
