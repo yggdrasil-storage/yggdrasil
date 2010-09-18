@@ -52,7 +52,7 @@ sub define {
 	$parent_id = $pentity->_internal_id();
     }
 
-    if ($parent_id != 1) {
+    if ($parent_id && $parent_id != 1) {
 	$fqn = join "::", $pentity->id(), $name;
     } else {
 	$fqn = $name;
