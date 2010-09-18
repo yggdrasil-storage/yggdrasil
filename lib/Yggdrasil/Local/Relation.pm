@@ -67,6 +67,20 @@ sub get {
     }    
 }
 
+sub expire {
+    my $self = shift;
+
+    # Do not expire historic Relations
+    if( $self->stop() ) {
+	$self->get_status()->set( 406, "Unable to expire historic relation" );
+	return 0;
+    }
+
+    my $storage = $self->storage();
+    $storage->expire( 'Relations', relationid => $self->_internal_id() );
+    $storage->expire( 'MetaRelation', id => $self->_internal_id() );
+}
+
 sub objectify {
     my %params = @_;
     

@@ -310,7 +310,10 @@ my %cmd;
 	           _instance_right => \&relation_instances,
                },
 	   },
-        },    
+        },
+	expire => {
+		   _relationlabel => \&relation_expire,
+	},
     },
 
     transaction => {
@@ -1068,7 +1071,8 @@ sub relation_list {
 sub relation_info {
     my ($relation_command, $info_command, $label) = @_;
 
-    my $rel = $y->get_relation( $label );
+    my($rkey, $tstart, $tstop) = extract_temporality( $label );
+    my $rel = $y->get_relation( $rkey, populate_times( $tstart, $tstop ) );    
     print $status->message(), "\n" and return unless $status->OK();
 
     print "$label\n";
@@ -1088,6 +1092,16 @@ sub relation_info {
 	}
     }
     
+}
+
+sub relation_expire {
+    my($relation_command, $expire_command, $label) = @_;
+
+    my $rel = $y->get_relation( $label );
+    print $status->message(), "\n" and return unless $status->OK();
+
+    $rel->expire();
+    print $status->message(), "\n";
 }
 
 # Tick interface
