@@ -220,9 +220,7 @@ sub expire {
     }
 
     # You might not have permission to do this, can fails now either way.
-#    for my $instance ($self->{entity}->instances()) {
-#	$storage->expire( $self->{entity}->_userland_id() . ':' . $self->_userland_id(), id => $self->{_id} );
-#    }
+    $storage->expire( $self->entity()->_userland_id() . ':' . $self->_userland_id() );
     
     $storage->expire( 'MetaProperty', id => $self->{_id} );
     return 1 if $status->OK();
