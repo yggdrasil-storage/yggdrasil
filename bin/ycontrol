@@ -691,6 +691,16 @@ sub entity_info {
     } else {
 	printf "%-15s - NULL\n", "Relations";
     }
+
+    my @descendants;
+    @descendants = $eobj->descendants() if $eobj->parent();
+    
+    if( @descendants ) {
+	print "Descendants\n";
+	for my $d (@descendants) {
+	    printf "  %-13s\n", $d;
+	}
+    }
     
     display_tick( $eobj );
 }

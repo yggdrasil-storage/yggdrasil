@@ -518,6 +518,32 @@ sub ancestors {
 }
 
 
+sub descendants {
+    my $self = shift;
+    my $time = shift;
+
+    my $storage = $self->storage();
+    my $r = $storage->fetch( MetaEntity => { return => [qw/id entity parent/],
+					     where  => [ parent => $self->_internal_id() ] },
+			     $time );
+
+    my @descendants;
+    my @children = @$r;
+    while( @children ) {
+	my $child = shift @children;
+	my $child_id = $child->{id};
+	push( @descendants, $child->{entity} );
+
+	$r = $storage->fetch( MetaEntity => { return => [qw/id entity parent/],
+					      where  => [ parent => $child_id ] },
+			      $time );
+
+	push( @children, @$r );
+    }
+
+    return @descendants;
+}
+
 sub _admin_dump {
     my $self   = shift;
     my $entity = shift;
