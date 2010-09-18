@@ -90,7 +90,7 @@ sub can_write_value {
     
     # Check to see if the property has any values. If the property
     # exists with a value, we'll get an OK status set, if the property
-    # doesn't exist (yet), we'll get something else[tm].
+    # doesn't exist (yet), we'll get OK, but with the code 210.
     $self->get( $prop );
     if ( $self->get_status()->OK() ) {
 	if ($self->get_status()->status() == 210) {
