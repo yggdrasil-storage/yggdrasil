@@ -79,13 +79,11 @@ sub INIT {
 
     # --- Help?
     if( defined $self->{help} ) {
-	$self->_help( "head" );
-	$self->_client_help();
-        $self->_help( "body" );
-        
+	$self->help();
+
         exit;
     } elsif( defined $self->{version} ) {
-	$self->_version();
+	$self->version();
 	
 	exit;
     } elsif (defined $self->{'list-lables'}) {
@@ -120,7 +118,15 @@ sub _client_help {
     }
 }
 
-sub _version {
+sub help {
+    my $self = shift;
+
+    $self->_help( "head" );
+    $self->_client_help();
+    $self->_help( "body" );
+}
+
+sub version {
     my $self = shift;
 
     my $version = $self->{_caller}->VERSION;
