@@ -129,12 +129,14 @@ sub can_expire {
 sub can_instanciate {
     my $self = shift;
 
+    return if $self->stop();
     return $self->storage()->can( create => 'Instances', { entity => $self->_internal_id() } );
 }
 
 sub can_create_subentity {
     my $self = shift;
 
+    return if $self->stop();
     return $self->storage()->can( create => 'MetaEntity', { parent => $self->_internal_id() } );
 }
 
