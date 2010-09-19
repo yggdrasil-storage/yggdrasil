@@ -85,6 +85,20 @@ sub new {
     return bless $self, $class;
 }
 
+# Handle temporality in the proper fashion.
+sub _populate_time {
+    my %params = @_;
+    if (exists $params{start} || exists $params{stop}) {
+	return ( time => {
+			  start  => $params{start},
+			  stop   => $params{stop},
+			  format => $params{format},
+			 });
+    } else {
+	return ();
+    }
+}
+
 sub _info {
     my $ygg = shift;
     return $ygg->info();
@@ -189,15 +203,14 @@ sub _create_instance {
 sub _get_entity {
     my $ygg = shift;
     my %params = @_;
-    
-    return $ygg->get_entity( $params{entityid} );
+    return $ygg->get_entity( $params{entityid}, _populate_time( @_ ) );
 }
 
 sub _get_property {
     my $ygg = shift;
     my %params = @_;
 
-    my $entity = $ygg->get_entity( $params{entityid} );
+    my $entity = $ygg->get_entity( $params{entityid}, _populate_time( @_ ) );
     return unless defined $entity;
     return $entity->get_property( $params{propertyid} );
 }
@@ -217,26 +230,30 @@ sub _expire_property {
 # Get all objects of a given type.
 sub _get_all_users {
     my $ygg = shift;    
-    my @data = $ygg->users( @_ );
+    my @data = $ygg->users( _populate_time( @_ ) );
     return \@data;
 }
 
 sub _get_all_roles {
     my $ygg = shift;    
-    my @data = $ygg->roles( @_ );
+    my @data = $ygg->roles( _populate_time( @_ ) );
     return \@data;
 }
 
 sub _get_all_entities {
     my $ygg = shift;
-    my @data = $ygg->entities();
+    my @data = $ygg->entities( _populate_time( @_ ) );
     return \@data;
 }
 
 sub _get_all_instances {
     my $ygg = shift;    
     my %params = @_;
-    my @data = $ygg->instances( $params{entityid} );
+
+    # Yggdrasil will take care of the entity->get() and perform it
+    # temporally if needed.  ygg->instances( e, temporal ) is
+    # identical to calling ygg->get_entity( e, temporal )->instances()
+    my @data = $ygg->instances( $params{entityid}, _populate_time( @_ ) );
     for my $i (@data) {
 	$i->{id} = $i->_userland_id();
     }
@@ -246,7 +263,7 @@ sub _get_all_instances {
 sub _get_all_entity_relations {
     my $ygg = shift;    
     my %params = @_;
-    my $entity = $ygg->get_entity( $params{entityid} );
+    my $entity = $ygg->get_entity( $params{entityid}, _populate_time( @_ ) );
     my @data = $entity->relations();
     for my $i (@data) {
 	$i->{id} = $i->_userland_id();
@@ -257,7 +274,7 @@ sub _get_all_entity_relations {
 sub _get_entity_decendants {
     my $ygg = shift;
     my %params = @_;
-    my $entity = $ygg->get_entity( $params{entityid} );
+    my $entity = $ygg->get_entity( $params{entityid}, _populate_time( @_ ) );
     my @data = $entity->descendants();
     return \@data;
 }
@@ -265,7 +282,7 @@ sub _get_entity_decendants {
 sub _get_entity_ancestors {
     my $ygg = shift;
     my %params = @_;
-    my $entity = $ygg->get_entity( $params{entityid} );
+    my $entity = $ygg->get_entity( $params{entityid}, _populate_time( @_ ) );
     my @data = $entity->ancestors();
     return \@data;
 }
@@ -273,21 +290,22 @@ sub _get_entity_ancestors {
 sub _get_entity_children {
     my $ygg = shift;
     my %params = @_;
-    my $entity = $ygg->get_entity( $params{entityid} );
+    my $entity = $ygg->get_entity( $params{entityid}, _populate_time( @_ ) );
     my @data = $entity->children();
     return \@data;
 }
 
 sub _get_all_properties {
     my $ygg = shift;
-    my $ent = shift;
-    my @data = $ygg->properties( @_ );
+    my %params = @_;
+    my @data = $ygg->properties( $params{entityid}, _populate_time( @_ ) );
     return \@data;
 }
 
 sub _get_all_relations {
-    my $ygg = shift;    
-    my @data = $ygg->relations( @_ );
+    my $ygg = shift;
+    my %params = @_;
+    my @data = $ygg->relations( $params{entityid}, _populate_time( @_ ) );
     return \@data;
 }
 
@@ -297,28 +315,28 @@ sub _get_relation {
     my $ygg = shift;
     my %params = @_;
     
-    return $ygg->get_relation( $params{relationid} );
+    return $ygg->get_relation( $params{relationid}, _populate_time( @_ ) );
 }
 
 sub _get_user {
     my $ygg = shift;
     my %params = @_;
     
-    return $ygg->get_user( $params{userid} );
+    return $ygg->get_user( $params{userid}, _populate_time( @_ ) );
 }
 
 sub _get_role {
     my $ygg = shift;
     my %params = @_;
     
-    return $ygg->get_role( $params{roleid} );
+    return $ygg->get_role( $params{roleid}, _populate_time( @_ ) );
 }
 
 sub _get_instance {
     my $ygg = shift;
     my %params = @_;
     
-    my $entity = $ygg->get_entity( $params{entityid} );
+    my $entity = $ygg->get_entity( $params{entityid}, _populate_time( @_ ) );
 
     return undef unless $entity;
     my @nodes = $entity->fetch( $params{instanceid}, time => $params{time} );
@@ -329,10 +347,10 @@ sub _get_set_value {
     my $ygg = shift;
     my %params = @_;
     
-    my $entity = $ygg->get_entity( $params{entityid}, time => $params{time} );
+    my $entity = $ygg->get_entity( $params{entityid}, _populate_time( @_ ) );
 
     return undef unless $entity;
-    my $instance = $entity->fetch( $params{instanceid}, time => $params{time} );
+    my $instance = $entity->fetch( $params{instanceid} );
     
     return undef unless $instance;
     if (exists $params{value}) {
@@ -347,7 +365,7 @@ sub _get_set_uservalue {
     my $ygg = shift;
     my %params = @_;
 
-    my $user = $ygg->get_user( $params{userid} );
+    my $user = $ygg->get_user( $params{userid}, _populate_time( @_ ) );
     return undef unless $user;
 
     if (exists $params{value}) {
@@ -361,7 +379,7 @@ sub _get_set_rolevalue {
     my $ygg = shift;
     my %params = @_;
 
-    my $role = $ygg->get_role( $params{roleid} );
+    my $role = $ygg->get_role( $params{roleid}, _populate_time( @_ ) );
     return undef unless $role;
 
     if (exists $params{value}) {
@@ -375,7 +393,7 @@ sub _get_roles_of {
     my $ygg = shift;
     my %params = @_;
 
-    my $user = $ygg->get_user( $params{userid} );
+    my $user = $ygg->get_user( $params{userid}, _populate_time( @_ ) );
     return unless $user;
     
     my @roles = $user->member_of();
@@ -386,7 +404,7 @@ sub _get_members {
     my $ygg = shift;
     my %params = @_;
 
-    my $role = $ygg->get_role( $params{roleid} );
+    my $role = $ygg->get_role( $params{roleid}, _populate_time( @_ ) );
     return unless $role;
 
     my @users = $role->members();
@@ -397,7 +415,7 @@ sub _get_relation_participants {
     my $ygg = shift;
     my %params = @_;
 
-    my $relation = $ygg->get_relation( $params{relationid} );
+    my $relation = $ygg->get_relation( $params{relationid}, _populate_time( @_ ) );
     return unless $relation;
 
     my @instance_sets;
@@ -481,7 +499,7 @@ sub _get_search {
     my $ygg = shift;
     my %params = @_;
 
-    my ($e, $i, $p, $r) = $ygg->search( $params{search} );
+    my ($e, $i, $p, $r) = $ygg->search( $params{search}, _populate_time( @_ ) );
     my @all_hits = (@$e, @$i, @$p, @$r);
 
     return \@all_hits;
@@ -499,7 +517,7 @@ sub _get_property_meta {
     my $ygg = shift;
     my %params = @_;
 
-    my $p = $ygg->get_property( $params{entityid}, $params{propertyid} );
+    my $p = $ygg->get_property( $params{entityid}, $params{propertyid}, _populate_time( @_ ) );
     return unless $p;
     
     if ($params{meta} eq 'null') {
@@ -514,7 +532,7 @@ sub _get_property_meta {
 
 sub _get_property_types {
     my $ygg = shift;
-    my @types = $ygg->property_types(@_);
+    my @types = $ygg->property_types( _populate_time( @_ ) );
 
     return \@types;
 }

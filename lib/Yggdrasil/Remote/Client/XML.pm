@@ -94,6 +94,25 @@ sub _expire {
     return $self->_exec( $type, 'expire', @_ );
 }
 
+# Time is passed as an anonymous has on the format
+# { start => tick, stop => tick }
+sub _populate_time_params {
+    my ($self, $time) = @_;
+    
+    if (defined $time->{start} || defined $time->{stop}) {
+	return ('start' => $time->{start}, 'stop' => $time->{stop}, 'format' => $time->{format} );
+    } else {
+	return ();
+    }
+}
+
+sub _attempt_to_modify_temporal_object {
+    my $self = shift;
+    
+    $self->get_status()->set( 406, 'Temporality active, unable to write to Yggdrasil' );
+    return;
+}
+
 # Execute does the actual stream / socket writing, as well as
 # XMLifying the output from _exec.
 sub _execute {
@@ -107,67 +126,73 @@ sub _execute {
 
 # Entity interface.
 sub get_entity {
-    my ($self, $id) = @_;
-    return $self->_get( 'entity', entityid => $id );
+    my ($self, $id, $time) = @_;
+    return $self->_get( 'entity', entityid => $id, $self->_populate_time_params( $time ) );
 }
 
 sub define_entity {
-    my ($self, $id) = @_;
+    my ($self, $id, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_define( 'entity', entityid => $id );
 }
 
 sub expire_entity {
-    my ($self, $id) = @_;
+    my ($self, $id, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_expire( 'entity', entityid => $id );
 }
 
 sub get_entity_descendants {
-    my ($self, $id) = @_;
-    return $self->_get( 'entity_descendants', entityid => $id );
+    my ($self, $id, $time) = @_;
+    return $self->_get( 'entity_descendants', entityid => $id, $self->_populate_time_params( $time ) );
 }
 
 sub get_entity_ancestors {
-    my ($self, $id) = @_;
-    return $self->_get( 'entity_ancestors', entityid => $id );
+    my ($self, $id, $time) = @_;
+    return $self->_get( 'entity_ancestors', entityid => $id, $self->_populate_time_params( $time ) );
 }
 
 sub get_entity_children {
-    my ($self, $id) = @_;
-    return $self->_get( 'entity_children', entityid => $id );
+    my ($self, $id, $time) = @_;
+    return $self->_get( 'entity_children', entityid => $id, $self->_populate_time_params( $time ) );
 }
 
 # Property interface.
 sub get_property {
-    my ($self, $eid, $pid) = @_;
-    return $self->_get( 'property', entityid => $eid, propertyid => $pid );    
+    my ($self, $eid, $pid, $time) = @_;
+    return $self->_get( 'property', entityid => $eid, propertyid => $pid, $self->_populate_time_params( $time ) ); 
 }
 
 sub define_property {
-    my ($self, $eid, $pid, $type, $nullp) = @_;
+    my ($self, $eid, $pid, $type, $nullp, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_define( 'property', entityid => $eid, propertyid => $pid, type => $type, nullp => $nullp );
 }
 
 sub expire_property {
-    my ($self, $eid, $pid) = @_;
-    return $self->_expire( 'property', entityid => $eid, propertyid => $pid );    
+    my ($self, $eid, $pid, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
+    return $self->_expire( 'property', entityid => $eid, propertyid => $pid );
 }
 
 sub get_property_meta {
-    my ($self, $eid, $pid, $meta) = @_;
+    my ($self, $eid, $pid, $meta, $time) = @_;
     return $self->_get(
 		       'property_meta',    entityid => $eid,
 		       propertyid => $pid, meta     => $meta,
+		       $self->_populate_time_params( $time ),
 		      );
 }
 
 # Relation interface
 sub get_relation {
-    my ($self, $id) = @_;
-    return $self->_get( 'relation', relationid => $id );    
+    my ($self, $id, $time) = @_;
+    return $self->_get( 'relation', relationid => $id, $self->_populate_time_params( $time ) ); 
 }
 
 sub define_relation {
-    my ($self, $id, $lval, $rval) = @_;
+    my ($self, $id, $lval, $rval, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
 
     my @idlist = ();
     @idlist = ( 'relationid' => $id ) if $id;
@@ -176,18 +201,21 @@ sub define_relation {
 }
 
 sub relation_bind {
-    my ($self, $id, $lval, $rval) = @_;
+    my ($self, $id, $lval, $rval, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
 
     return $self->_define( 'relation_bind', relationid => $id, lval => $lval, rval => $rval );
 }
 
 sub expire_relation {
-    my ($self, $id) = @_;
-    return $self->_expire( 'relation', relationid => $id );    
+    my ($self, $id, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
+    return $self->_expire( 'relation', relationid => $id ); 
 }
 
 sub relation_participants {
-    my ($self, $id) = @_;
+    my ($self, $id, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_get( 'relation_participants', relationid => $id );
 }
 
@@ -195,27 +223,30 @@ sub relation_participants {
 # only created.
 sub get_instance {
     my ($self, $eid, $id, $time) = @_;
-    return $self->_get( 'instance', entityid => $eid, instanceid => $id, time => $time );
+    return $self->_get( 'instance', entityid => $eid, instanceid => $id, $self->_populate_time_params( $time ) );
 }
 
 sub create_instance {
-    my ($self, $eid, $id) = @_;
+    my ($self, $eid, $id, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_create( 'instance', entityid => $eid, instanceid => $id );
 }
 
 sub expire_instance {
-    my ($self, $eid, $id) = @_;
+    my ($self, $eid, $id, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_expire( 'instance', entityid => $eid, instanceid => $id );
 }
 
 # Value interface, can't be defined, only set.
 sub get_value {
     my ($self, $eid, $pid, $id, $time) = @_;
-    return $self->_get( 'value', entityid => $eid, propertyid => $pid, instanceid => $id, time => $time );
+    return $self->_get( 'value', entityid => $eid, propertyid => $pid, instanceid => $id, $self->_populate_time_params( $time ) );
 }
 
 sub set_value {
-    my ($self, $eid, $pid, $id, $value) = @_;
+    my ($self, $eid, $pid, $id, $value, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_set( 'value',
 			entityid   => $eid, propertyid => $pid,
 			instanceid => $id,  value => $value );
@@ -223,68 +254,74 @@ sub set_value {
 
 # User interface
 sub get_user {
-    my ($self, $uid) = @_;
-    return $self->_get( 'user', userid => $uid );
+    my ($self, $uid, $time) = @_;
+    return $self->_get( 'user', userid => $uid, $self->_populate_time_params( $time ) );
 }
 
 sub expire_user {
-    my ($self, $uid) = @_;
+    my ($self, $uid, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_expire( 'user', userid => $uid );
 }
 
 sub get_user_value {
-    my ($self, $uid, $key) = @_;
-    return $self->_get( 'user_value', userid => $uid, propertyid => $key );
+    my ($self, $uid, $key, $time) = @_;
+    return $self->_get( 'user_value', userid => $uid, propertyid => $key, $self->_populate_time_params( $time ) );
 }
 
 sub set_user_value {
-    my( $self, $uid, $key, $val ) = @_;
-    return $self->_set( 'user_value', userid => $uid, propertyid => $key, value => $val );
+    my( $self, $uid, $key, $val, $time ) = @_;
+    return $self->_set( 'user_value', userid => $uid, propertyid => $key, value => $val, $self->_populate_time_params( $time ) );
 }
 
 sub get_roles_of {
-    my ($self, $uid) = @_;
-    return $self->_get( 'roles_of', userid => $uid );
+    my ($self, $uid, $time) = @_;
+    return $self->_get( 'roles_of', userid => $uid, $self->_populate_time_params( $time ) );
 }
 
 # Role interface
 sub define_role {
-    my ($self, $rid) = @_;
+    my ($self, $rid, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_define( 'role', roleid => $rid );
 }
 
 sub get_role {
-    my ($self, $rid) = @_;
-    return $self->_get( 'role', roleid => $rid );
+    my ($self, $rid, $time) = @_;
+    return $self->_get( 'role', roleid => $rid, $self->_populate_time_params( $time ) );
 }
 
 sub get_role_value {
-    my ($self, $rid, $key) = @_;
-    return $self->_get( 'role_value', roleid => $rid, propertyid => $key );
+    my ($self, $rid, $key, $time) = @_;
+    return $self->_get( 'role_value', roleid => $rid, propertyid => $key, $self->_populate_time_params( $time ) );
 }
 
 sub set_role_value {
-    my ($self, $rid, $key, $val) = @_;
+    my ($self, $rid, $key, $val, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_set( 'role_value', roleid => $rid, propertyid => $key, value => $val );
 }
 
 sub get_members {
-    my ($self, $rid) = @_;
-    return $self->_get( 'members', roleid => $rid );
+    my ($self, $rid, $time) = @_;
+    return $self->_get( 'members', roleid => $rid, $self->_populate_time_params( $time ) );
 }
 
 sub role_add_user {
-    my ($self, $rid, $uid ) = @_;
+    my ($self, $rid, $uid, $time ) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_get( 'role_add_user', roleid => $rid, userid => $uid );
 }
 
 sub role_remove_user {
-    my ($self, $rid, $uid ) = @_;
+    my ($self, $rid, $uid, $time ) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_get( 'role_remove_user', roleid => $rid, userid => $uid );
 }
 
 sub role_grant {
-    my ($self, $rid, $schema, $mode, $id, $idvalue) = @_;
+    my ($self, $rid, $schema, $mode, $id, $idvalue, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_get( 'role_grant',
 			roleid => $rid,
 			schema => $schema,
@@ -293,7 +330,8 @@ sub role_grant {
 }
 
 sub role_revoke {
-    my ($self, $rid, $schema, $mode, $id, $idvalue) = @_;
+    my ($self, $rid, $schema, $mode, $id, $idvalue, $time) = @_;
+    return $self->_attempt_to_modify_temporal_object() if $self->_populate_time_params( $time );
     return $self->_get( 'role_revoke',
 			roleid => $rid,
 			schema => $schema,
@@ -303,47 +341,44 @@ sub role_revoke {
 
 # Slurps.
 sub get_all_entities {
-    my $self = shift;
-    return $self->_get( 'all_entities', @_ );
+    my ($self, $time) = @_;
+    return $self->_get( 'all_entities', $self->_populate_time_params( $time ) );
 }
 
 sub get_all_users {
-    my $self = shift;
-    return $self->_get( 'all_users', @_ );
+    my ($self, $time) = @_;
+    return $self->_get( 'all_users', $self->_populate_time_params( $time ) );
 }
 
 sub get_all_relations {
-    my $self = shift;
-    return $self->_get( 'all_relations', @_ );
+    my ($self, $time) = @_;
+    return $self->_get( 'all_relations', $self->_populate_time_params( $time ) );
 }
 
 sub get_all_roles {
-    my $self = shift;
-    return $self->_get( 'all_roles', @_ );
+    my ($self, $time) = @_;
+    return $self->_get( 'all_roles', $self->_populate_time_params( $time ) );
 }
 
 sub get_all_instances {
-    my $self   = shift;
-    my $entity = shift;
-    return $self->_get( 'all_instances', entityid => $entity, @_ );
+    my ($self, $entity, $time) = @_;
+    return $self->_get( 'all_instances', entityid => $entity, $self->_populate_time_params( $time ) );
 }
 
 sub get_all_entity_relations {
-    my $self   = shift;
-    my $entity = shift;
-    return $self->_get( 'all_entity_relations', entityid => $entity, @_ );
+    my ($self, $entity, $time) = @_;
+    return $self->_get( 'all_entity_relations', entityid => $entity, $self->_populate_time_params( $time ) );
 }
 
 sub get_all_properties {
-    my $self   = shift;
-    my $entity = shift;
-    return $self->_get( 'all_properties', entityid => $entity, @_ );
+    my ($self, $entity, $time) = @_;
+    return $self->_get( 'all_properties', entityid => $entity, $self->_populate_time_params( $time ) );
 }
 
 sub search {
     my $self = shift;
     my %params = @_;
-    return $self->_get( 'search', search => $params{search} );
+    return $self->_get( 'search', search => $params{search}, $self->_populate_time_params( $params{time} ) );
 }
 
 # Metaish stuff

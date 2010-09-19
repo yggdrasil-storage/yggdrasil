@@ -19,20 +19,18 @@ sub fetch {
 	$e    = $params{entity};
     }
 
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;    
     
     my @instances = Yggdrasil::Object::objectify( $self->yggdrasil(),
 						  __PACKAGE__,
-						  $self->storage()->{protocol}->get_instance( $e, $params{instance}, $params{time} ),
+						  $self->storage()->{protocol}->get_instance( $e, $params{instance}, $time ),
 						);
 
     for my $i (@instances) {
 	$i->{entity} = Yggdrasil::Remote::Entity->get(
 						      yggdrasil => $self->yggdrasil(), 
 						      entity    => $e,
-						      time      => { start  => $i->start(),
-								     stop   => $i->stop(),
-								     format => 'tick',
-								   },
 						     );
 	$i->{visual_id} = $i->{id};
     }
@@ -51,11 +49,25 @@ sub get {
 
 sub set {
     my $self = shift;
+
+    # Do not expire historic objects
+    if( $self->stop() ) {
+	$self->get_status()->set( 406, "Unable to set values in historic instances" );
+	return 0;
+    }    
+
     $self->property( @_ );
 }
 
 sub expire {
     my $self  = shift;
+
+    # Do not expire historic objects
+    if( $self->stop() ) {
+	$self->get_status()->set( 406, "Unable to expire historic instance" );
+	return 0;
+    }
+    
     return $self->storage()->{protocol}->expire_instance( $self->entity()->_userland_id(), $self->_userland_id() );    
 }
 
@@ -76,12 +88,6 @@ sub property {
 							}
 						      );
     }
-}
-
-sub delete :method {
-    my $self = shift;
-    
-    return $self->storage()->{protocol}->expire_instance( $self->entity()->_userland_id(), $self->_userland_id() );
 }
 
 1;

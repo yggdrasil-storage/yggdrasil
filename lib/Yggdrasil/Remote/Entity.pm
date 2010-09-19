@@ -16,7 +16,7 @@ sub define {
     }
     
     my $dataref = $self->storage()->{protocol}->define_entity( $ename );
-    return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );    
+    return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );
 }
 
 sub get {
@@ -29,32 +29,46 @@ sub get {
     
     my $self = $class->SUPER::new(@_);
     my %params = @_;
+
+    my $time = $self->_validate_temporal( $params{time} );
+    return unless $time;    
     
-    my $dataref = $self->storage()->{protocol}->get_entity( $params{entity} );
+    my $dataref = $self->storage()->{protocol}->get_entity( $params{entity}, $time );
     return Yggdrasil::Object::objectify( $self->yggdrasil(), __PACKAGE__, $dataref );    
 }
 
 sub property_exists {
     my $self = shift;
-
+    
     return $self->get_property( @_ );
 }
 
 sub descendants {
     my $self = shift;
-    return $self->storage()->{protocol}->get_entity_descendants( $self->_userland_id() );
+    my %params = @_;
+
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;    
+
+    return $self->storage()->{protocol}->get_entity_descendants( $self->_userland_id(), $time );
 }
 
 sub ancestors {
     my $self = shift;
-    return $self->storage()->{protocol}->get_entity_ancestors( $self->_userland_id() );
+    my %params = @_;
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;    
+    return $self->storage()->{protocol}->get_entity_ancestors( $self->_userland_id(), $time );
 }
 
 sub children {
     my $self = shift;
+    my %params = @_;
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;    
     return Yggdrasil::Object::objectify( $self->yggdrasil(),
 					 __PACKAGE__,
-					 $self->storage()->{protocol}->get_entity_children( $self->_userland_id() ));
+					 $self->storage()->{protocol}->get_entity_children( $self->_userland_id(), $time ));
 }
 
 sub fetch {
@@ -72,13 +86,25 @@ sub fetch {
 sub expire {
     my $self = shift;
 
+    # Do not expire historic Entities
+    if( $self->stop() ) {
+	$self->get_status()->set( 406, "Unable to expire historic entity" );
+	return 0;
+    }
+
+    # Do not expire UNIVERSAL.  That's bad.
+    if ($self->_internal_id() == 1) {
+	$self->get_status()->set( 403, "Unable to expire the root entity, 'UNIVERSAL'");
+	return 0;
+    }
+    
     return $self->storage()->{protocol}->expire_entity( $self->_userland_id() );
 }
 
 sub get_property {
     my $self = shift;
     my $prop = shift;
-
+    
     return Yggdrasil::Remote::Property->get( yggdrasil => $self->yggdrasil(),
 					     entity    => $self,
 					     property  => $prop,
@@ -90,31 +116,42 @@ sub get_all {
     my $self = $class->SUPER::new(@_);
     my %params = @_;
 
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;
+    
     return Yggdrasil::Object::objectify(
 					$self->yggdrasil(),
 					__PACKAGE__,
-					$self->storage()->{protocol}->get_all_entities(),
+					$self->storage()->{protocol}->get_all_entities( $time ),
 				       );
 }
 
 sub instances {
     my $self = shift;
+    my %params = @_;
+
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;
 
     return map { $_->{visual_id} = $_->{id}; $_ }
       Yggdrasil::Object::objectify(
 				   $self->yggdrasil(),
 				   'Yggdrasil::Remote::Instance',
-				   $self->storage()->{protocol}->get_all_instances( $self->_userland_id() ),
+				   $self->storage()->{protocol}->get_all_instances( $self->_userland_id(), $time ),
 				  );
 }
 
 sub relations {
     my $self = shift;
+    my %params = @_;
 
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;
+    
     my @objs = Yggdrasil::Object::objectify(
 					    $self->yggdrasil(),
 					    'Yggdrasil::Remote::Relation',
-					    $self->storage()->{protocol}->get_all_entity_relations( $self->_userland_id() ),
+					    $self->storage()->{protocol}->get_all_entity_relations( $self->_userland_id(), $time ),
 					   );
 
     for my $o (@objs) {
@@ -126,11 +163,15 @@ sub relations {
 
 sub properties {
     my $self = shift;
-    
+    my %params = @_;
+
+    my $time = $self->_validate_temporal( $params{time} ); 
+    return unless $time;    
+
     my @props = Yggdrasil::Object::objectify(
 					     $self->yggdrasil(),
 					     'Yggdrasil::Remote::Property',
-					     $self->storage()->{protocol}->get_all_properties( $self->_userland_id() ),
+					     $self->storage()->{protocol}->get_all_properties( $self->_userland_id(), $time ),
 					    );
     for my $prop (@props) {
 	if ($prop->{entity} eq $self->_userland_id()) {
@@ -145,6 +186,12 @@ sub properties {
 sub create {
     my $self = shift;
     my $id   = shift;
+
+    # Do not create instances in historic context.
+    if( $self->stop() ) {
+	$self->get_status()->set( 406, "Unable to create instances in historic context" );
+	return 0;
+    }
     
     return Yggdrasil::Object::objectify(
 					$self->yggdrasil(),
