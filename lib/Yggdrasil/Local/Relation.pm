@@ -21,7 +21,7 @@ sub define {
     $self->{label} = $label;
     
     $lval = Yggdrasil::Local::Entity->get( yggdrasil => $self, entity => $lval );
-    $rval = Yggdrasil::Local::Entity->get( yggdrasil => $self, entity => $rval );;
+    $rval = Yggdrasil::Local::Entity->get( yggdrasil => $self, entity => $rval );
 
     $self->{lval} = $lval;
     $self->{rval} = $rval;
