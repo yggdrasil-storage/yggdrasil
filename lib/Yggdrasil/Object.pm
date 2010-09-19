@@ -82,6 +82,11 @@ sub objectify {
     }    
 }
 
+# FIXME: The remote API seems to create some objects without a proper
+# self->start() set, so until that's fixed, we'll have to test for the
+# existance of self->start() in the code below.  This shouldn't be
+# needed, *ever*, but seemlingly is for some reason.  It's odd that
+# this is the only place this breaks.
 sub _validate_temporal {
     my $self = shift;
     my $time = shift || {};
@@ -89,7 +94,7 @@ sub _validate_temporal {
     # START
     my $invalid = 0;
     if( defined $time->{start} ) {
-	$invalid = "'start' out of range" if $time->{start} < $self->start();
+	$invalid = "'start' out of range" if $self->start() && $time->{start} < $self->start();
 	$invalid = "'start' out of range" if $self->stop() && $time->{start} > $self->stop();
     }
 
@@ -98,7 +103,7 @@ sub _validate_temporal {
     # STOP
     if( exists $time->{stop} ) {
 	if( defined $time->{stop} ) {
-	    $invalid = "'stop' out of range" if $time->{stop} < $self->start();
+	    $invalid = "'stop' out of range" if $self->start() && $time->{stop} < $self->start();
 	    $invalid = "'stop' out of range" if $self->stop() && $time->{stop} > $self->stop();
 	} else {
 	    # user specified 'stop', but value was 'undef'. This means
