@@ -190,7 +190,7 @@ sub define_instance {
     my $entity = shift;
     my $instance = shift;
 
-    return Yggdrasil::Instance->define(
+    return Yggdrasil::Instance->create(
 				       yggdrasil => $self,
 				       entity    => $entity,
 				       instance  => $instance,
