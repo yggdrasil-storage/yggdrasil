@@ -1418,7 +1418,8 @@ sub expand_instance {
 sub expand_instance_relation {
     my( $side, $instance, $relation ) = @_;
 
-    my $rel = $y->get_relation( $relation );
+    my ($rkey, $tstart, $tstop) = extract_temporality( $relation );
+    my $rel = $y->get_relation( $rkey );
     my ($left, $right) = $rel->entities();
 
     if ($side eq 'l') {
