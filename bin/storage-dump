@@ -88,8 +88,7 @@ sub storage_dump {
 	my $target    = $tick->{target};
 	
 	my $real = $storage->_get_real_name( $target ) || $target;
-
-	next if $real =~/^Storage_/;
+	next if $real =~/^Storage/;
 
 	my $file = File::Spec->catfile( $wdir, $t );
 	open( my $fh, '>', $file ) || die "Unable to dump: $!\n";
@@ -106,9 +105,20 @@ sub storage_dump {
 		die "Inconsistent data in Storage! Did not find schema that was supposed to be defined at tick $t\n";
 	    }
 	} elsif( $event eq "store" || $event eq "update" || $event eq "expire" ) {
-	    $data = $storage->fetch( $real => { 
-					       return => [ "*" ],
-					       where => [ start => $t ] } );
+	    my( $where, $time );
+	    if( $event eq "expire" ) {
+		$where = [ stop => $t ];
+		$time  = { start => $t-1, stop => $t };
+	    } else {
+		$where = [ start => $t ];
+		$time  = { start => $t, stop => $t };
+	    }
+
+	    $data = $storage->fetch( 
+				    $real => { 
+					      return => [ "*" ],
+					      where => $where },
+				    $time);
 	    $data = $data->[0];
 	    delete $data->{stop};
 	    delete $data->{start};
