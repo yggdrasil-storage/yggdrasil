@@ -3,199 +3,308 @@
 use strict;
 use warnings;
 
-use MIME::Base64;
+BEGIN { our $VERSION = '0.01' };
+
 use Getopt::Long;
 
 use FindBin qw($Bin);
 use lib qq($Bin/../lib);
 
+use Archive::Tar;
+use Storable qw/thaw/;
+
 use Yggdrasil;
+use Yggdrasil::Common::CommandLine;
+use Yggdrasil::Common::Config;
 
-our %INSTANCE_MAP;
-our %ENTITY_MAP;
-our %RELATION_MAP;
+our %ENTITIES;
+our %INSTANCES;
+our %RELATIONS;
+our %PROPERTIES;
+our %PROPERTY_SCHEMAS;
 
-my ($user, $password, $host, $port, $db, $engine, $mapper, $NAMESPACE, $VERSION) =
-  ($ENV{YGG_USER}, $ENV{YGG_PASSWORD}, $ENV{YGG_HOST}, $ENV{YGG_PORT}, $ENV{YGG_DB}, $ENV{YGG_ENGINE}, undef, 'Ygg', '0.01');
+my $file    = shift;
+my $cmdline = Yggdrasil::Common::CommandLine->new();
+my $label   = $cmdline->get('label') || 'default';
 
-GetOptions(
-    "mapper=s"     => \$mapper,
-    "user=s"       => \$user,
-    "engine=s"     => \$engine,
-    "password=s"   => \$password,
-    "host=s"       => \$host,
-    "database=s"   => \$db,
-    "engine=s"     => \$engine,
-    "port=s"       => \$port,
-    "help"         => \&help,
-    "version"      => \&version,
-    );
-
-new Yggdrasil(
-	      user      => $user,
-	      password  => $password,
-	      host      => $host,
-	      port      => $port,
-	      db        => $db,
-	      engine    => $engine,
-	      mapper    => $mapper,
-	      namespace => $NAMESPACE,
-	      admin     => 1,
-	     );
-
-my $store = {
-    MetaEntity   => \&meta_entity,
-    MetaProperty => \&meta_property,
-    MetaRelation => \&meta_relation,
-    MetaInheritance => \&meta_inheritance,
-    Entity   => \&entity,
-    Property => \&property,
-    Relation => \&relation,
-};
-
-my $define = {
-    MetaEntity   => sub {},
-    MetaProperty => sub {},
-    MetaRelation => sub {},
-    MetaInheritance => sub {},
-    Entity   => sub{},
-    Property => \&property_define,
-    Relation => sub{},
-};
-
-
-my( @data, $section, $extra );
-while( my $line = <>) {
-    next if $line =~ /^#/;
-    if( $line eq "\n" ) {
-	$store->{ $section }->( $extra, \@data ) if @data;
-	@data = ();
-	next;
-    } elsif( $line =~ /^\[/ ) {
-	my($header) = $line =~ /\[([^]]+)\]/;
-	( $section, $extra ) = split(":", $header);
-	$define->{ $section }->( $extra );
-	next;
-    }
-
-    die unless $section;
-
-    push( @data, $line );
-}
-
-sub meta_entity {
-    my $schema = shift;
-    my %data = decode(shift);
-
-    my $id = Yggdrasil::MetaEntity->admin_restore( \%data );
-    $ENTITY_MAP{ $data{entity} } = $id;
-}
-
-sub meta_property {
-    my $schema = shift;
-    my %data = decode(shift);
-
-    $data{entity} = $ENTITY_MAP{ $data{entity} };
-    Yggdrasil::MetaProperty->admin_restore( \%data );
-}
-
-sub meta_relation {
-    my $schema = shift;
-    my %data = decode(shift);
-
-    $data{lval} = $ENTITY_MAP{ $data{lval} };
-    $data{rval} = $ENTITY_MAP{ $data{rval} };
-    my $id = Yggdrasil::MetaRelation->admin_restore( \%data );
-    $RELATION_MAP{ $data{label} } = $id;
-}
-
-sub meta_inheritance {
-    my $schema = shift;
-    my %data = decode(shift);
-
-    $data{parent} = $ENTITY_MAP{ $data{parent} };
-    $data{child}  = $ENTITY_MAP{ $data{child} };
-    Yggdrasil::MetaInheritance->admin_restore( \%data );
-}
-
-sub entity {
-    my $entity = decode_base64( shift );
-    my %data   = decode(shift);
-
-    $data{entity} = $ENTITY_MAP{ $entity };
-    my $id = Yggdrasil::Entity->admin_restore( \%data );
-    $INSTANCE_MAP{ $data{visual_id} } = $id;
-}
-
-sub property {
-    my $schema = shift;
-    my( $entity, $property ) = map { decode_base64($_) } split ' ', $schema;
-    my %data = decode(shift);
-    
-    $data{id} = $INSTANCE_MAP{ $data{id} };
-    Yggdrasil::Property->admin_restore( $entity, $property, \%data );
-}
-
-sub property_define {
-    my $schema = shift;
-    my( $entity, $property ) = map { decode_base64($_) } split ' ', $schema;
-
-    Yggdrasil::Property->admin_define( $entity, $property );    
-}
-
-sub relation {
-    my $label = decode_base64( shift );
-    my %data = decode(shift);
-    
-    $data{lval} = $INSTANCE_MAP{ $data{lval} };
-    $data{rval} = $INSTANCE_MAP{ $data{rval} };
-    $data{id}   = $RELATION_MAP{ $label };
-    Yggdrasil::Relation->admin_restore( \%data );
-}
-
-
-sub decode {
-    my $data = shift;
-
-    my @list;
-    foreach my $l (@$data) {
-	my( $key, $val ) = split /\s+=>\s+/, $l;
-	$val = decode_base64($val);
-	$val = undef unless length $val;
-
-	push( @list, $key, $val );
-    }
-
-    return @list;
-}
-
-sub help {
-    print <<USAGE;
-Usage: $0 <dump file>
-
-Restores an Yggdrasil database from a dump file. Dump files can be
-generated with ydump.
-
-USAGE
-
-    print <DATA>;
+unless( $file && -e $file ) {
+    $cmdline->help();
     exit;
 }
 
-sub version {
-    print "yrestore version $VERSION\n";
-    exit;
+my $c = Yggdrasil::Common::Config->new();
+my $config = $c->get($label);
+
+unless ($config) {
+    $config = $c->get('ENV');
+    die "No such label as $label and falling back to ENV failed\n"
+	unless $config->get( 'engineuser' );
+}
+
+
+my $y = new Yggdrasil();
+my $status = $y->get_status();
+
+$y->connect( 
+	    user      => $config->get('engineuser'),
+	    password  => $config->get('enginepassword'),
+	    host      => $config->get('enginehost'),
+	    port      => $config->get('engineport'),
+	    db        => $config->get('enginedb'),
+	    engine    => $config->get('enginetype'),
+	   );
+die $status->message(), "\n" unless $status->OK();
+
+my $uname = $cmdline->get( 'username' ) || $config->get( 'authuser' ) || (getpwuid($>))[0];
+my $upass = $cmdline->get( 'password' ) || $config->get( 'authpass' ) || $cmdline->read_password();
+my $iam = $y->login( username => $uname, password => $upass );    
+die $status->message(), "\n" unless $status->OK();
+
+my $tar = Archive::Tar->new();
+$tar->read( $file );
+
+my @files   = $tar->list_files();
+my( $path ) = $files[0] =~ m/^(.*)\//;
+
+
+my @ticks = sort { $a <=> $b } map { s/^.*\///; $_ } @files;
+foreach my $tick (@ticks) {
+    my $file = join('/', $path, $tick);
+    my $content = $tar->get_content( $file );
+
+    restore($y, $content);
+}
+
+sub restore {
+    my $y = shift;
+    my $content = shift;
+
+    my( $head, $body ) = parse($content);
+    use Data::Dumper;
+#    print Dumper($head), "\n";
+#    print Dumper($body), "\n";
+#    <>;
+#    return;
+
+    my $stamp     = $head->{stamp};
+    my $target    = $head->{target};
+    my $committer = $head->{committer};
+    my $event     = $head->{event};
+
+
+    return unless $event;
+    return if $event eq "define";
+
+    my $revert = $event eq "expire";
+
+    eval {
+	if( $target eq "MetaEntity" ) {
+	    restore_entity( $y, $head, $body, $revert );
+	} elsif( $target eq "MetaProperty" ) {
+	    restore_property( $y, $head, $body, $revert );
+	} elsif( $target eq "Instances" ) {
+	    restore_instance( $y, $head, $body, $revert );
+	} elsif( $target eq "MetaRelation" ) {
+	    restore_relation( $y, $head, $body, $revert );
+	} elsif( $target eq "Relations" ) {
+	    restore_link( $y, $head, $body, $revert );
+	} else {
+	    restore_property_value( $y, $head, $body, $revert );
+	}
+    };
+
+    if( $@ ) {
+	warn $@;
+        warn $y->get_status()->status(), ": ", $y->get_status()->message(), "\n";
+	exit;
+    }
+}
+
+sub restore_link {
+    my $y      = shift;
+    my $head   = shift;
+    my $body   = shift;
+    my $revert = shift;
+
+    my $rval = $body->{rval};
+    my $lval = $body->{lval};
+    my $rid  = $body->{relationid};
+    my $id   = $body->{id};
+
+    $rval = $INSTANCES{$rval};
+    $lval = $INSTANCES{$lval};
+
+    my $relation = $RELATIONS{$rid};
+    my $r = $y->get_relation( $relation );
+    $y->get_status()->OK() || die "Failed to fetch relation '$label'\n";
+
+    my( $lentity, $linstance ) = @$lval;
+    my $li = $y->get_instance( $lentity, $linstance );
+    $y->get_status()->OK() || die "Failed to fetch instance '$linstance' in entity '$lentity'\n";
+
+    my( $rentity, $rinstance ) = @$rval;
+    my $ri = $y->get_instance( $rentity, $rinstance );
+    $y->get_status()->OK() || die "Failed to fetch instance '$rinstance' in entity '$rentity'\n";
+
+    if( $revert ) {
+	$r->unlink( $li, $ri );
+    } else {
+	$r->link( $li, $ri );
+    }
+    
+    $y->get_status()->OK() || die "Failed to restore link between '$linstance' and '$rinstance' in relation '$relation'\n";
+
+}
+
+sub restore_relation {
+    my $y      = shift;
+    my $head   = shift;
+    my $body   = shift;
+    my $revert = shift;
+
+    my $rval  = $body->{rval};
+    my $lval  = $body->{lval};
+    my $label = $body->{label};
+    my $l2r   = $body->{l2r};
+    my $r2l   = $body->{r2l};
+    my $req   = $body->{requirement};
+    my $id    = $body->{id};
+
+    $rval = $ENTITIES{$rval};
+    $lval = $ENTITIES{$lval};
+
+    if( $revert ) {
+	$y->expire_relation( $label );
+    } else {
+	my $le = $y->get_entity( $lval );
+	$y->get_status()->OK() || die "Failed to fetch entity '$lval'\n";
+
+	my $re = $y->get_entity( $rval );
+	$y->get_status()->OK() || die "Failed to fetch entity '$rval'\n";
+
+	$y->define_relation( $le, $re, label => $label );
+    }
+
+    $y->get_status()->OK() || die "Failed to restore relation '$label'\n";
+
+    $RELATIONS{$id} = $label;
+}
+
+sub restore_property_value {
+    my $y      = shift;
+    my $head   = shift;
+    my $body   = shift;
+    my $revert = shift;
+
+    my $property = $PROPERTY_SCHEMAS{ $head->{target} };
+    my $value    = $body->{value};
+    my $id       = $body->{id};
+
+    my( $entity, $instance ) = @{ $INSTANCES{$id} };
+    my $i = $y->get_instance( $entity, $instance );
+    $y->get_status()->OK() || die "Failed to fetch instance '$instance' in entity '$entity'\n";
+
+    $i->set( $property => $value );
+    $y->get_status()->OK() || die "Failed to restore value for property '$property' in instance '$instance'\n";
+}
+
+sub restore_instance {
+    my $y      = shift;
+    my $head   = shift;
+    my $body   = shift;
+    my $revert = shift;
+    
+    my $entity = $body->{entity};
+    my $name   = $body->{visual_id};
+    my $id     = $body->{id};
+
+    $entity = $ENTITIES{$entity};
+    my $e = $y->get_entity( $entity );
+    $y->get_status()->OK() || die "Failed to get entity '$entity'\n";
+
+    if( $revert ) {
+	$y->expire_instance( $e, $name );
+    } else {
+	$y->define_instance( $e, $name );
+    }
+
+    $y->get_status()->OK() || die "Failed to restore instance '$name' in entity '$entity'\n";
+
+    $INSTANCES{$id} = [ $entity, $name ];
+}
+
+sub restore_property {
+    my $y      = shift;
+    my $head   = shift;
+    my $body   = shift;
+    my $revert = shift;
+
+    my $entity = $body->{entity};
+    my $nullp  = $body->{nullp};
+    my $type   = $body->{type};
+    my $name   = $body->{property};
+    my $id     = $body->{id};
+
+    $entity = $ENTITIES{$entity};
+
+    if( $revert ) {
+	$y->expire_property( $entity, $name );
+    } else {
+	$y->define_property( $entity, $name, type => $type, nullp => $nullp );
+    }
+
+    $y->get_status()->OK() || die "Failed to restore property '$entity:$name'\n";
+
+    $PROPERTIES{$id} = $name;
+    $PROPERTY_SCHEMAS{ join(":", $entity, $name) } = $name;
+}
+
+sub restore_entity {
+    my $y      = shift;
+    my $head   = shift;
+    my $body   = shift;
+    my $revert = shift;
+
+    my $entity = $body->{entity};
+    my $parent = $body->{parent};
+    my $id     = $body->{id};
+
+    if( $revert ) {
+	$y->expire_entity( $entity );
+    } else {
+	$y->define_entity( $entity );
+    }
+
+    $y->get_status()->OK() || die "Failed to restore entity '$entity'\n";
+
+    $ENTITIES{$id} = $entity;
+}
+
+
+sub parse {
+    my $content = shift;
+
+    my( %head, $body );
+
+    open( my $fh, "<", \$content );
+    while( my $line = <$fh> ) {
+	last unless $line =~ /\S/;
+	chomp $line;
+
+	my( $key, $val ) = split /\s*:\s*/, $line, 2;
+	$head{$key} = $val;
+    }
+    
+    {
+	local $/ = undef;
+	$body = <$fh>;
+    };
+
+    $body = thaw($body);
+
+    return( \%head, $body );
 }
 
 __DATA__
-Options:
---------
---help               Prints out usage help
---version            Prints version information
---user <name>        Specify database login name
---password <pass>    Specify database password
---host <host>        Specify database host
---port <port>        Specify database port
---db <name>          Specify database name
---engine <name>      Specify database engine
---namespace <space>  Specify Yggdrasil namespace
+Utility to restore a previously dumped Yggdrasil instance.
+
