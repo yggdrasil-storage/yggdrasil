@@ -12,12 +12,16 @@ use lib qq($Bin/../lib);
 
 use Term::ReadLine;
 use Text::ParseWords;
+use File::Spec;
 
 use Crypt::GeneratePassword;
 
 use Yggdrasil;
 use Yggdrasil::Common::CommandLine;
 use Yggdrasil::Common::Config;
+
+our $CFG_DIR = "yggdrasil";
+our $HISTORY = ".history";
 
 my $cmdline = Yggdrasil::Common::CommandLine->new();
 my $label   = $cmdline->get('label') || 'default';
@@ -401,6 +405,8 @@ $attribs->{completion_function} = sub { completion(@_, \%cmd, \@cmd_path) };
 $attribs->{completer_quote_characters} = q<"'>;
 $attribs->{filename_quote_characters} = q( <->);
 
+load_history( $term );
+
 while ( defined (my $input = $term->readline($prompt)) ) {
     chomp $input;
 
@@ -451,6 +457,8 @@ while ( defined (my $input = $term->readline($prompt)) ) {
     # Set prompt
     $prompt = join(" ", @cmd_path) . " > ";
 }
+
+save_history( $term );
 
 sub help {
     my $top  = shift;
@@ -1553,6 +1561,26 @@ sub _read_password {
 	}
     }
     return undef;
+}
+
+sub load_history {
+    my $term = shift;
+
+    my $history = File::Spec->catdir( ($ENV{HOME} || (getpwuid($>))[7]),
+				      '.'.$CFG_DIR, $HISTORY );
+
+    return unless -e $history;
+
+    $term->ReadHistory( $history );
+}
+
+sub save_history {
+    my $term = shift;
+
+    my $history = File::Spec->catdir( ($ENV{HOME} || (getpwuid($>))[7]),
+				      '.'.$CFG_DIR, $HISTORY );
+
+    $term->WriteHistory( $history );
 }
 
 __DATA__
