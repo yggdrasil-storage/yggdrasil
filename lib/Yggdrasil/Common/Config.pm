@@ -67,8 +67,9 @@ sub _parse_all_configuration {
     return unless -e $path && -d $path && -r $path;
 
     # --- Find all configuration files within - filter backup files
+    #     and dot files
     opendir( my $dh, $path ) || return;
-    my @files = grep { ! m<^\.\.?$> && ! m<(~|\.bak)$> } readdir $dh;
+    my @files = grep { ! m<^\.> && ! m<(~|\.bak)$> } readdir $dh;
     closedir $dh;
 
     # --- Parse each configuration file
