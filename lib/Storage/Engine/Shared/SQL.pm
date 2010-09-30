@@ -65,16 +65,16 @@ sub _define {
     $sql .= $self->_engine_post_create_details();
     $sql .= ";\n";
     
-    $self->_sql( $sql );
-
-    for my $field (@indexes) {
-	my $indexsql = $self->_create_index_sql($schema, $field );
-	$self->_sql( $indexsql );
-    }
+    if( $self->_sql( $sql ) ) {
+	for my $field (@indexes) {
+	    my $indexsql = $self->_create_index_sql($schema, $field );
+	    $self->_sql( $indexsql );
+	}
     
-    # Find a way to deal with return values from here, worked / didn't
-    # would be nice.
-    return 1;
+	return 1;
+    } else {
+	return;
+    }
 }
 
 # Does the engine support primary keys, and does that support include
@@ -167,7 +167,7 @@ sub _sql {
 	my $value = defined $attr ? $attr : "NULL";
 	$sqlinline =~ s/\?/"'$value'"/e;
     }
-    $self->{transaction}->engine( $sqlinline );
+
     print "$sqlinline\n" if $self->{_debug}->{protocol};
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed: " . $sth->errstr() );
@@ -636,6 +636,24 @@ sub _dump_structure {
     
     my $dbh = $self->{dbh};
     return $dbh->selectall_arrayref( "select * from $schema" );
+}
+
+sub _start_transaction {
+    my $self = shift;
+
+    $self->{dbh}->begin_work();
+}
+
+sub _commit {
+    my $self = shift;
+
+    $self->{dbh}->commit();
+}
+
+sub _rollback {
+    my $self = shift;
+
+    $self->{dbh}->rollback();
 }
 
 1;

@@ -15,6 +15,7 @@ sub new {
 		config        => 'config',
 		defines       => 'defines',
 		ticker        => 'ticker',
+		subticker     => 'subticker',
 		authschema    => 'authschema',
 		authuser      => 'auth_user',
 		authrole      => 'auth_role',
@@ -53,21 +54,25 @@ sub bootstrap {
 
     my $status = $self->{_storage}->get_status();
 
+    my $transaction = Storage::Transaction->new( $self->{_storage} );
     $self->_bootstrap_ticker();
-    return unless $status->OK;
+    return $transaction->rollback() unless $status->OK();
     $self->_bootstrap_defines();
-    return unless $status->OK;
+    return $transaction->rollback() unless $status->OK();
     $self->_bootstrap_config();
-    return unless $status->OK;
+    return $transaction->rollback() unless $status->OK();
     $self->_bootstrap_filter();
-    return unless $status->OK;
+    return $transaction->rollback() unless $status->OK();
     $self->_bootstrap_temporal();
-    return unless $status->OK;
+    return $transaction->rollback() unless $status->OK();
     $self->_bootstrap_mapper();
-    return unless $status->OK;
+    return $transaction->rollback() unless $status->OK();
     $self->_bootstrap_auth();
-    return unless $status->OK;
+    return $transaction->rollback() unless $status->OK();
     $self->_bootstrap_fields();    
+    return $transaction->rollback() unless $status->OK();
+    
+    $transaction->commit();
 }
 
 sub init {
@@ -173,6 +178,7 @@ sub _bootstrap_mapper {
 
     $self->{_storage}->define( $self->get( 'mapper' ),
 			       fields => {
+					  id         => { type => 'SERIAL' },
 					  humanname  => { type => 'TEXT' },
 					  mappedname => { type => 'TEXT' },
 					 },
@@ -227,12 +233,23 @@ sub _bootstrap_ticker {
 			       fields => {
 					  id        => { type => 'SERIAL' },
 					  committer => { type => 'TEXT' },
-					  event     => { type => 'TEXT' },
-					  target    => { type => 'TEXT' },
 					  stamp     => { type => 'TIMESTAMP', 
 							 null => 0,
 							 default => "current_timestamp" },
 					 }, );
+
+    $self->{_storage}->define( $self->get( 'subticker' ),
+			       nomap => 1,
+			       fields => {
+					  tickid    => { type => 'INTEGER' },
+					  subtickid => { type => 'INTEGER' },
+					  event     => { type => 'TEXT' },
+					  target    => { type => 'TEXT' },
+					  },
+			       hints => { tickid    => { foreign => $self->get( 'ticker' ), index => 1 },
+					  subtickid => { index => 1 }
+					} );
+
     $self->{_storage}->tick( 'define', $self->get( 'ticker' ));
 }
 
@@ -594,8 +611,8 @@ sub _define_auth {
 				   nomap => $nomap,
 				   temporal => 1,
 				   hints => {
-					     id     => { foreign => $schema },
-					     roleid => { foreign => $self->get( 'authrole' ), index => 1 },
+					     id     => { foreign => $schema, key => 1 },
+					     roleid => { foreign => $self->get( 'authrole' ), key => 1, index => 1 },
 					     w      => { index => 1 },
 					     r      => { index => 1 },
 					     'm'    => { index => 1 },

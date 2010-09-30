@@ -18,8 +18,6 @@ use Digest::MD5 qw(md5_hex);
 
 our $VERSION = '0.0.1';
 
-our $TRANSACTION = Storage::Transaction->create_singleton();
-
 sub new {
     my $class = shift;
     my $self  = {};
@@ -61,7 +59,6 @@ sub new {
 	my $storage = $engine_class->new(@_);
 	$storage->_set_default_user("nobody");
 
-	$storage->{transaction} = $TRANSACTION;
 	$storage->{type} = new Storage::Type();
 	
 	unless (defined $storage) {
@@ -231,6 +228,12 @@ sub get_status {
     return $self->{status};
 }
 
+sub initialize_transaction {
+    my $self = shift;
+
+    return Storage::Transaction->new($self);
+}
+
 # define( Schema',
 #         fields   => { field1, 
 #                               { null  => BOOL(0), type => type(TEXT),
@@ -245,7 +248,7 @@ sub define {
     my $self = shift;
     my $schema = shift;
     
-    my $transaction = $TRANSACTION->init( path => 'define' );
+    my $transaction = Storage::Transaction->new( $self );
 
     my %data = @_;
     my $originalname = $schema;
@@ -272,7 +275,7 @@ sub define {
 	$data{hints}->{stop}   = { foreign => $self->get_structure( 'ticker' ) };
     } else {
 	# Add tick field unless we're dealing with the ticker schema.
-	unless ( $schema eq $self->get_structure( 'ticker' ) ) {
+	unless ( $schema eq $self->get_structure( 'ticker' ) || $schema eq $self->get_structure( 'subticker' )) {
 	    $data{fields}->{tick} = { type => 'INTEGER', null => 0 };
 	}
     }
@@ -283,9 +286,11 @@ sub define {
 	my %newdata = @{$schemadef->{define}};
 	if ($self->_deep_eq( \%newdata, \%data )) {
 	    $status->set( 202, "Structure '$schema' already exists" );
+	    $transaction->rollback();
 	    return;
 	} else {
 	    $status->set( 406, "Structure '$schema' already defined, unable to redefine with new configuration" );
+	    $transaction->rollback();
 	    return;
 	}
     }
@@ -299,6 +304,7 @@ sub define {
 		    # Pass. Good work!
 		} elsif (ref $filters) {
 		    $status->set( 406, "Malformed filter data format" );
+		    $transaction->rollback();
 		    return;
 		} else {
 		    $filters = [ $filters, undef ];
@@ -311,16 +317,25 @@ sub define {
 		    $self->store( $self->get_structure( 'filter' ), key => "schemaname",
 				  fields => { schemaname => $originalname, filter => $filter,
 					      field  => $field, params => $params });
+		    return unless $status->OK();
+
 		    push @fieldfilters, { filter => $filter, field => $field, params => $params };
 		}
 		$self->cache( 'filter', $originalname, \@fieldfilters);
 	    }
 	}
     }
-    
-    $transaction->log( "Defined $originalname" );
-    my $tick = $self->tick( 'define', $schema ) unless $schema eq $self->get_structure( 'ticker' );
+ 
+    my $tick = $self->tick( 'define', $schema ) 
+      unless $schema eq $self->get_structure( 'ticker' ) ||
+	$schema eq $self->get_structure( 'subticker' );
+
+    $transaction->define( $schema );
     my $retval = $self->_define( $schema, %data );
+    unless( $retval ) {
+	$transaction->rollback();
+	return;
+    }
 
     # Store the define statement for reference to help dump / restore.
     # Use _store to avoid ticking.  FIXME, check return value?
@@ -333,28 +348,43 @@ sub define {
 				  tick       => $tick,
 				  define     => Storable::nfreeze( \@define ),
 				 });
+
+	# _store doesn't do transactions on its own, so we might have
+	# to rollback here
+	unless( $status->OK() ) {
+	    $transaction->rollback();
+	    return;
+	}
     }
     
     if ($retval) {
 	unless ( $originalname =~ /^$storage_prefix/ ) {
-	    $self->cache( 'mapperh2m', $originalname, $schema );
-	    $self->cache( 'mapperm2h', $schema, $originalname );
 	    $self->store( $self->get_structure( 'mapper' ), key => "humanname",
 			  fields => { humanname => $originalname, mappedname => $schema });
+	    return unless $status->OK();
+
+	    $self->cache( 'mapperh2m', $originalname, $schema );
+	    $self->cache( 'mapperm2h', $schema, $originalname );
 	}
 	if ($data{temporal}) {
-	    $self->cache( 'temporal', $schema, 1 );
 	    $self->store( $self->get_structure( 'temporal' ), key => "tablename",
 			  fields => { tablename => $schema, temporal => 1 });
+	    return unless $status->OK();
+
+	    $self->cache( 'temporal', $schema, 1 );
 	}
 
 	if( $data{auth} ) {
 	    $self->{structure}->_define_auth( $schema, $originalname, $data{auth}, $data{nomap}, $data{authschema} );
+	    unless( $status->OK() ) {
+		$transaction->rollback();
+		return;
+	    }
 	}
     }
     
     $transaction->commit();
-    return $retval;
+    return 1;
 }
 
 sub _find_schema_by_name_or_alias {
@@ -386,8 +416,10 @@ sub store {
     my $schema = shift;
     my %params = @_;
 
+    my $has_fields = exists $params{fields};
+
+    my $transaction = Storage::Transaction->new($self);
     my $status = $self->get_status();
-    my $transaction = $TRANSACTION->init( path => 'store' );
 
     my $uname = $self->{user}->id();
 
@@ -414,7 +446,7 @@ sub store {
     my $key = $params{key};
     if( ref $key eq 'ARRAY' ) {
 	for my $k (@$key) {
-	    $keys{$k} = $params{fields}->{$k};
+	    $keys{$k} = $params{fields}->{$k} if exists $params{fields}->{$k};
 	}
     } else {
 	$keys{$key} = $params{fields}->{$key};
@@ -422,7 +454,17 @@ sub store {
 
     # Check if the entry exists
     my $real_schema = $self->_get_schema_name( $schema ) || $schema;
-    my $aref = $self->_fetch( $real_schema => { where => [ %keys ], return => '*' } );
+
+    # If fields are not sent as a parameter, the we're not storing any
+    # (user generated) values, in essence we're asking Storage to
+    # store nothing. This can be useful if your schema consists of
+    # only a SERIAL field that you want to bump, in which case
+    # checking for previous values makes no sense.
+    my $aref = [];
+    if( $has_fields ) {
+	$aref = $self->_fetch( $real_schema => { where => [ %keys ], return => '*' } );
+    }
+
     my $update = 0;
     if( @$aref ) {
 	# An entry exists - we have to check if the values for the
@@ -448,12 +490,14 @@ sub store {
 	    # current
 	    if( $can ) { 
 		$status->set( 202, "Value(s) already set" );
+		$transaction->rollback();
 
 		# FIX: what if the key is a composite key?
-		return $aref->[0]->{$key};
+		return $aref->[0]->{ref $key?$key->[0]:$key};
 	    }
 	    else { 
-		$status->set( 403, "Forbidden" ); 
+		$status->set( 403, "Forbidden" );
+		$transaction->rollback();
 		return;
 	    }
 	} else {
@@ -461,6 +505,7 @@ sub store {
 	    unless( $can ) {
 		# ... but not the proper rights
 		$status->set( 403, "Forbidden" );
+		$transaction->rollback();
 		return;
 	    }
 
@@ -482,6 +527,7 @@ sub store {
 	my $can = $self->can( create => $real_schema, \%keys );
 	unless( $can ) {
 	    $status->set( 403, "Forbidden" );
+	    $transaction->rollback();
 	    return;
 	}
     }
@@ -494,23 +540,34 @@ sub store {
 
     # If we are updating, expire the old value
     if( $update ) {
-	$transaction->log( "Expire: $schema " . join( ", ", map { defined()?$_:"" } %keys ) );
 	$self->_expire( $real_schema, $tick, %keys );
+	unless( $status->OK() ) {
+	    $transaction->rollback();
+	    return;
+	}
     }
 
-    $transaction->log( "Store: $schema " . join( ", ", map { defined()?$_:"" } %keys ) );
-    $transaction->commit();
     my $r = $self->_store( $real_schema, tick => $tick, %params );
+    unless( $status->OK() ) {
+	$transaction->rollback();
+	return;
+    }
+
     my $user = $self->user();
     
     unless ($self->_is_bootstrapping()) {
 	if( $self->cache( 'hasauthschema', $schema ) ) {
 	    for my $role ( $user->member_of() ) {
 		$role->grant( $real_schema => 'm', id => $r );
+		unless( $status->OK() ) {
+		    $transaction->rollback();
+		    return;
+		}
 	    }
 	}
     }    
 
+    $transaction->commit();
     return $r;
 }
 
@@ -520,12 +577,26 @@ sub tick {
     my $schema = shift;
     my $c = $self->{user}->name();
 
-    my $tickerschema = $self->_get_schema_name($self->get_structure( 'ticker' )) || $self->get_structure( 'ticker' );
-    return $self->_store( $tickerschema, fields => {
-						    committer => $c,
-						    event     => $event,
-						    target    => $schema,
-						   } );
+    my $transaction = Storage::Transaction->get();
+    my $subid = $transaction->sub_tick_id(1);
+
+    if( $subid == 1 ) {
+	my $tickerschema = $self->_get_schema_name($self->get_structure( 'ticker' )) || $self->get_structure( 'ticker' );
+	my $tick = $self->_store( $tickerschema, fields => {
+							    committer => $c,
+							   } );
+	$transaction->tick_id( $tick );
+    }
+
+    my $subtickerschema = $self->_get_schema_name($self->get_structure( 'subticker' )) || $self->get_structure( 'subticker' );
+    $self->_store( $subtickerschema, fields => {
+						event     => $event,
+						target    => $schema,
+						tickid    => $transaction->tick_id(),
+						subtickid => $subid
+					       } );
+    
+    return $transaction->tick_id();
 }
 
 sub get_ticks {
@@ -619,8 +690,6 @@ sub fetch {
     my $self = shift;
     my @targets;
 
-    my $transaction = $TRANSACTION->init( path => 'fetch' );
-    
     my $time;
     if( @_ % 2 ) { 
 	$time = pop @_;
@@ -665,8 +734,6 @@ sub fetch {
 	push @targets, $schema;
     }
 
-    $transaction->log( "Fetch: " . join( ', ', @schemas_looked_at) );
-
     my @schemadefs = @_;
     unless ($self->_is_bootstrapping()) {
 	# Add auth bindings to query
@@ -678,7 +745,6 @@ sub fetch {
     @schemadefs = $self->_map_fetch_schema_references( @schemadefs );
 
     my $ref = $self->_fetch( @schemadefs, $time );
-    $transaction->commit();
     return $ref;
 }
 
@@ -942,10 +1008,12 @@ sub expire {
     my $self   = shift;
     my $schema = shift;
     
+    my $transaction = Storage::Transaction->new($self);
     my $real_schema = $self->_get_schema_name( $schema ) || $schema;
 
     unless ($self->_schema_is_temporal( $real_schema )) {
 	$self->get_status()->set( 406, "Expire of a non-temporal value attempted" );
+	$transaction->rollback();
 	return;
     }
 
@@ -953,14 +1021,20 @@ sub expire {
     my $able = $self->can( expire => $real_schema, { @_ } );
     unless ($able) {
 	$self->get_status()->set( 403 );
+	$transaction->rollback();
 	return;
     }
 
     # Tick
     my $tick = $self->tick( 'expire', $real_schema );
 
-    # Do not test return values, just pass them back to the caller.
     $self->_expire( $real_schema, $tick, @_ );
+    unless( $self->get_status()->OK() ) {
+	$transaction->rollback();
+	return;
+    }
+
+    $transaction->commit();
 }
 
 # exists ( schema, field, value ) 
@@ -1015,6 +1089,7 @@ sub _map_schema_name {
     }
 
     my $id = $self->store( $self->get_structure('idgenerator'), key => 'id' ); # fields => { id => undef } );
+    
 
     return $self->{structure}->internal( 'dataprefix' ) . $id;
 }
@@ -1108,6 +1183,8 @@ sub set_auth {
     my $action = shift;
     my $restrictions = shift;
 
+    my $transaction = Storage::Transaction->new($self);
+
     my $authschema = $self->{structure}->construct_userauth_from_schema( $schema );
     my $realschema = $self->_get_schema_name( $schema ) || $schema;
 
@@ -1183,15 +1260,22 @@ sub set_auth {
     my $bindings = $restrictions ? Storable::nfreeze( $restrictions ) : undef;
     my $schemaname = $self->{structure}->get( 'authschema' );
     my $tick = $self->tick( 'store', $schemaname );
-    $self->_store( $schemaname, 
-		   key => [ qw/usertable authtable type/ ],
-		   fields => {
-			      usertable => $realschema,
-			      authtable => $authschema,
-			      type      => $action,
-			      bindings  => $bindings,
-			      tick      => $tick,
-			     } );
+    my $e = $self->_store( $schemaname, 
+			   key => [ qw/usertable authtable type/ ],
+			   fields => {
+				      usertable => $realschema,
+				      authtable => $authschema,
+				      type      => $action,
+				      bindings  => $bindings,
+				      tick      => $tick,
+				     } );
+    unless( $self->get_status()->OK() ) {
+	$transaction->rollback();
+	return;
+    }
+
+    $transaction->commit();
+    return $e;
 }
 
 sub is_valid_type {
