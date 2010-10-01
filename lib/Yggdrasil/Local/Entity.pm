@@ -36,6 +36,8 @@ sub define {
     # "Student" etc. UNIVERSAL should not be parent of UNIVERSAL
     $parent = $UNIVERSAL if ! defined $parent && $name ne $UNIVERSAL;
 
+    my $transaction = $self->storage()->initialize_transaction();
+
     my $parent_id = undef;
     my $pentity;
     
@@ -46,6 +48,7 @@ sub define {
 
 	unless( $pentity ) {
 	    $status->set( 400, "Unable to access parent entity $parent." );
+	    $transaction->rollback();
 	    return;
 	}
 
@@ -69,9 +72,17 @@ sub define {
     }
 
     Yggdrasil::MetaEntity->add( %entity_params );
-    return unless $status->OK();
 
-    return __PACKAGE__->get( yggdrasil => $self, entity => $fqn );
+    unless ($status->OK()) {
+	$transaction->rollback();
+	return;
+    }
+    
+    my $o = __PACKAGE__->get( yggdrasil => $self, entity => $fqn );
+
+    $transaction->commit();
+    return $o;
+    
 }
 
 # get an entity
@@ -176,16 +187,20 @@ sub expire {
     my $status  = $self->get_status();
     my $storage = $self->storage();
 
+    my $transaction = $storage->initialize_transaction();
+    
     # Do not expire historic Entities
     if( $self->stop() ) {
 	$status->set( 406, "Unable to expire historic entity" );
-	return 0;
+	$transaction->rollback();
+	return;
     }
 
     # Do not expire UNIVERSAL.  That's bad.
     if ($self->_internal_id() == 1) {
 	$status->set( 403, "Unable to expire the root entity, 'UNIVERSAL'");
-	return 0;
+	$transaction->rollback();
+	return;
     }
     
     # Expire all descendants first
@@ -212,9 +227,11 @@ sub expire {
     $storage->expire( 'MetaEntity', id => $self->_internal_id() );
 
     if ($status->OK()) {
+	$transaction->commit();
 	return 1;
     } else {
-	return 0;
+	$transaction->rollback();
+	return;
     }
 }
 
