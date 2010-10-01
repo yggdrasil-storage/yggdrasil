@@ -396,6 +396,11 @@ sub get_ticks {
     return $self->_get( 'ticks', @_ );
 }
 
+sub size {
+    my $self = shift;
+    return $self->_get( 'size', @_ );
+}
+
 sub get_ticks_by_time {
     my $self = shift;
 
@@ -509,6 +514,8 @@ sub _get_reply {
 	$reply_node = 'value';
     } elsif ($reply_node eq 'entity_children') {
 	$reply_node = 'entity';
+    } elsif ($reply_node eq 'size') {
+	$reply_node = 'value';
     }
 
     my @data;

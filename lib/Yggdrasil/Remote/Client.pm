@@ -167,4 +167,9 @@ sub can {
     return $self->{protocol}->can( @_ );
 }
 
+sub size {
+    my $self = shift;
+    return $self->{protocol}->size( @_ );
+}
+
 1;

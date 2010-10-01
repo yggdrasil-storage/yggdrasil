@@ -57,6 +57,7 @@ sub new {
 		get_search        => sub { _get_search( $y, @_ ) },
 
 		get_can           => sub { _get_can( $y, @_ ) },
+		get_size          => sub { _get_size( $y, @_ ) },
 		
 		get_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
 		set_role_value   => sub { _get_set_rolevalue( $y, @_ ) },
@@ -512,6 +513,10 @@ sub _get_can {
     return $ygg->storage()->can( $params{operation} => $params{target}, { $params{key} => $params{value} } ) || 0;
 }
 
+sub _get_size {
+    my $ygg = shift;
+    return $ygg->storage()->size( @_ );
+}
 
 sub _get_property_meta {
     my $ygg = shift;
