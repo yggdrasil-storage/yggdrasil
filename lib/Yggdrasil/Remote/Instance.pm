@@ -76,16 +76,20 @@ sub property {
     my ($key, $val) = @_; 
 
     $key = $key->_userland_id() if ref $key;
+
+    my $time;
+    if (@_ == 3) {
+	$time = $self->_validate_temporal( $_[2] ); 
+    } else {
+	$time = $self->_validate_temporal(); 
+    }
+    return unless $time;    
     
     if (@_ == 2) {
 	return $self->storage()->{protocol}->set_value( $self->entity()->_userland_id(), $key, $self->_userland_id(), $val );
     } else {
 	return $self->storage()->{protocol}->get_value( $self->entity()->_userland_id(), $key, $self->_userland_id(),
-							{
-							 start  => $self->start(),
-							 stop   => $self->stop(),
-							 format => 'tick',
-							}
+							$time
 						      );
     }
 }

@@ -367,6 +367,15 @@ sub property {
     my $self = shift;
     my ($key, $value) = @_;
     my $p;
+
+    my $time;
+    if (@_ == 3) {
+	# get( key, time, {} ), ie, value is "time".
+	$time = $self->_validate_temporal( $_[2] );
+    } else {
+	$time = $self->_validate_temporal();
+    }
+    return unless $time;
     
     # We might be passed a property object and not its name as the
     # key.  Also verify that it's of the correct class.
@@ -380,11 +389,6 @@ sub property {
 	    $status->set( 406, "$ref isn't acceptable as a property reference." );
 	    return undef;
 	}
-    }
-
-    my $time = {};
-    if( $self->stop() ) {
-	$time = { start => $self->start(), stop => $self->stop() };
     }
 
     my $storage = $self->storage();
@@ -436,12 +440,8 @@ sub property {
 	}
     }
 
-    my @times;
-    if ($self->{_stop}) { # Historic object, search for property by start / stop times.
-	@times = ( start => $self->start(), stop => $self->stop() );
-    }
     my $r = $storage->fetch( $schema => { return => [qw/id value/], where => [ id => $self->{_id} ] },
-			     { @times } );
+			     $time );
 
     if( ! defined $r->[0]->{id} ) {
 	$status->set( 210 );
