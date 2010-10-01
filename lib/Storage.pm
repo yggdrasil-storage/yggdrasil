@@ -6,6 +6,7 @@ use warnings;
 use Storable qw();
 
 use Storage::Status;
+use Storage::Debug;
 use Storage::Type;
 use Storage::Structure;
 use Storage::Transaction;
@@ -98,13 +99,23 @@ sub _engine {
     return $engine;
 }
 
+sub debugger {
+    my $self = shift;
+    $self->{debug} ||= new Storage::Debug;
+    
+    return $self->{debug};
+}
+
 sub debug {
     my $self = shift;
-    my %params = @_;
-
-    for my $key ( keys %params ) {
-	$self->{_debug}->{$key} = $params{$key};
+    my $key  = shift;
+    
+    if (@_) {
+	my $value = shift;
+	$self->debugger()->set( $key, $value );
     }
+    
+    return $self->debugger()->get( $key );
 }
 
 sub _set_default_user {

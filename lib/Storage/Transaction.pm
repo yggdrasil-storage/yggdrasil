@@ -21,8 +21,13 @@ sub new {
     }
 
     $self->{level} += 1;
-    print "  " x $self->{level}, "Start transaction\n";
+    
+    my ($package, $filename, $line, $subroutine, $hasargs,
+	$wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller(1);
 
+    $self->{storage}->debugger()->debug( 'transaction',
+					 "  " x $self->{level} . "Start transaction ($package / $subroutine / $line)" );
+    
     return $self;
 }
 
@@ -53,7 +58,11 @@ sub sub_tick_id {
 sub commit {
     my $self = shift;
 
-    print "  " x $self->{level}, "End transaction\n";
+    my ($package, $filename, $line, $subroutine, $hasargs,
+	$wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller(1);
+
+    $self->{storage}->debugger()->debug( 'transaction',
+					 "  " x $self->{level} . "End transaction ($package / $subroutine / $line)" );
     $self->{level} -= 1;
     return if $self->{level};
 
@@ -72,8 +81,13 @@ sub rollback {
 #	use Carp qw(cluck confess);
 #	confess();
 #    }
-#    print "-" x 79, "\n";
-#    print "ROLLBACK!\n";
+
+    my ($package, $filename, $line, $subroutine, $hasargs,
+	$wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller(1);
+
+    $self->{storage}->debugger()->debug( 'transaction',
+					 "  " x $self->{level} . "ROLLBACK ($package / $subroutine / $line)" );
+    $self->{level} -= 1;
 #    cluck();
     $self->{storage}->_rollback();
 
@@ -97,6 +111,14 @@ sub _reset {
 
 sub __DESTROY__ {
     my $self = shift;
+
+    my ($package, $filename, $line, $subroutine, $hasargs,
+	$wantarray, $evaltext, $is_require, $hints, $bitmask, $hinthash) = caller(1);
+
+    $self->{storage}->debugger()->debug( 'transaction',
+					 "  " x $self->{level} . "Implicit rollback! ($package / $subroutine / $line)" );
+    $self->{level} -= 1;
+
 
 #    $self->rollback();
 }

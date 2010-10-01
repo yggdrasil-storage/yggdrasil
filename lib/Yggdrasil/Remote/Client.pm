@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 use IO::Socket::SSL;
+use Storage::Debug;
 
 sub new {
     my $class = shift;
@@ -97,13 +98,23 @@ sub enable_protocol {
     }
 }
 
+sub debugger {
+    my $self = shift;
+    $self->{debug} ||= new Storage::Debug;
+    
+    return $self->{debug};
+}
+
 sub debug {
     my $self = shift;
-    my %params = @_;
+    my $key  = shift;
 
-    for my $key ( keys %params ) {
-	$self->{protocol}->{_debug}->{$key} = $params{$key};
+    if (@_) {
+	my $value = shift;
+	$self->debugger()->set( $key, $value );
     }
+    
+    return $self->debugger()->get( $key );
 }
 
 sub _populate_protocols {

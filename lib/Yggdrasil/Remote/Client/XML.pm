@@ -6,6 +6,7 @@ use strict;
 use IO::Socket::SSL;
 use XML::StreamReader;
 use XML::Simple;
+use Storage::Debug;
 
 sub new {
     my $class  = shift;
@@ -22,6 +23,13 @@ sub new {
     $self->{requestid} = sub { return $i };
     
     return $self;
+}
+
+sub debugger {
+    my $self = shift;
+    $self->{debug} ||= new Storage::Debug;
+    
+    return $self->{debug};
 }
 
 sub xmlout {
@@ -120,7 +128,7 @@ sub _execute {
     my $xmlout = $self->xmlout( yggdrasil => { request => { @_ } } );
 
     my $stream = $self->{stream};
-    print $xmlout, "\n" if $self->{_debug}->{protocol};
+    $self->debugger()->debug( 'protocol', $xmlout );
     print $stream $xmlout;
 }
 

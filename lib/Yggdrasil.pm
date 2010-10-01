@@ -44,8 +44,19 @@ sub version {
     return $VERSION;
 }
 
+# Filter debug switches.  If we're remote, don't display the
+# transaction key as it won't matter anyway.  We might wish to fix
+# this if the user is admin, allowing such users to toggle debug on
+# the server side.
 sub debug_switches {
-    return qw/protocol/;
+    my $self = shift;
+    my @hits;
+
+    for my $key ($self->storage()->debugger()->accepted_keys()) {
+	next if $key eq 'transaction' && $self->is_remote();
+	push @hits, $key;
+    }
+    return @hits;
 }
 
 sub storage {
@@ -479,20 +490,6 @@ sub get_tick {
     my $tick = shift;
     
     return ($self->{mode}->get_ticks( start => $tick, stop => $tick ))[0];
-}
-
-
-# Transaction interface.
-sub transaction_stack_get {
-    my $self = shift;
-
-    return $self->{mode}->transaction_stack_get( @_ );
-}
-
-sub transaction_stack_clear {
-    my $self = shift;
-
-    return $self->{mode}->transaction_stack_clear( @_ );
 }
   
 ###############################################################################

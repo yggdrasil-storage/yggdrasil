@@ -168,7 +168,7 @@ sub _sql {
 	$sqlinline =~ s/\?/"'$value'"/e;
     }
 
-    print "$sqlinline\n" if $self->{_debug}->{protocol};
+    $self->debugger()->debug( 'protocol', $sqlinline );
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed: " . $sth->errstr() );
 	return;

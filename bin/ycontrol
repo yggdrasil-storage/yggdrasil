@@ -367,7 +367,7 @@ my %cmd;
 my %debug_switches;
 
 for my $switch ($y->debug_switches()) {
-    $debug_switches{$switch} = 0;
+    $debug_switches{$switch} = $y->storage()->debugger()->get( $switch );
 } 
 
 my %cmd_handler = (
