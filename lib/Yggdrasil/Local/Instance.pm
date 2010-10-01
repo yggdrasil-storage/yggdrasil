@@ -35,18 +35,30 @@ sub create {
     # FIX: Want to avoid having to query MetaEntity for the entity's
     #      id. Couldn't Entity-objects have an ->_id() or similar
     #      method that returns this number?
+
+    my $transaction = $self->storage()->initialize_transaction();
+    
     my $idref = $self->storage()->fetch( 
 	MetaEntity => { return => 'id', where  => [ entity => $ename ] } );
 
-    my $eid = $idref->[0]->{id};
+    unless ($self->get_status()->OK()) {
+	$transaction->rollback();
+	return;
+    }
 
+    my $eid = $idref->[0]->{id};
     $self->{_id} = $self->storage()->store( Instances => 
 					    key => [qw/visual_id entity/],
 					    fields => { visual_id => $vid,
 							entity    => $eid } );
-
-    $status->set( 201, "Created instance '$vid' in entity '$ename'." );
-    return __PACKAGE__->fetch( yggdrasil => $self, %params );
+    if ($self->get_status()->OK()) {
+	$status->set( 201, "Created instance '$vid' in entity '$ename'." );
+	$transaction->commit();
+	return __PACKAGE__->fetch( yggdrasil => $self, %params );
+    } else {
+	$transaction->rollback();
+	return;
+    }
 }
 
 sub fetch {
@@ -112,17 +124,26 @@ sub expire {
 	return;
     }
 
+    my $transaction = $storage->initialize_transaction();
+    
     # Expire all properties
     for my $prop ($entity->properties()) {
-	$storage->expire( join(':', $entity->_userland_id(), $prop->_userland_id()), id => $self->{_id} );	
+	$storage->expire( join(':', $entity->_userland_id(), $prop->_userland_id()), id => $self->{_id} );
+
+	unless ($status->OK()) {
+	    $transaction->rollback();
+	    return;
+	}
     }
     
     # Expire the instance itself.
     $storage->expire( 'Instances', id => $self->{_id} );
     if ($status->OK()) {
+	$transaction->commit;
 	return 1;
     } else {
-	return undef;
+	$transaction->rollback();
+	return;
     }
     
 }
@@ -400,7 +421,19 @@ sub property {
 	    return undef;
 	}
 
+	# Stricktly speaking, there is no need to make a transaction
+	# for a single Storage::store(), as Storage is more than
+	# capable of doing that on its own, but it's nice to be
+	# explicit about things.
+	my $transaction = $storage->initialize_transaction();
 	$storage->store( $schema, key => "id", fields => { id => $self->{_id}, value => $value } );
+	
+	if ($status->OK()) {
+	    $transaction->commit();
+	} else {
+	    $transaction->rollback();
+	    return;
+	}
     }
 
     my @times;
