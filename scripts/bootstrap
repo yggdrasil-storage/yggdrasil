@@ -42,7 +42,7 @@ $y->connect(
 
 die $status->message() unless $status->OK();
 
-my $bootstrap = $y->bootstrap( terjekv => 'flappa', davidra => 'bah' );
+my $bootstrap = $y->bootstrap( terjekv => 'flappa', davidra => 'bah', step => 'zooty'  );
 die $status->message() unless $status->OK();
 
 print "Yggdrasil is now bootstrapped with the following users:\n";
