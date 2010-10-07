@@ -297,7 +297,7 @@ sub define {
 	my %newdata = @{$schemadef->{define}};
 	if ($self->_deep_eq( \%newdata, \%data )) {
 	    $status->set( 202, "Structure '$schema' already exists" );
-	    $transaction->rollback();
+	    $transaction->commit();
 	    return;
 	} else {
 	    $status->set( 406, "Structure '$schema' already defined, unable to redefine with new configuration" );
@@ -501,7 +501,7 @@ sub store {
 	    # current
 	    if( $can ) { 
 		$status->set( 202, "Value(s) already set" );
-		$transaction->rollback();
+		$transaction->commit();
 
 		# FIX: what if the key is a composite key?
 		return $aref->[0]->{ref $key?$key->[0]:$key};
