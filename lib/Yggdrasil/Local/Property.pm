@@ -222,8 +222,13 @@ sub expire {
     }
 
     # You might not have permission to do this, can fails now either way.
+    my $can = $storage->can( create => "MetaProperty", { entity => $self->entity()->_internal_id() } );
+
+    return unless $can;
+
     $storage->expire( $self->entity()->_userland_id() . ':' . $self->_userland_id() );
-    
+    return unless $status->OK();
+
     $storage->expire( 'MetaProperty', id => $self->{_id} );
     return 1 if $status->OK();
     return;

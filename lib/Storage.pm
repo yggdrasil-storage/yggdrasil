@@ -1028,21 +1028,43 @@ sub expire {
 	return;
     }
 
-    # can?
-    my $able = $self->can( expire => $real_schema, { @_ } );
-    unless ($able) {
-	$self->get_status()->set( 403 );
-	$transaction->rollback();
-	return;
+    # can? FIX: We need a "drop" as a replacement for "expire" when
+    # the user requests to expire the whole schema. For now, skip auth
+    # for dropping whole schemas.
+    if( @_ ) {
+	my $able = $self->can( expire => $real_schema, { @_ } );
+	unless ($able) {
+	    $self->get_status()->set( 403 );
+	    $transaction->rollback();
+	    return;
+	}
     }
 
     # Tick
     my $tick = $self->tick( 'expire', $real_schema );
 
-    $self->_expire( $real_schema, $tick, @_ );
-    unless( $self->get_status()->OK() ) {
-	$transaction->rollback();
-	return;
+    if( @_ ) {
+	# Expire values
+	$self->_expire( $real_schema, $tick, @_ );
+	unless( $self->get_status()->OK() ) {
+	    $transaction->rollback();
+	    return;
+	}
+    } else {
+	# Expire schemas
+	if( $self->cache( 'hasauthschema', $schema ) ) {
+	    my $authschema = $self->_get_auth_schema_name( join(":", $schema, "Auth") );
+	    #my $realschema = $self->_get_real_name( $authschema );
+	    $self->_expire( "Storage_mapper", $tick, humanname => $authschema );
+
+	    $self->cache( 'hasauthschema', $schema, undef );
+	    $self->cache( 'mapperh2m', $authschema, undef );
+	    #$self->cache( 'mapperm2h', $realschema, undef );
+	}
+
+	$self->_expire( "Storage_mapper", $tick, humanname => $schema );
+	$self->cache( 'mapperh2m', $schema, undef );
+	$self->cache( 'mapperm2h', $real_schema, undef );
     }
 
     $transaction->commit();
@@ -1123,7 +1145,8 @@ sub _get_real_name {
 
 sub cache {
     my $self = shift;
-    my ($map, $from, $to) = @_;
+    my $map  = shift;
+    my $from = shift;
 
     my $cachename;
     if ($map eq 'mapperh2m') {
@@ -1144,7 +1167,14 @@ sub cache {
 	Yggdrasil::fatal( "Unknown cache type '$map' requested for populating" );
     }
 
-    $self->{cache}->{$cachename}->{$from} = $to if defined $to;
+    if( @_ ) {
+	my $to = shift;
+	if( defined $to ) {
+	    $self->{cache}->{$cachename}->{$from} = $to;
+	} else {
+	    delete $self->{cache}->{$cachename}->{$from};
+	}
+    }
 
     if (ref $self->{cache}->{$cachename}->{$from}) {
 	return Storable::dclone( $self->{cache}->{$cachename}->{$from} ); 
