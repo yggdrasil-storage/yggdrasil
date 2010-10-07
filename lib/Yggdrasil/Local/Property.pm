@@ -55,8 +55,10 @@ sub define {
 	push( @parts, $entity_name );
 	$entity_name = join('::', @parts);
 	$self->{entity} = $yggdrasil->get_entity( $entity_name );
-	$status->set( 400, "Unknown entity '$entity_name' requested for property '$property_name'." );
-	return unless $status->OK();
+	unless( $status->OK() ) {
+	    $status->set( 400, "Unknown entity '$entity_name' requested for property '$property_name'." );
+	    return;
+	}
     } else {
 	# we have no entity and the property name contains no ":"
 	# This means we were called as $ygg->define_property( "foo" );
