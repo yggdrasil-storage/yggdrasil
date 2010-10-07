@@ -34,7 +34,7 @@ sub get {
     if ($KEYS{$key}) {
 	return $self->{$key};
     } else {
-	$self->debug( "No debug key '$key'" );
+	$self->say( "No debug key '$key'" );
 	return;
     }
 }
@@ -47,7 +47,7 @@ sub set {
 	$self->{$key} = $value;
 	return $value;
     } else {
-	$self->debug( "No debug key '$key'" );
+	$self->say( "No debug key '$key'" );
 	return;
     }
 }
@@ -60,10 +60,17 @@ sub debug {
     return unless $self->get( $required_key );
     
     if ($self->get( 'stderr' )) {
-	print STDERR "$message\n";
+	$self->say( $message );
     } else {
 	return $message;
     }
+}
+
+sub say {
+    my $self = shift;
+    my $message = shift;
+
+    print STDERR "$message\n";
 }
 
 1;
