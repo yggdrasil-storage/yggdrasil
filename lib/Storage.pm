@@ -1479,6 +1479,42 @@ sub _deep_eq {
     }
 }
 
+# Engine information, has to be overloaded for each engine, if it's
+# not, stuff won't very well, or not at all.
+sub size {
+    my $self = shift;
+    my $status = $self->get_status();
+    $status->set( 501 );
+    return 0;
+}
+
+sub info {
+    my $self = shift;
+    my $status = $self->get_status();
+    $status->set( 501, $self->engine() );
+    return $self->engine();
+}
+
+sub storage_is_empty {
+    my $self = shift;    
+    die "storage_is_empty not implemented, unable to determine if Storage has data!"
+}
+
+sub _structure_exists {
+    my $self = shift;
+    die "_structure_exists not implemented, unable to determine if a given structure exists in Storage!"
+}
+
+sub _list_structures {
+    my $self = shift;
+    die "_list_structures not implemented, unable to determine what structures exist in Storage!"
+}
+
+sub _fields_in_structure {
+    my $self = shift;
+    die "_fields_in_structure not implemented, unable to determine what fields structures in Storage contain!"
+}
+
 # Admin interface, not for normal use.
 
 # Require the "admin" parameter to Storage to be set to a true value to access any admin method.
