@@ -9,8 +9,28 @@ use base 'Storage';
 # _structure_exists() with the name of the structure to check its
 # existance before _define is called.  If _define is called, the
 # structure is expected to be non-existant.  For a definition of the
-# call, see Storage::define().  At this point any table mappings are already done
+# call, see Storage::define().  At this point any table mappings are
+# already done
 sub _define {
+    my $self   = shift;
+    my $schema = shift;
+    
+    my ($sql, $indexes) = $self->_generate_define_sql( $schema, @_ );
+
+    if( $self->_sql( $sql ) ) {
+	for my $field (@$indexes) {
+	    my $indexsql = $self->_create_index_sql( $schema, $field );
+	    $self->_sql( $indexsql );
+	}
+	return 1;
+    } else {
+	return;
+    }
+}
+
+# Generate an the SQL statement for the define itself (a proper "TABLE
+# CREATE ..." as well as the appopriate way to generate indexes.
+sub _generate_define_sql {
     my $self   = shift;
     my $schema = shift;
     my %data   = @_;
@@ -65,16 +85,7 @@ sub _define {
     $sql .= $self->_engine_post_create_details();
     $sql .= ";\n";
     
-    if( $self->_sql( $sql ) ) {
-	for my $field (@indexes) {
-	    my $indexsql = $self->_create_index_sql($schema, $field );
-	    $self->_sql( $indexsql );
-	}
-    
-	return 1;
-    } else {
-	return;
-    }
+    return ($sql, \@indexes);
 }
 
 # Does the engine support primary keys, and does that support include
@@ -192,6 +203,25 @@ sub _sql {
 # expected to exist, all fields are expected to exist.
 sub _fetch {
     my $self = shift;
+
+    my ($sql, $params) = $self->_generate_fetch_sql( @_ );
+    my $status = $self->get_status();
+    
+#    my ($package, $filename, $line, $subroutine, $hasargs,
+#     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
+
+#    if ($subroutine =~ /_store/) {
+#	print STDERR "$sql with [" . join(", ", map { defined()?$_:"NULL" } @$params) . "]\n";
+#    }  
+    
+    $status->set( 200 );
+    return $self->_sql( $sql, @$params ); 
+}
+
+# Generating the fetch sql is a hassle.  A very big hassle.  Somehow
+# it seems to work, quite often it even does what you'd expect.
+sub _generate_fetch_sql {
+    my $self       = shift;
     my @schemalist = @_;
 
     my($start,$stop);
@@ -281,15 +311,7 @@ sub _fetch {
 	$sql .= join(" and ", @wheres );
     }
 
-#    my ($package, $filename, $line, $subroutine, $hasargs,
-#     $wantarray, $evaltext, $is_require, $hints, $bitmask) = caller(2);
-
-#    if ($subroutine =~ /_store/) {
-#	print STDERR "$sql with [" . join(", ", map { defined()?$_:"NULL" } @params) . "]\n";
-#    }  
-    
-    $status->set( 200 );
-    return $self->_sql( $sql, @params ); 
+    return ($sql, \@params);
 }
 
 # Creates a proper FROM statement, ensuring that joins happen properly
@@ -396,14 +418,25 @@ sub _store {
 sub _expire {
     my $self   = shift;
     my $schema = shift;
+
+    return unless $self->_schema_is_temporal( $schema );
+    my $status  = $self->get_status();
+
+    my ($sql, $params) = $self->_generate_expire_sql( $schema, @_ );
+    $self->_sql( $sql, @$params );
+    $status->set( 200 ) if $status->OK();
+}
+
+# Generate expire sql.
+sub _generate_expire_sql {
+    my $self   = shift;
+    my $schema = shift;
     my $tick   = shift;
     my %params = @_;
 
-    return unless $self->_schema_is_temporal( $schema );
-
-    my $status = $self->get_status();
     my $nullopr = $self->_null_comparison_operator();
-	
+    my $status  = $self->get_status();
+    
     my @sets;
 
     for my $key (keys %params) {
@@ -416,9 +449,10 @@ sub _expire {
     my $keys = "";
     $keys = " and " . join(" and ", @sets) if @sets;
 
-    $self->_sql( "UPDATE $schema SET stop = ? WHERE stop $nullopr NULL $keys", $tick, values %params );
+    my $sql    = "UPDATE $schema SET stop = ? WHERE stop $nullopr NULL $keys";
+    my @params = ($tick, values %params);
 
-    $status->set( 200 ) if $status->OK();
+    return ($sql, \@params);
 }
 
 # Generates a field / data based where clause, ensuring that the
