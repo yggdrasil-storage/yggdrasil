@@ -1004,15 +1004,6 @@ sub authenticate {
     return $user_obj;
 }
 
-sub raw_fetch {
-    my $self = shift;
-    $self->_admin_verify();
-    
-    my @mapped_def = $self->_map_fetch_schema_references( @_ );
-
-    return $self->_raw_fetch( @mapped_def );
-}
-
 # expire ( $schema, $indexfield, $key )
 # FIXME, handle multiple keys
 sub expire {
