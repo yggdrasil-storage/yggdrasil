@@ -375,8 +375,26 @@ sub _create_from {
 # previous row, setting stop to NOW().
 sub _store {
     my $self = shift;
+    my $schema = $_[0];
+
+    my ($sql, $params, $id) = $self->_generate_store_sql( @_ );
+
+    # Execute the SQL and fetch the generated id (otherwise default to
+    # the id we got in return from the generator).
+    $self->_sql( $sql, @$params );
+    my $r = $self->_last_insert_id( $schema ) || $id;
+
+    my $status = $self->get_status();
+    $status->set( 200, "Value(s) set" );
+
+    return $r;
+}
+
+# Generate the sql for _store.
+sub _generate_store_sql {
+    my $self   = shift;
     my $schema = shift;
-    my %data = @_;
+    my %data   = @_;
 
     my $key    = $data{key};
     my $fields = $data{fields} || {};
@@ -398,20 +416,14 @@ sub _store {
     my $num = keys %$fields;
     $num = $num ? $num + @tick_val : @tick_val;
     my $placeholders = join(", ", ('?') x $num );
-
-    # Execute the SQL and fetch the generated id (if any)
     my $sql = "INSERT INTO $schema ($dbfields) VALUES($placeholders)";
-    $self->_sql( $sql, values %$fields, @tick_val );
-    my $r = $self->_last_insert_id( $schema );
-
-    unless( $r ) {
-	# FIX: can we safely assume "id"? No we can not.
-	$r = $fields->{id};
-    }
-
-    my $status = $self->get_status();
-    $status->set( 200, "Value(s) set" );
-    return $r;
+    my @params = ( values %$fields, @tick_val );
+    
+    # FIX: can we safely assume to use the value from the key field is
+    # found in the "id" field (alone)?  No we can not.  This is a
+    # fallback in case _last_insert_id() failed, and it works due to
+    # the way Storage is (normally) used.
+    return ($sql, \@params, $fields->{id});
 }
 
 # Expire a field with a given value that is current (stop is NULL).
