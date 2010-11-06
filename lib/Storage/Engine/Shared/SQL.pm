@@ -549,13 +549,6 @@ sub _qualify {
     return @fqfn;
 }
 
-# Provides a default mapper for SQL engines.
-sub get_default_mapper {
-    my $self = shift;
-    
-    return $self->set_mapper( 'MD5' );
-}
-
 sub _start_transaction {
     my $self = shift;
 
