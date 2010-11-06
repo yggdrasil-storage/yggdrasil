@@ -595,24 +595,4 @@ sub children {
     return @children;
 }
 
-sub _admin_dump {
-    my $self   = shift;
-    my $entity = shift;
-
-    return $self->{storage}->raw_fetch( Instances => { where => [ entity => $entity ] } );
-}
-
-sub _admin_restore {
-    my $self   = shift;
-    my $data   = shift;
-
-    $self->{storage}->raw_store( "Instances", fields => $data );
-
-    my $id = $self->{storage}->raw_fetch( Instances =>
-					  { return => "id", 
-					    where => [ %$data ] } );
-    return $id->[0]->{id};
-}
-
-
 1;

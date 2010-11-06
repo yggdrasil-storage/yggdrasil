@@ -1515,44 +1515,4 @@ sub _fields_in_structure {
     die "_fields_in_structure not implemented, unable to determine what fields structures in Storage contain!"
 }
 
-# Admin interface, not for normal use.
-
-# Require the "admin" parameter to Storage to be set to a true value to access any admin method.
-sub _admin_verify {
-    my $self = shift;
-    die( "Administrative interface unavailable without explicit request." )
-      unless $self->{user}->is_a_member_of( 'admin' );
-}
-
-# Returns a list of all the structures, guarantees nothing about the order.
-sub _admin_list_structures {
-    my $self = shift;
-
-    $self->_admin_verify();
-    return $self->_list_structures();
-}
-
-sub _admin_dump_structure {
-    my $self = shift;
-    $self->_admin_verify();
-
-    return $self->_dump_structure( @_ );
-}
-
-# Delete a named structure.
-sub _admin_delete_structure {
-    my $self = shift;
-
-    $self->_admin_verify();
-    $self->_delete_structure( @_ );
-}
-
-# Truncate a named structure.
-sub _admin_truncate_structure {
-    my $self = shift;
-
-    $self->_admin_verify();
-    $self->_truncate_structure( @_ );
-}
-
 1;

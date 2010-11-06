@@ -190,24 +190,4 @@ sub add {
     return $id;
 }
 
-sub _admin_dump {
-    my $self = shift;
-
-    return $self->{storage}->raw_fetch( "MetaRelation" );
-}
-
-sub _admin_restore {
-    my $self = shift;
-    my $data = shift;
-
-    $self->{storage}->raw_store( "MetaRelation", fields => $data );
-
-    my $id = $self->{storage}->raw_fetch( MetaRelation =>
-					  { return => "id",
-					    where  => [ %$data ] } );
-
-    return $id->[0]->{id};
-}
-
-
 1;

@@ -292,29 +292,6 @@ sub _fetch {
     return $self->_sql( $sql, @params ); 
 }
 
-# Fetching a raw structure, with all fields.  Used by ydump and admin interfaces.
-sub _raw_fetch {
-    my $self     = shift;
-    my $schema   = shift;
-    my $queryref = shift;
-
-    my $operator = $queryref->{operator} || '=';
-
-    my( $rf, $where, $params ) = $self->_process_where($schema, $queryref->{where}, $operator);
-
-    my @fieldlist;
-    for my $field ($self->_fields_in_structure( $schema )) {
-#	if ($field eq 'start' || $field eq 'stop') {
-#	    $field = $self->_time_as_epoch( $field ) . " as $field";
-#	}
-	push @fieldlist, $field;
-    } 
-    
-    my $sql = "SELECT " . join(",", @fieldlist) .  " FROM " . $schema;
-    $sql .= " WHERE " . join(" and ", @$where) if @$where;
-    return $self->_sql( $sql, @$params );
-}
-
 # Creates a proper FROM statement, ensuring that joins happen properly
 # if required.
 sub _create_from {
@@ -413,37 +390,6 @@ sub _store {
     my $status = $self->get_status();
     $status->set( 200, "Value(s) set" );
     return $r;
-}
-
-# Store data in raw form into the structure given, the only exceptions
-# are start and stop which are translated from epoch to the internal
-# database format.  The structure is assumed to be capable of
-# swallowing the data, and no checks are done (no expire, no time
-# checking).  yrestore / admin interfaces are the only legitimate
-# callers of this method.
-sub _raw_store {
-    my $self = shift;
-    my $schema = shift;
-    my %data = @_;
-
-    my $fields = $data{fields};
-
-    if ($fields->{start} || $fields->{stop}) {
-#	my ($sstart, $sstop) = ($self->_convert_time( delete $fields->{start} || 'NULL'), 
-#				$self->_convert_time( delete $fields->{stop}  || 'NULL'));
-
-	my ($sstart, $sstop) = (delete $fields->{start} || 'NULL',
-				delete $fields->{stop}  || 'NULL');
-
-	
-	$self->_sql( "INSERT INTO $schema (start,stop," . join(", ", keys %$fields) . ") VALUES ($sstart,$sstop, "
-		     . join(", ", ('?') x keys %$fields) . ')', values %$fields);	
-    } else {
-	$self->_sql( "INSERT INTO $schema (" . join(", ", keys %$fields) . ") VALUES ( "
-		     . join(", ", ('?') x keys %$fields) . ')', values %$fields);	
-    }
-
-    return 1;
 }
 
 # Expire a field with a given value that is current (stop is NULL).
@@ -608,34 +554,6 @@ sub get_default_mapper {
     my $self = shift;
     
     return $self->set_mapper( 'MD5' );
-}
-
-
-# Admin interface follows, it is expected that Storage has verified that these calls are valid.
-
-sub _delete_structure {
-    my $self   = shift;
-    my $schema = shift;
-    return unless $self->_structure_exists( $schema );
-    
-    $self->_sql( "DROP TABLE $schema" );
-}
-
-sub _truncate_structure {
-    my $self   = shift;
-    my $schema = shift;
-    return unless $self->_structure_exists( $schema );
-
-    $self->_sql( "TRUNCATE TABLE $schema" );
-}
-
-sub _dump_structure {
-    my $self   = shift; 
-    my $schema = shift;
-    return unless $self->_structure_exists( $schema );
-    
-    my $dbh = $self->{dbh};
-    return $dbh->selectall_arrayref( "select * from $schema" );
 }
 
 sub _start_transaction {

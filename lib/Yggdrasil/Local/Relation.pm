@@ -201,18 +201,4 @@ sub unlink :method {
   $self->storage()->expire( 'Relations', lval => $lval->_internal_id(), rval => $rval->_internal_id() );
 }
 
-sub _admin_dump {
-    my $self = shift;
-    my $id   = shift;
-
-    return $self->{storage}->raw_fetch( Relations => { where => [ relationid => $id ] } );
-}
-
-sub _admin_restore {
-    my $self  = shift;
-    my $data  = shift;
-
-    $self->{storage}->raw_store( 'Relations', fields => $data );
-}
-
 1;

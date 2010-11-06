@@ -271,45 +271,5 @@ sub _get_meta {
     }
 }
 
-sub _admin_dump {
-    my $self = shift;
-    my $entity = shift;
-    my $property = shift;
-
-    my $schema = join(":", $entity, $property);
-    return $self->{storage}->raw_fetch( $schema );
-}
-
-sub _admin_restore {
-    my $self = shift;
-    my $entity = shift;
-    my $property = shift;
-    my $data = shift;
-
-    my $schema = join(":", $entity, $property);
-
-    $self->{storage}->raw_store( $schema, fields => $data );
-}
-
-sub _admin_define {
-    my $self = shift;
-    my $entity = shift;
-    my $property = shift;
-
-    my $eid = $self->{storage}->fetch( MetaEntity => 
-				       { return => "id",
-					 where  => [ entity => $entity ] } );
-
-
-    $eid = $eid->[0]->{id};
-    my $type = $self->{storage}->fetch( "MetaProperty" => 
-					{ return => "type",
-					  where => [ entity   => $eid,
-						     property => $property ] } );
-    
-    $type = $type->[0]->{type} || "TEXT";
-    $self->_define( $entity, $property, type => $type, raw => 1 );    
-}
-
 1;
 
