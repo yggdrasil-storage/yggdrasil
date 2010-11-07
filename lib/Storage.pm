@@ -684,15 +684,6 @@ sub get_current_tick {
     return $ref->[0]->{max_id};
 }
 
-sub raw_store {
-    my $self = shift;
-    my $schema = shift;
-    $self->_admin_verify();
-    
-    my $mapped = $self->_get_schema_name( $schema ) || $schema;
-    return $self->_raw_store( $mapped, @_ );
-}
-
 # fetch ( schema1, { return => [ fieldnames ], where => [ s1field1 => s1value1, ... ], operator => operator, bind => bind-op }
 #         schema2, { return => [ fieldnames ], where => [ s2field => s2value, ... ], operator => operator, bind => bind-op }
 #         { start => $start, stop => $stop, format => tick|iso|epoch } (optional)
