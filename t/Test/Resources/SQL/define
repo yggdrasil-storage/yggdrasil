@@ -1,0 +1,20 @@
+Test general define sql building
+-- 
+("TEST-SCHEMA",
+ fields => { field1 => { null => 1, type => 'TEXT',
+			 index => 1, constraint => '?' },
+	     field2 => { null => 0, type => 'INTEGER',
+			 index => 0 },
+	   },
+ temporal => 1,
+ hints    => { field1 => { key => 1,
+			   foreign => 'OTHER-TEST-SCHEMA',
+			   index => 1 }
+	     } 
+);
+-- 
+Testing SERIAL and field named 'id'
+-- 
+("TEST-SCHEMA",
+ fields => { field1 => { null => 1, type => 'SERIAL' },
+	     id     => { null => 1, type => 'INTEGER' } } );
