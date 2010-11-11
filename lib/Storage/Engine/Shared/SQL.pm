@@ -41,7 +41,7 @@ sub _generate_define_sql {
 
     my $sql = "CREATE TABLE $schema (\n";
  
-    my (@sqlfields, @indexes, %keys);
+    my (@sqlfields, %indexes, %keys);
     for my $fieldname (keys %$fields) {
 	my $field = $fields->{$fieldname};
 	my ($type, $null, $index, $default) = ($field->{type}, $field->{null}, $field->{index}, $field->{default});
@@ -52,7 +52,7 @@ sub _generate_define_sql {
 	$keys{$fieldname}++ if $type eq 'SERIAL' && $self->_engine_requires_serial_as_key();
 
 	$type = $self->_map_type( $type );
-	push @indexes, $fieldname if $index;
+	$indexes{$fieldname}++ if $index;
 
 	# FUGLY hack to ensure that id fields come first in the listings.
 	if ($fieldname eq 'id') {
@@ -66,7 +66,7 @@ sub _generate_define_sql {
 	my $field = $hints->{$fieldname};
 	$keys{$fieldname}++ if $field->{key};
 
-	push @indexes, $fieldname if $field->{index}; # && (keys %keys > 1);
+	$indexes{$fieldname}++ if $field->{index}; # && (keys %keys > 1);
 	
 	# FIXME: Foregin keys isn't supported as of yet.  The issue is
 	# MetaEntity and its friends requiring the key to be both ID
@@ -85,7 +85,7 @@ sub _generate_define_sql {
     $sql .= $self->_engine_post_create_details();
     $sql .= ";\n";
     
-    return ($sql, \@indexes);
+    return ($sql, [ keys %indexes ]);
 }
 
 # Does the engine support primary keys, and does that support include
