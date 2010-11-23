@@ -13,9 +13,10 @@ my %map = (
 	   201 => 'Created',
 	   202 => 'Accepted', # no return value, batched.
 	   203 => 'Non-authorative information', # cached?
-	   204 => 'No content',
+	   204 => 'No content',	   
 	   210 => 'Uninitialized',
-
+	   220 => 'Multiple values',
+	   
 	   # 300 series, things are moved, but the request
 	   # is still processed and returned OK.
 	   301 => 'Moved permanently',
