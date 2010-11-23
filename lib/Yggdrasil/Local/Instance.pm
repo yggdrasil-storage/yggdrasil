@@ -443,19 +443,33 @@ sub property {
     my $r = $storage->fetch( $schema => { return => [qw/id value/], where => [ id => $self->{_id} ] },
 			     $time );
 
-    if( ! defined $r->[0]->{id} ) {
-	$status->set( 210 );
-	return;
-    }
+    if (@$r < 2) {
+	if( ! defined $r->[0]->{id} ) {
+	    $status->set( 210 );
+	    return;
+	}
+	
+	if ($r->[0]->{value}) {
+	    # Pass through return value from Storage, it'll be 200 / 202 correctly.
+	    # $status->set( 200 );
+	} else {
+	    $status->set( 204 ) if $status->OK();
+	}
 
-    if ($r->[0]->{value}) {
-	# Pass through return value from Storage, it'll be 200 / 202 correctly.
-	# $status->set( 200 );
+	return $r->[0]->{value};
     } else {
-	$status->set( 204 ) if $status->OK();
-    }
+	$status->set( 220 );
+	my @values;
+	for my $v (@$r) {
+	    push @values, $v->{value};	    
+	}
 
-    return $r->[0]->{value};
+	if (wantarray) {
+	    return @values;	    
+	} else {
+	    return $values[-1];
+	}
+    }
 }
 
 # FIXME, temporal search.  FIXME, JUST FIX ME!
