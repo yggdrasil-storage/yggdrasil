@@ -680,7 +680,7 @@ sub entity_info {
 	print "Properties\n";
 	for my $prop (@props) {
 	    my $prop_orig_entity = $prop->entity();
-	    my $source = $prop_orig_entity->id();
+	    my $source = nameify( $prop_orig_entity );
 	    my $type = $prop->type();
 	    printf "  %-13s - %-10s - %-7s%s\n",  nameify( $prop ), lc $prop->type(),
 	      $prop->null()?'TRUE':'FALSE',
