@@ -417,7 +417,7 @@ $attribs->{filename_quote_characters} = q( <->);
 
 load_history( $term );
 
-while ( defined (my $input = $term->readline($prompt)) ) {
+while ( defined (my $input = -t STDIN ? $term->readline($prompt) : <STDIN> ) ) {
     chomp $input;
 
     if( $input !~ /\S/ ) {
