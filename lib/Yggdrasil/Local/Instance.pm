@@ -564,22 +564,30 @@ sub fetch_related {
       foreach my $step ( @$path ) {
 	  my $alias = $alias_generator->();
 	  my @schema = ( Relations => {
-				       where => [ lval => \@id,
-						  rval => \@id ], 
-				       bind => "or" } );
+				       where  => [ lval => \@id,
+						   rval => \@id ], 
+				       bind   => "or",
+				       noauth => 1,
+				      } );
 	  
-	  push( @schema, Relations => { where => [ lval => \qq<Relations.lval>,
-						   lval => \qq<Relations.rval>,
-						   rval => \qq<Relations.lval>, 
-						   rval => \qq<Relations.rval> ], 
-					bind => "or", alias => $alias } );
+	  push( @schema, Relations => { where  => [ lval => \qq<Relations.lval>,
+						    lval => \qq<Relations.rval>,
+						    rval => \qq<Relations.lval>, 
+						    rval => \qq<Relations.rval> ], 
+					bind   => "or",
+					alias  => $alias,
+					noauth => 1,
+				      } );
 
 	  push(@schema,
 	       Instances => { return => [ qw/id visual_id/ ], 
-			      where => [ id     => \qq<$alias.lval>,
-					 id     => \qq<$alias.rval> ],
-			      bind => "or" },
-	       Instances => { where => [ entity => $step ] } );
+			      where  => [ id     => \qq<$alias.lval>,
+					  id     => \qq<$alias.rval> ],
+			      bind   => "or",
+			      noauth => 1,
+			    },
+	       Instances => { noauth => 1,
+			      where  => [ entity => $step ] } );
 
 	  $res = $self->storage()->fetch( @schema, $time );
 	  @id = map { $_->{id} } @$res;
