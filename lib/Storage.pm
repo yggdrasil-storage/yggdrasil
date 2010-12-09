@@ -17,6 +17,8 @@ use Storage::Auth::Role;
 
 use Digest::MD5 qw(md5_hex);
 
+use 5.10.0;
+
 our $VERSION = '0.0.1';
 
 sub new {
@@ -484,7 +486,9 @@ sub store {
 	my $fields = $params{fields};
 	my $equal  = 1;
 	foreach my $field ( keys %$fields ) {
-	    if( ! defined $values->{$field} || $fields->{$field} ne $values->{$field} ) { 
+	    my $left = $fields->{$field} // '';
+	    my $right = $values->{$field} // '';
+	    if( $left ne $right ) { 
 		# FIX: "ne"? should use a proper equality test, !=,
 		# ne, other?
 		$equal = 0;
@@ -684,7 +688,7 @@ sub get_current_tick {
     return $ref->[0]->{max_id};
 }
 
-# fetch ( schema1, { return => [ fieldnames ], where => [ s1field1 => s1value1, ... ], operator => operator, bind => bind-op }
+# fetch ( schema1, { return => [ fieldnames ], where => [ s1field1 => s1value1, ... ], operator => operator, bind => bind-op, nomap => 0, noauth => 0 }
 #         schema2, { return => [ fieldnames ], where => [ s2field => s2value, ... ], operator => operator, bind => bind-op }
 #         { start => $start, stop => $stop, format => tick|iso|epoch } (optional)
 # We remap the schema names (the non-reference parameters) here.
@@ -767,6 +771,8 @@ sub _add_auth {
 	my $schema = $schemadefs->[$i];
 	my $schemabindings = $schemadefs->[$i+1];
 
+	next if $schemabindings->{noauth};
+	
 	# 1. Find auth-bindings for this schema
 	my $cachename = $schema . ':' . $authtype;
 	my $typebindings = $self->cache( 'authbindings', $cachename );
@@ -922,6 +928,11 @@ sub _map_fetch_schema_references {
     my @mapped_def;
     while( @defs ) {
 	my( $schema, $struct ) = ( shift @defs, shift @defs );
+
+	if ($struct->{nomap}) {
+	    push @mapped_def, $schema, $struct;
+	    next;
+	}
 
 	# Map schema names mentioned inside the fetch
 	my $where = $struct->{where};
