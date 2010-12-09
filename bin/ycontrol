@@ -295,6 +295,16 @@ my %cmd;
 	        _INSTANCENAME_ => \&instance_create,
 	    },
 	},
+	fetch_related => {
+	    _help    => "Fetch related instances",
+	    _entity  => {
+                _instance => {
+		     _entity => \&instance_fetch_related,
+		},			 
+	    },
+			  
+	},
+		 
     },
     
     relation => {
@@ -1020,6 +1030,30 @@ sub instance_property_history {
     for my $tick ( keys %changes ) {
 	print "* $tick [$changes{$tick}]\n";
     }
+}
+
+sub instance_fetch_related {
+    my ($instance_command, $fetch_command, $source_entity, $source_instance, $target_entity) = @_;
+    my ($eskey, $iskey, $etkey, $tstart, $tstop);
+
+    ($eskey, $tstart, $tstop) = extract_temporality( $source_entity );
+    my $esobj = $y->get_entity( $eskey, populate_times( $tstart, $tstop ) );    
+    print "'$source_entity', no such entity.\n" and return unless $esobj;
+
+    ($iskey, $tstart, $tstop) = extract_temporality( $source_instance );
+    my $isobj = $esobj->fetch( $iskey, populate_times( $tstart, $tstop ) );    
+    print "'$source_instance', no such instance in '$source_entity'.\n" and return unless $isobj;
+
+    ($etkey, $tstart, $tstop) = extract_temporality( $target_entity );
+    my $etobj = $y->get_entity( $etkey, populate_times( $tstart, $tstop ) );    
+    print "'$target_entity', no such entity.\n" and return unless $etobj;
+
+    
+    my @related = $isobj->fetch_related( $etobj );
+
+    for my $instance (@related) {
+	printf "%s (%s - %d)\n", $instance->id(), $instance->entity()->id(), $instance->pathlength();
+    }    
 }
 
 # Relations
