@@ -131,8 +131,8 @@ sub expire {
 	$storage->expire( join(':', $entity->_userland_id(), $prop->_userland_id()), id => $self->{_id} );
 
 	unless ($status->OK()) {
-	    $transaction->rollback();
-	    return;
+#	    $transaction->rollback();
+#	    return;
 	}
     }
     
