@@ -323,25 +323,57 @@ sub find_instances_by_property_value {
 	    return;
 	}
     }
+
+    my (@key, @value);
+
+    for my $p (qw|key value|) {
+	my @tmp;
+	if (ref $params{$p} && ref $params{$p} eq 'ARRAY') {
+	    @tmp = @{$params{$p}};
+	} else {
+	    push @tmp, $params{$p};	    
+	}
+
+	if ($p eq 'key') {
+	    @key = @tmp;
+	} else {
+	    @value = @tmp;
+	}
+    }
+
+    unless (@value == @key) {
+	$self->get_status()->set( 406, "The list of keys and the list of values must be equally long" );
+	return;
+    }
+      
     
-    # Pass along temporality.  If we don't get a proper property
-    # object in return, it didn't exist at the given time (which may
-    # be NOW()).
-    my $prop = $self->get_property( $params{key}, time => $time );
-    return unless $self->get_status()->OK();
-
-    my $schema = $prop->full_name();
-
     my $operator = 'LIKE';
     $operator = '=' if $params{exact};
+
+    my @search;
+    for (my $idx = 0; $idx < scalar @key; $idx++) {
+	my $key   = $key[$idx];
+	my $value = $value[$idx];
+	
+	# Pass along temporality.  If we don't get a proper property
+	# object in return, it didn't exist at the given time (which may
+	# be NOW()).
+	
+	my $prop = $self->get_property( $key, time => $time );
+	return unless $self->get_status()->OK();
+	
+	my $schema = $prop->full_name();
+	
+	push @search, ( $schema => { where    => [ value => $value ],
+				     return   => [ 'value' ], 
+				     operator => $operator },
+			Instances  => { return => [ 'visual_id', 'id', 'start', 'stop' ],
+					where  => [ id => \qq{$schema.id} ] }) ;
+    }
     
-    my $hits = $self->storage()->fetch( $schema => { where    => [ value => $params{value} ],
-						     return   => [ 'value' ],			     
-						     operator => $operator },
-					Instances  => { return => [ 'visual_id', 'id', 'start', 'stop' ],
-							where  => [ id => \qq{$schema.id} ] },
+    my $hits = $self->storage()->fetch( @search,
 					$time );
-    
+	
     # FIXME, find a way to create instance objects in a nice way
     my @i;
     for my $i ( @$hits ) {
