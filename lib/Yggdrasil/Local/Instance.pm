@@ -434,6 +434,7 @@ sub property {
 	
 	if ($status->OK()) {
 	    $transaction->commit();
+	    return $value;
 	} else {
 	    $transaction->rollback();
 	    return;
