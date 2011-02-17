@@ -570,7 +570,7 @@ sub store {
 
     my $user = $self->user();
     
-    unless ($self->_is_bootstrapping()) {
+    if (! $self->_is_bootstrapping() && $update == 0) {
 	if( $self->cache( 'hasauthschema', $schema ) ) {
 	    for my $role ( $user->member_of() ) {
 		$role->grant( $real_schema => 'm', id => $r );
