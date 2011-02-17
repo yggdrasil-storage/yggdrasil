@@ -15,6 +15,8 @@ use Storage::Auth;
 use Storage::Auth::User;
 use Storage::Auth::Role;
 
+use Storage::Querycache;
+
 use Digest::MD5 qw(md5_hex);
 
 use 5.10.0;
@@ -60,6 +62,8 @@ sub new {
 	}
 	
 	my $storage = $engine_class->new(@_);
+	$storage->{querycache} = new Storage::Querycache;
+	
 	$storage->_set_default_user("nobody");
 
 	$storage->{type} = new Storage::Type();
@@ -1134,6 +1138,12 @@ sub _get_real_name {
     my $schema = shift;
 
     return $self->cache( 'mapperm2h', $schema );
+}
+
+sub querycache {
+    my $self = shift;
+
+    return $self->{querycache};
 }
 
 sub cache {
