@@ -213,9 +213,22 @@ sub _fetch {
 #    if ($subroutine =~ /_store/) {
 #	print STDERR "$sql with [" . join(", ", map { defined()?$_:"NULL" } @$params) . "]\n";
 #    }  
+
+    my $v = $self->querycache()->get( $sql, $params );
+    if ( $v ) {
+	$status->set( 203 );
+    } else {
+	$status->set( 200 );
+
+	my $i = 0;
+	my @schemas = grep { ++$i % 2 } @_;
+	pop @schemas;
+	
+	$v = $self->_sql( $sql, @$params );
+	$self->querycache()->set( $sql, $params, $v, \@schemas ); 
+    }
     
-    $status->set( 200 );
-    return $self->_sql( $sql, @$params ); 
+    return $v;
 }
 
 # Generating the fetch sql is a hassle.  A very big hassle.  Somehow
@@ -378,7 +391,8 @@ sub _store {
     my $schema = $_[0];
 
     my ($sql, $params, $id) = $self->_generate_store_sql( @_ );
-
+    $self->querycache()->delete( $schema );
+    
     # Execute the SQL and fetch the generated id (otherwise default to
     # the id we got in return from the generator).
     $self->_sql( $sql, @$params );
@@ -435,6 +449,8 @@ sub _expire {
     my $status  = $self->get_status();
 
     my ($sql, $params) = $self->_generate_expire_sql( $schema, @_ );
+    $self->querycache()->delete( $schema );
+
     $self->_sql( $sql, @$params );
     $status->set( 200 ) if $status->OK();
 }
