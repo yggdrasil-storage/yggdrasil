@@ -62,7 +62,7 @@ sub new {
 	}
 	
 	my $storage = $engine_class->new(@_);
-	$storage->{querycache} = new Storage::Querycache;
+	$storage->{querycache} = new Storage::Querycache( storage => $storage );
 	
 	$storage->_set_default_user("nobody");
 

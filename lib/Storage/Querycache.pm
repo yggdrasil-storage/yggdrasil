@@ -5,8 +5,8 @@ use warnings;
 
 sub new {
     my $class = shift;
-
-    my $self = {};
+    
+    my $self = { @_ };
 
     $self->{query}     = {};
     $self->{schemamap} = {};
@@ -14,21 +14,47 @@ sub new {
     return bless $self, $class;
 }
 
+sub storage {
+    my $self = shift;
+    return $self->{storage};
+}
+
+sub debugger {
+    my $self = shift;
+    return $self->storage()->debugger();
+}
+
 sub get {
     my ($self, $sql, $params) = @_;
+
+    my $key = $self->_keygen( $sql, $params );
+    my $hit = $self->{query}->{$key};
+
+    if ($hit) {
+	$self->debugger()->debug( 'cache', "H: $key" );
+	$self->debugger()->activity( 'cache', 'hit' );
+    } else {
+	$self->debugger()->debug( 'cache', "M: $key" );
+	$self->debugger()->activity( 'cache', 'miss' );
+    }
     
-    return $self->{query}->{$self->_keygen( $sql, $params )};
+    return $hit;
 }
 
 sub set {
     my ($self, $sql, $params, $value, $schemas) = @_;
+    my $key = $self->_keygen( $sql, $params );
+
     
     for my $s (@$schemas) {
 	$self->{schemamap}->{$s} ||= [];
-	push @{$self->{schemamap}->{$s}}, $self->_keygen( $sql, $params );
+	push @{$self->{schemamap}->{$s}}, $key;
     }
 
-    return $self->{query}->{$self->_keygen( $sql, $params )} = $value;
+    $self->debugger()->debug( 'cache', "A: $key" );
+    $self->debugger()->activity( 'cache', 'add' );
+
+    return $self->{query}->{$key} = $value;
 }
 
 sub delete {
@@ -39,13 +65,16 @@ sub delete {
     for my $stm (@$ref) {
 	delete $self->{query}->{$stm};
     }
+    
+    $self->debugger()->debug( 'cache', "D: $schema" );
+    $self->debugger()->activity( 'cache', 'delete' );
     delete $self->{schemamap}->{$schema};
 }
 
 sub _keygen {
     my ($self, $sql, $params) = @_;
 
-    return join(',', $sql, @$params);
+    return $sql . ' => ' . join(',', @$params);
 }
 
 1;
