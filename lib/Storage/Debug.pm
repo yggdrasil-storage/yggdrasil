@@ -51,7 +51,7 @@ sub _stop {
 	
 	for my $k (sort keys %{$self->{active}->{$key}}) {
 	    next if $k eq 'start';
-	    printf STDERR "%-10s: %d\n", ucfirst $k, $self->{active}->{$key}->{$k};
+	    printf STDERR "%-20s: %d\n", ucfirst $k, $self->{active}->{$key}->{$k};
 	}
     }
 
