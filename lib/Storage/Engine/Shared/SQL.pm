@@ -180,6 +180,7 @@ sub _sql {
     }
 
     $self->debugger()->debug( 'protocol', $sqlinline );
+    $self->debugger()->activity( 'protocol', 'sql' );
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed: " . $sth->errstr() );
 	return;

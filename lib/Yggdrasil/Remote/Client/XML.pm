@@ -128,6 +128,7 @@ sub _execute {
     my $xmlout = $self->xmlout( yggdrasil => { request => { @_ } } );
 
     my $stream = $self->{stream};
+    $self->debugger()->activity( 'protocol', 'xmlsend' );
     $self->debugger()->debug( 'protocol', $xmlout );
     print $stream $xmlout;
 }
@@ -464,7 +465,9 @@ sub _get_reply {
     my $reply_node = shift;
     
     my $reply = $self->parser()->read_document();
-    $reply->dump() if $self->{_debug}->{protocol};
+    $reply->dump() if $self->{debug}->{protocol};
+    $self->debugger()->activity( 'protocol', 'xmlrecieved' );
+
     my $s = $self->_get_reply_status( $reply );
     return unless $s->OK();
 
