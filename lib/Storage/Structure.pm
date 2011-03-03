@@ -526,6 +526,11 @@ sub _bootstrap_schema_auth {
     
     $self->{_storage}->define( $self->get( 'authschema' ),
 			       nomap  => 1,
+			       hints  => {
+					  usertable => { index => 1 },
+					  type      => { index => 1 },
+					  authtable => { index => 1 },
+					 },
 			       fields => {
 					  usertable => { type => 'TEXT',
 							 null => 0 },
