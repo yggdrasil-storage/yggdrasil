@@ -582,8 +582,8 @@ sub fetch_related {
 
 	  push(@schema,
 	       Instances => { return => [ qw/id visual_id/ ], 
-			      where  => [ id     => \qq<$alias.lval>,
-					  id     => \qq<$alias.rval> ],
+			      where  => [ id     => \qq<Relations.lval>,
+					  id     => \qq<Relations.rval> ],
 			      bind   => "or",
 #			      noauth => 1,
 			    },
