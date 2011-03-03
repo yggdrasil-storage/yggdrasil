@@ -568,26 +568,26 @@ sub fetch_related {
 				       where  => [ lval => \@id,
 						   rval => \@id ], 
 				       bind   => "or",
-				       noauth => 1,
+#				       noauth => 1,
 				      } );
 	  
-	  push( @schema, Relations => { where  => [ lval => \qq<Relations.lval>,
-						    lval => \qq<Relations.rval>,
-						    rval => \qq<Relations.lval>, 
-						    rval => \qq<Relations.rval> ], 
-					bind   => "or",
-					alias  => $alias,
-					noauth => 1,
-				      } );
+#	  push( @schema, Relations => { where  => [ lval => \qq<Relations.lval>,
+#						    lval => \qq<Relations.rval>,
+#						    rval => \qq<Relations.lval>, 
+#						    rval => \qq<Relations.rval> ], 
+#					bind   => "or",
+#					alias  => $alias,
+#					noauth => 1,
+#				      } );
 
 	  push(@schema,
 	       Instances => { return => [ qw/id visual_id/ ], 
 			      where  => [ id     => \qq<$alias.lval>,
 					  id     => \qq<$alias.rval> ],
 			      bind   => "or",
-			      noauth => 1,
+#			      noauth => 1,
 			    },
-	       Instances => { noauth => 1,
+	       Instances => { # noauth => 1,
 			      where  => [ entity => $step ] } );
 
 	  $res = $self->storage()->fetch( @schema, $time );
