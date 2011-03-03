@@ -21,6 +21,7 @@ sub define {
 		      nomap      => 1,
 		      hints      => {
 				     parent => { foreign => 'MetaEntity' },
+				     entity => { index => 1 },
 				    },
 		      authschema => 1,
 		      auth       => {
@@ -68,7 +69,7 @@ sub define {
 		      temporal => 1,
 		      nomap    => 1,
 		      hints    => {
-				   entity => { foreign => 'MetaEntity' },
+				   entity => { foreign => 'MetaEntity', index => 1 },
 				  },
 		      authschema => 1,
 		      auth => {
