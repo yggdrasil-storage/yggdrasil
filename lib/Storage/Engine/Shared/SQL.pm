@@ -18,9 +18,9 @@ sub _define {
     my ($sql, $indexes) = $self->_generate_define_sql( $schema, @_ );
 
     if( $self->_sql( $sql ) ) {
-	for my $field (@$indexes) {
-	    my $indexsql = $self->_create_index_sql( $schema, $field );
-	    $self->_sql( $indexsql );
+	for my $field (keys %$indexes) {
+	    my $indexsql = $self->_create_index_sql( $schema, $field, $indexes->{$field} );
+	    $self->_sql( $indexsql ) if $indexsql;
 	}
 	return 1;
     } else {
@@ -52,7 +52,7 @@ sub _generate_define_sql {
 	$keys{$fieldname}++ if $type eq 'SERIAL' && $self->_engine_requires_serial_as_key();
 
 	$type = $self->_map_type( $type );
-	$indexes{$fieldname}++ if $index;
+	$indexes{$fieldname} = $field if $index;
 
 	# FUGLY hack to ensure that id fields come first in the listings.
 	if ($fieldname eq 'id') {
@@ -66,7 +66,7 @@ sub _generate_define_sql {
 	my $field = $hints->{$fieldname};
 	$keys{$fieldname}++ if $field->{key};
 
-	$indexes{$fieldname}++ if $field->{index}; # && (keys %keys > 1);
+	$indexes{$fieldname} = $fields->{$fieldname} if $field->{index}; # && (keys %keys > 1);
 	
 	# FIXME: Foregin keys isn't supported as of yet.  The issue is
 	# MetaEntity and its friends requiring the key to be both ID
@@ -85,7 +85,7 @@ sub _generate_define_sql {
     $sql .= $self->_engine_post_create_details();
     $sql .= ";\n";
     
-    return ($sql, [ keys %indexes ]);
+    return ($sql, \%indexes );
 }
 
 # Does the engine support primary keys, and does that support include
@@ -108,8 +108,7 @@ sub _engine_post_create_details {
 # for indexes, but, at least this is a fallback.  This generic
 # version does nothing with regards to the type at all.
 sub _create_index_sql {
-    my ($self, $schema, $field) = @_;
-    
+    my ($self, $schema, $field, $fielddata) = @_;
     return "CREATE INDEX ${schema}_${field}_index ON $schema ($field)";
 }
 

@@ -173,4 +173,20 @@ sub _time_as_epoch {
     return "UNIX_TIMESTAMP($time)";
 }
 
+sub _create_index_sql {
+    my ($self, $schema, $field, $fielddata) = @_;
+
+    # This is a storage type
+    my $type = $fielddata->{type};
+    
+    if ($type eq 'TEXT' || $type eq 'BINARY') {
+	return "CREATE INDEX ${schema}_${field}_index ON $schema ($field(255))";
+    } elsif ($type eq 'SET') {	
+	return undef;
+    } else {
+	return "CREATE INDEX ${schema}_${field}_index ON $schema ($field)";
+    }
+}
+
+
 1;
