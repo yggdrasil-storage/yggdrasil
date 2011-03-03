@@ -33,7 +33,7 @@ sub _start {
     my $self = shift;
     my $key  = shift;
 
-    return if $self->{$key};
+    return if $self->{active}->{$key};
     $self->{active}->{$key}->{start} = [gettimeofday];
 }
 
@@ -41,7 +41,7 @@ sub _stop {
     my $self = shift;
     my $key  = shift;
 
-    return unless $self->{$key};
+    return unless $self->{active}->{$key};
 
     if ($self->get( 'verbose' )) {
 	my $elapsed = tv_interval([gettimeofday], $self->{active}->{$key}->{start});

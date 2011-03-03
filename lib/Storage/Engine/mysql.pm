@@ -188,5 +188,68 @@ sub _create_index_sql {
     }
 }
 
+sub _extra_debugging_enable {
+    my $self = shift;
+    my $sql  = shift;
+    my @attr = @_;
+    
+    my $dbh = $self->{dbh};
+    return unless $self->debug( 'protocol' );
+    
+    my $dsth = $dbh->prepare( "explain $sql" );
+    $dsth->execute( @attr );
+
+    my $aref = $dsth->fetchall_arrayref( {} );
+
+    my @keys   = qw|id select_type table type key key_len ref rows Extra possible_keys|;
+    my $format = "%2s %-12s %-25s %-6s %-35s %-8s %-26s %-8s %-30s %s\n";
+    
+    open( my $fh, '>>', 'storage.debug.protocol.log' );
+    my $sqlinline = $sql;
+    for my $attr ( @attr ) {
+	my $value = defined $attr ? $attr : "NULL";
+	$sqlinline =~ s/\?/"'$value'"/e;
+    }
+    print $fh "{{{\n$sqlinline\n\n";
+    printf $fh $format, @keys;
+    
+    for my $href (@$aref) {
+	my %hash = %$href;
+	printf $fh $format, map { defined $_?$_:'NULL' } @hash{@keys};
+    }
+    close $fh;
+    
+    $dbh->do( 'set profiling=1' );
+}
+
+sub _extra_debugging_disable {
+    my $self = shift;
+    return unless $self->debug( 'protocol' );
+
+    my $dbh  = $self->{dbh};
+    my $dsth = $dbh->prepare( "show profile" );
+    $dsth->execute();
+
+    my $aref = $dsth->fetchall_arrayref( {} );
+
+    my @keys   = qw|Duration Status|;
+    my $format = "%9s : %s\n";
+    
+    open( my $fh, '>>', 'storage.debug.protocol.log' );
+    printf $fh "\n$format", @keys;
+
+    my $total = 0;
+    for my $href (@$aref) {
+	my %hash = %$href;
+	printf $fh $format, @hash{@keys};
+	$total += $href->{Duration};
+    }
+    printf $fh "%9.6f : %s\n", $total, 'Total';
+    
+    print $fh "\n}}}\n\n";
+    close $fh;
+    
+    $self->{dbh}->do( 'set profiling=0' );
+}
 
 1;

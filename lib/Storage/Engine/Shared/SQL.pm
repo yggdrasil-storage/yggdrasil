@@ -180,10 +180,13 @@ sub _sql {
 
     $self->debugger()->debug( 'protocol', $sqlinline );
     $self->debugger()->activity( 'protocol', 'sql' );
+
+    $self->_extra_debugging_enable( $sql, @attr );
     unless ($sth->execute(@attr)) {
 	$status->set( 500, "Execute of the statement handler failed: " . $sth->errstr() );
 	return;
     }
+    $self->_extra_debugging_disable();
     
     # FIX: if we do some DDL stuff, doing a fetch later on will make
     # DBD::mysql warn about calling fetch before execute. So if we do
@@ -609,6 +612,14 @@ sub _qualify {
     my @fqfn = map { /\./ ? $_ : join(".", $schema, $_) } @fields;
 
     return @fqfn;
+}
+
+sub _extra_debugging_enable {
+    return;
+}
+
+sub _extra_debugging_disable {
+    return;
 }
 
 sub _start_transaction {
